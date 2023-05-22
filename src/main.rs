@@ -21,7 +21,7 @@ struct LogFilter;
 
 impl Filter for LogFilter {
     fn filter(&self, record: &log::Record) -> log4rs::filter::Response {
-        if record.target().starts_with("spacebar") {
+        if record.target().starts_with("symfonia") {
             log4rs::filter::Response::Accept
         } else {
             log4rs::filter::Response::Reject
@@ -72,25 +72,25 @@ fn main() {
                 .filter(Box::new(LogFilter))
                 .build("gateway", Box::new(gateway_log)),
         )
-        .logger(Logger::builder().build("spacebar::db", LevelFilter::Info))
-        .logger(Logger::builder().build("spacebar::cfg", LevelFilter::Info))
+        .logger(Logger::builder().build("symfonia::db", LevelFilter::Info))
+        .logger(Logger::builder().build("symfonia::cfg", LevelFilter::Info))
         .logger(
             Logger::builder()
                 .appender("api")
                 .additive(false)
-                .build("spacebar::api", LevelFilter::Warn),
+                .build("symfonia::api", LevelFilter::Warn),
         )
         .logger(
             Logger::builder()
                 .appender("cdn")
                 .additive(false)
-                .build("spacebar::cdn", LevelFilter::Warn),
+                .build("symfonia::cdn", LevelFilter::Warn),
         )
         .logger(
             Logger::builder()
                 .appender("gateway")
                 .additive(false)
-                .build("spacebar::gateway", LevelFilter::Warn),
+                .build("symfonia::gateway", LevelFilter::Warn),
         )
         .build(Root::builder().appender("stdout").build({
             let mode = std::env::var("MODE").unwrap_or("DEBUG".to_string());
@@ -104,5 +104,5 @@ fn main() {
 
     let _handle = log4rs::init_config(config).unwrap();
 
-    log::info!(target: "spacebar", "Starting up Oxidized Spacebar.chat");
+    log::info!(target: "symfonia", "Starting up Symfonia");
 }
