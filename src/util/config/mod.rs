@@ -78,39 +78,6 @@ fn generate_pairs(obj: &Value, key: &str) -> Vec<ConfigEntity> {
     pairs
 }
 
-/*fn pairs_to_config(pairs: Vec<ConfigEntity>) -> ConfigValue {
-    let mut value_map = Map::new();
-    
-    for pair in pairs {
-        let keys: Vec<&str> = pair.key.split("_").collect();
-        let mut prev = "";
-        let mut prev_obj = value_map.clone();
-        let mut i = 0;
-        
-        let keys_len = keys.len();
-        for key in keys {
-            if key.parse::<i64>().is_ok() && !prev_obj.get(prev).unwrap().as_array().map(|x| x.is_empty()).unwrap_or_default() {
-                prev_obj.insert(prev.to_string(), Value::Array(vec![]));
-            }
-            println!("{key}");
-            
-            if i == keys_len - 1 {
-                value_map.insert(key.to_string(), pair.value.clone());
-                continue;
-            } else if !value_map.contains_key(key) {
-                value_map.insert(key.to_string(), Value::Object(Default::default()));
-            }
-            
-            prev = key;
-            prev_obj = value_map.clone();
-            value_map = value_map.get(key).unwrap().as_object().unwrap().to_owned();
-            i += 1;
-        }
-    }
-    
-    serde_json::from_value(Value::Object(value_map)).unwrap()
-}*/
-
 fn pairs_to_config(pairs: Vec<ConfigEntity>) -> ConfigValue {
     let mut value = Map::new();
     
