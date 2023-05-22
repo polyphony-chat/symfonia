@@ -1,6 +1,8 @@
 <div align="center">
 
 [![Discord]][Discord-invite]
+<img src="https://img.shields.io/static/v1?label=Status&message=Early%20Development&color=blue">
+
   
 </div>
 
@@ -8,11 +10,6 @@
   
   <img width="128" src="https://raw.githubusercontent.com/polyphony-chat/design/main/branding/polyphony-symfonia-transparent-8bit.png" />
   <h1 align="center">Symfonia</h1>
-</p>
-
-
-<p>
-  <img src="https://img.shields.io/static/v1?label=Status&message=Early%20Development&color=blue">
 </p>
 
 ## About
