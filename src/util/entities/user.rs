@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
+use sqlx::{FromRow, Type};
 
 use crate::{
     errors::Error,
@@ -122,7 +122,7 @@ impl User {
 /// Database Calls
 impl User {
     pub async fn get_by_id(
-        conn: &mut sqlx::AnyConnection,
+        conn: &mut sqlx::MySqlConnection,
         id: &Snowflake,
     ) -> Result<Option<Self>, Error> {
         sqlx::query_as("SELECT * FROM users WHERE id = ?")
@@ -133,7 +133,7 @@ impl User {
     }
 
     pub async fn find_by_user_and_discrim(
-        conn: &mut sqlx::AnyConnection,
+        conn: &mut sqlx::MySqlConnection,
         user: &str,
         discrim: &str,
     ) -> Result<Option<Self>, Error> {
@@ -190,6 +190,7 @@ impl From<User> for PublicUser {
 const CUSTOM_USER_FLAG_OFFSET: u64 = 1 << 32;
 
 bitflags::bitflags! {
+    #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Type)]
     pub struct UserFlags: u64 {
         const DISCORD_EMPLOYEE = 1 << 0;
         const PARTNERED_SERVER_OWNER = 1 << 1;
