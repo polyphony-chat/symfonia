@@ -1,10 +1,10 @@
-use bitflags::bitflags;
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use sqlx::{FromRow};
 use crate::errors::Error;
 use crate::util::entities::user::User;
 use crate::util::Snowflake;
+use bitflags::bitflags;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use sqlx::{Decode, Encode, FromRow, Type};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, FromRow)]
 pub struct Application {
@@ -19,7 +19,7 @@ pub struct Application {
     pub bot_require_code_grant: bool,
     pub verify_key: String,
     pub owner_id: Snowflake,
-    pub flags: ApplicationFlags,
+    pub flags: u64,
     pub redirect_uris: Option<sqlx::types::Json<Vec<String>>>,
     pub rpc_application_state: i64,
     pub store_application_state: i64,
@@ -35,11 +35,18 @@ pub struct Application {
     pub install_params: Option<sqlx::types::Json<InstallParams>>,
     pub terms_of_service_url: Option<String>,
     pub privacy_policy_url: Option<String>,
-    pub team_id: Option<Snowflake>
+    pub team_id: Option<Snowflake>,
 }
 
 impl Application {
-    pub async fn create(conn: &mut sqlx::AnyConnection, name: &str, summary: &str, owner_id: &Snowflake, verify_key: &str, flags: ApplicationFlags) -> Result<Self, Error> {
+    pub async fn create(
+        conn: &mut sqlx::MySqlConnection,
+        name: &str,
+        summary: &str,
+        owner_id: &Snowflake,
+        verify_key: &str,
+        flags: ApplicationFlags,
+    ) -> Result<Self, Error> {
         let application = Self {
             id: Snowflake::generate(),
             name: name.to_string(),
@@ -52,7 +59,7 @@ impl Application {
             bot_require_code_grant: false,
             verify_key: verify_key.to_string(),
             owner_id: owner_id.to_owned(),
-            flags,
+            flags: flags.bits(),
             redirect_uris: None,
             rpc_application_state: 0,
             store_application_state: 0,
@@ -70,42 +77,51 @@ impl Application {
             privacy_policy_url: None,
             team_id: None,
         };
-        
+
         let _res = sqlx::query("INSERT INTO applications (id, name, summary, hook, bot_public, verify_key, owner_id, flags, integration_public, discoverability_state, discovery_eligibility_flags) VALUES (?, ?, ?, true, true, ?, ?, ?, true, 1, 2240)")
             .bind(&application.id)
             .bind(name)
             .bind(summary)
             .bind(verify_key)
             .bind(owner_id)
-            .bind(flags)
+            .bind(flags.bits())
             .execute(conn)
             .await?;
-        
+
         Ok(application)
     }
-    
-    pub async fn get_by_id(conn: &mut sqlx::AnyConnection, id: &Snowflake) -> Result<Option<Self>, Error> {
+
+    pub async fn get_by_id(
+        conn: &mut sqlx::MySqlConnection,
+        id: &Snowflake,
+    ) -> Result<Option<Self>, Error> {
         sqlx::query_as("SELECT * FROM applications WHERE id = ?")
             .bind(id)
             .fetch_optional(conn)
             .await
             .map_err(Error::SQLX)
     }
-    
-    pub async fn get_by_owner(conn: &mut sqlx::AnyConnection, owner_id: &Snowflake) -> Result<Vec<Self>, Error> {
+
+    pub async fn get_by_owner(
+        conn: &mut sqlx::MySqlConnection,
+        owner_id: &Snowflake,
+    ) -> Result<Vec<Self>, Error> {
         sqlx::query_as("SELECT * FROM applications WHERE owner_id = ?")
             .bind(owner_id)
             .fetch_all(conn)
             .await
             .map_err(Error::SQLX)
     }
-    
-    pub async fn get_owner(&self, conn: &mut sqlx::AnyConnection) -> Result<User, Error> {
+
+    pub fn flags(&self) -> ApplicationFlags {
+        ApplicationFlags::from_bits(self.flags.to_owned()).unwrap()
+    }
+
+    pub async fn get_owner(&self, conn: &mut sqlx::MySqlConnection) -> Result<User, Error> {
         let u = User::get_by_id(conn, &self.owner_id).await?.unwrap(); // Unwrap the option since this should absolutely never fail
         Ok(u)
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct InstallParams {
@@ -114,6 +130,7 @@ pub struct InstallParams {
 }
 
 bitflags! {
+    #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
     pub struct ApplicationFlags: u64 {
         const APPLICATION_AUTO_MODERATION_RULE_CREATE_BADGE = 1 << 6;
         const GATEWAY_PRESENCE = 1 << 12;
@@ -134,7 +151,7 @@ pub struct ApplicationCommand {
     pub application_id: Snowflake,
     pub name: String,
     pub description: String,
-    pub options: Vec<ApplicationCommandOption>
+    pub options: Vec<ApplicationCommandOption>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -144,7 +161,7 @@ pub struct ApplicationCommandOption {
     pub description: String,
     pub required: bool,
     pub choices: Vec<ApplicationCommandOptionChoice>,
-    pub options: Vec<ApplicationCommandOption>
+    pub options: Vec<ApplicationCommandOption>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -170,19 +187,19 @@ pub enum ApplicationCommandOptionType {
     #[serde(rename = "CHANNEL")]
     Channel = 7,
     #[serde(rename = "ROLE")]
-    Role = 8
+    Role = 8,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ApplicationCommandInteractionData {
     pub id: Snowflake,
     pub name: String,
-    pub options: Vec<ApplicationCommandInteractionDataOption>
+    pub options: Vec<ApplicationCommandInteractionDataOption>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ApplicationCommandInteractionDataOption {
     pub name: String,
     pub value: Value,
-    pub options: Vec<ApplicationCommandInteractionDataOption>
+    pub options: Vec<ApplicationCommandInteractionDataOption>,
 }

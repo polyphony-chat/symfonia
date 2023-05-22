@@ -1,11 +1,11 @@
-use std::collections::HashMap;
+use crate::errors::Error;
 use lazy_static::lazy_static;
 use regex::internal::Input;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
+use std::collections::HashMap;
 use tokio::io::AsyncReadExt;
 use tokio::sync::RwLock;
-use crate::errors::Error;
 
 use crate::util::{
     config::types::{
@@ -28,7 +28,7 @@ use crate::util::{
 
 mod types;
 
-#[derive(Debug, Default, PartialEq,  Serialize, Deserialize)]
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ConfigValue {
     pub gateway: EndpointConfiguration,
@@ -63,18 +63,18 @@ impl ConfigValue {
 
         generate_pairs(&v, "")
     }
-    
+
     pub fn from_pairs(pairs: Vec<ConfigEntity>) -> Self {
         pairs_to_config(pairs)
     }
-    
-    pub async fn init(conn: &mut sqlx::AnyConnection) -> Result<(), Error> {
+
+    pub async fn init(conn: &mut sqlx::MySqlConnection) -> Result<(), Error> {
         log::info!(target: "spacebar::cfg", "Loading configuration...");
         let config = if let Ok(confg_path) = std::env::var("CONFIG_PATH") {
             if let Ok(mut f) = tokio::fs::File::open(&confg_path).await {
                 let mut data = String::new();
                 f.read_to_string(&mut data).await?;
-                
+
                 serde_json::from_str(&data)?
             } else {
                 Self::default()
@@ -83,7 +83,7 @@ impl ConfigValue {
             let pairs = ConfigEntity::collect(conn).await?;
             Self::from_pairs(pairs)
         };
-        
+
         *CONFIG.write().await = config;
         Ok(())
     }
@@ -112,20 +112,22 @@ fn generate_pairs(obj: &Value, key: &str) -> Vec<ConfigEntity> {
 
 fn pairs_to_config(pairs: Vec<ConfigEntity>) -> ConfigValue {
     let mut value = Map::new();
-    
+
     for p in pairs {
         let keys: Vec<&str> = p.key.split('_').collect();
         let mut i = 0;
-        
+
         let mut current_level = &mut value;
-        
+
         while i < keys.len() {
             let key = keys[i];
             if i == keys.len() - 1 {
                 current_level.insert(key.to_string(), p.value.clone());
                 break;
             } else {
-                let next_level = current_level.entry(key.to_string()).or_insert_with(|| Value::Object(Map::new()));
+                let next_level = current_level
+                    .entry(key.to_string())
+                    .or_insert_with(|| Value::Object(Map::new()));
                 match next_level {
                     Value::Object(map) => current_level = map,
                     _ => {
@@ -137,13 +139,13 @@ fn pairs_to_config(pairs: Vec<ConfigEntity>) -> ConfigValue {
             i += 1;
         }
     }
-    
+
     serde_json::from_value(Value::Object(value)).unwrap()
 }
 
 #[cfg(test)]
 mod test {
-    use crate::util::config::{generate_pairs, ConfigValue, pairs_to_config};
+    use crate::util::config::{generate_pairs, pairs_to_config, ConfigValue};
 
     #[test]
     fn test_pairs() {
@@ -151,7 +153,7 @@ mod test {
         let v = serde_json::json!(&c);
 
         let pairs = generate_pairs(&v, "");
-        
+
         let cfg = pairs_to_config(pairs);
         assert_eq!(cfg, c)
     }
