@@ -1,5 +1,5 @@
 <p align="center">
-  <img width="486" src="https://raw.githubusercontent.com/polyphony-chat/design/main/branding/polyphony-symfonia-transparent-8bit.png" />
+  <img width="128" src="https://raw.githubusercontent.com/polyphony-chat/design/main/branding/polyphony-symfonia-transparent-8bit.png" />
   <h1 align="center">Symfonia</h1>
 </p>
 
