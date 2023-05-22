@@ -9,7 +9,7 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, FromRow)]
 pub struct User {
-    pub id: String,
+    pub id: Snowflake,
     pub username: String,
     pub discriminator: String,
     pub avatar: Option<String>,
@@ -60,7 +60,7 @@ pub struct UserData {
 impl Default for User {
     fn default() -> Self {
         Self {
-            id: Snowflake::generate().to_string(),
+            id: Snowflake::generate(),
             username: String::new(),
             discriminator: String::new(),
             avatar: None,
@@ -146,8 +146,9 @@ impl User {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PublicUser {
-    pub id: String,
+    pub id: Snowflake,
     pub username: String,
     pub discriminator: String,
     pub avatar: Option<String>,
