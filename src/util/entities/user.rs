@@ -125,7 +125,11 @@ impl User {
         conn: &mut sqlx::AnyConnection,
         id: &Snowflake,
     ) -> Result<Option<Self>, Error> {
-        todo!()
+        sqlx::query_as("SELECT * FROM users WHERE id = ?")
+            .bind(id)
+            .fetch_optional(conn)
+            .await
+            .map_err(Error::SQLX)
     }
 
     pub async fn find_by_user_and_discrim(
