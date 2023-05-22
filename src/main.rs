@@ -73,6 +73,7 @@ fn main() {
                 .build("gateway", Box::new(gateway_log)),
         )
         .logger(Logger::builder().build("spacebar::db", LevelFilter::Info))
+        .logger(Logger::builder().build("spacebar::cfg", LevelFilter::Info))
         .logger(
             Logger::builder()
                 .appender("api")
