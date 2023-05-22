@@ -33,4 +33,11 @@ impl ConfigEntity {
             .await
             .map_err(Error::SQLX)
     }
+    
+    pub async fn collect(conn: &mut sqlx::AnyConnection) -> Result<Vec<Self>, Error> {
+        sqlx::query_as("SELECT * FROM config")
+            .fetch_all(conn)
+            .await
+            .map_err(Error::SQLX)
+    }
 }
