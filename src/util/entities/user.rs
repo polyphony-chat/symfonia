@@ -121,15 +121,15 @@ impl User {
 
 /// Database Calls
 impl User {
-    pub async fn find_by_id(
-        conn: &mut sqlx::MySqlConnection,
-        id: &str,
+    pub async fn get_by_id(
+        conn: &mut sqlx::AnyConnection,
+        id: &Snowflake,
     ) -> Result<Option<Self>, Error> {
         todo!()
     }
 
     pub async fn find_by_user_and_discrim(
-        conn: &mut sqlx::MySqlConnection,
+        conn: &mut sqlx::AnyConnection,
         user: &str,
         discrim: &str,
     ) -> Result<Option<Self>, Error> {
