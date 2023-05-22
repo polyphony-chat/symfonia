@@ -17,11 +17,11 @@
 This is a WIP implementation of a Spacebar compatible Server in Rust!
 
 This repository contains:
-- A partial implementation of:
-    - [HTTP API Server](/src/api)
-    - [HTTP CDN Server](/src/cdn)
-    - [WebSocket Gateway Server](/src/gateway)
-    - [Database Models](/src/database)
+A partial implementation of:
+  - [HTTP API Server](/src/api)
+  - [HTTP CDN Server](/src/cdn)
+  - [WebSocket Gateway Server](/src/gateway)
+  - [Database Models](/src/database)
 
 [Discord]: https://dcbadge.vercel.app/api/server/m3FpcapGDD?style=flat
 [Discord-invite]: https://discord.com/invite/m3FpcapGDD
