@@ -11,7 +11,7 @@ static PROCESS_ID: u128 = 1;
 lazy_static::lazy_static! {
     static ref INCREMENT: Atomic<u128> = Atomic::default();
 }
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Snowflake(String);
 
 impl Display for Snowflake {
