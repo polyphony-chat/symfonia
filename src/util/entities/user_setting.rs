@@ -1,4 +1,4 @@
-use mysql_common::frunk::labelled::chars::P;
+use chrono::{serde::ts_milliseconds_option, Utc};
 use serde::{Deserialize, Serialize};
 
 use crate::util::Snowflake;
@@ -101,7 +101,8 @@ impl Default for UserSettings {
 pub struct CustomStatus {
     pub emoji_id: Option<String>,
     pub emoji_name: Option<String>,
-    pub expires_at: Option<chrono::NaiveDateTime>,
+    #[serde(with = "ts_milliseconds_option")]
+    pub expires_at: Option<chrono::DateTime<Utc>>,
     pub text: Option<String>,
 }
 
