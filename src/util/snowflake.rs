@@ -4,6 +4,7 @@ use atomic::Atomic;
 use bigdecimal::{Num, ToPrimitive, Zero};
 use num_bigint::{BigInt, ToBigInt};
 use serde::{Deserialize, Serialize};
+use sqlx::{mysql::MySqlTypeInfo, Type, TypeInfo};
 
 const EPOCH: i64 = 1420070400000;
 static WORKER_ID: u128 = 0;
@@ -11,7 +12,8 @@ static PROCESS_ID: u128 = 1;
 lazy_static::lazy_static! {
     static ref INCREMENT: Atomic<u128> = Atomic::default();
 }
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[sqlx(transparent)]
 pub struct Snowflake(String);
 
 impl Display for Snowflake {
