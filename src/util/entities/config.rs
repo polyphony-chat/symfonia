@@ -26,7 +26,7 @@ impl ConfigEntity {
         self.value.as_i64().expect("value is not a number")
     }
 
-    pub async fn get_by_key(conn: &mut sqlx::MySqlConnection, key: &str) -> Result<Self, Error> {
+    pub async fn get_by_key(conn: &mut sqlx::AnyConnection, key: &str) -> Result<Self, Error> {
         sqlx::query_as("SELECT * FROM config WHERE `key` = ?")
             .bind(key)
             .fetch_one(conn)
