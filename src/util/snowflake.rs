@@ -1,7 +1,7 @@
 use std::{fmt::Display, time::SystemTime};
 
 use atomic::Atomic;
-use mysql_common::bigdecimal::{Num, ToPrimitive, Zero};
+use bigdecimal::{Num, ToPrimitive, Zero};
 use num_bigint::{BigInt, ToBigInt};
 use serde::{Deserialize, Serialize};
 
@@ -11,6 +11,7 @@ static PROCESS_ID: u128 = 1;
 lazy_static::lazy_static! {
     static ref INCREMENT: Atomic<u128> = Atomic::default();
 }
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Snowflake(String);
 
 impl Display for Snowflake {
@@ -53,16 +54,16 @@ impl Snowflake {
         let thirty_two = 32.to_bigint().unwrap();
 
         while num.bits() > 50 {
-            let high = &num >> 32;
-            let low = (&high % &ten) << 32 | &num & BigInt::from((1u64 << 32) - 1);
+            let high: BigInt = &num >> 32;
+            let low: BigInt = (high.clone() % &ten) << 32 | &num & BigInt::from((1u64 << 32) - 1);
 
-            let next: BigInt = (&low % &ten);
+            let next: BigInt = (low.clone() % &ten);
             dec.push(next.to_u8().unwrap());
-            num = (&high / &ten) << 32 | &low / &ten;
+            num = (high / &ten) << 32 | low / &ten;
         }
 
         while !num.is_zero() {
-            dec.push((&num % &ten).to_u8().unwrap());
+            dec.push((num.clone() % &ten).to_u8().unwrap());
             num /= &ten;
         }
 
