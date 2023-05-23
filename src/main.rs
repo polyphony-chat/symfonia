@@ -2,7 +2,6 @@ use log::LevelFilter;
 use log4rs::{
     append::{
         console::{ConsoleAppender, Target},
-        file::FileAppender,
         rolling_file::{
             policy::compound::{
                 roll::delete::DeleteRoller, trigger::size::SizeTrigger, CompoundPolicy,
