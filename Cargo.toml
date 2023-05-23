@@ -8,17 +8,17 @@ edition = "2021"
 [dependencies]
 atomic = "0.5.1"
 base64 = "0.21.0"
+bcrypt = "0.14.0"
 bigdecimal = "0.3.0"
 bitflags = { version = "2.2.1", features = ["serde"] }
 chrono = { version = "0.4.24", features = ["serde"] }
-#diesel = { version = "2.0.4", features = ["mysql", "chrono", "serde_json", "64-column-tables"] }
-#diesel-async = { version = "0.2.2", features = ["mysql", "deadpool"] }
 dotenv = "0.15.0"
 futures = "0.3.28"
 hostname = "0.3.1"
+jsonwebtoken = "8.3.0"
 lazy_static = "1.4.0"
 log = "0.4.17"
-log4rs = "1.2.0"
+log4rs = { version = "1.2.0", features=["rolling_file_appender", "compound_policy", "size_trigger", "gzip"] }
 num-bigint = "0.4.3"
 num-traits = "0.2.15"
 openssl = "0.10.52"
@@ -31,3 +31,4 @@ serde_json = { version = "1.0.96", features = ["raw_value"] }
 sqlx = { version = "0.6.3", features = ["mysql", "sqlite", "json", "chrono", "ipnetwork", "runtime-tokio-native-tls", "any"] }
 thiserror = "1.0.40"
 tokio = { version = "1.28.0", features = ["full"] }
+polyphony-types = { path = "../types", features = ["backend"] }#{ git = "https://github.com/polyphony-chat/types" }
