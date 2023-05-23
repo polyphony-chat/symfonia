@@ -31,4 +31,4 @@ serde_json = { version = "1.0.96", features = ["raw_value"] }
 sqlx = { version = "0.6.3", features = ["mysql", "sqlite", "json", "chrono", "ipnetwork", "runtime-tokio-native-tls", "any"] }
 thiserror = "1.0.40"
 tokio = { version = "1.28.0", features = ["full"] }
-polyphony-types = { path = "../types", features = ["backend"] }#{ git = "https://github.com/polyphony-chat/types" }
+polyphony-types = { version = "0.10.0", features = ["backend"] }#{ git = "https://github.com/polyphony-chat/types" }
