@@ -26,5 +26,5 @@ A partial implementation of:
 
 [Discord]: https://dcbadge.vercel.app/api/server/m3FpcapGDD?style=flat
 [Discord-invite]: https://discord.com/invite/m3FpcapGDD
-[build-shield]: https://img.shields.io/github/actions/workflow/status/polyphony-chat/symfonia/rust.yml?style=plastic
+[build-shield]: https://img.shields.io/github/actions/workflow/status/polyphony-chat/symfonia/rust.yml?style=flat
 [build-url]: https://github.com/polyphony-chat/symfonia/blob/main/.github/workflows/rust.yml
