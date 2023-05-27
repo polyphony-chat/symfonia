@@ -62,7 +62,7 @@ impl Guild {
                     cfg.defaults.guild.default_message_notifications,
                 ),
                 explicit_content_filter: Some(cfg.defaults.guild.explicit_content_filter),
-                features: String::default(), // TODO: cfg.guild.default_features
+                features: Default::default(), // TODO: cfg.guild.default_features
                 max_members: Some(cfg.limits.guild.max_members),
                 max_presences: Some(cfg.defaults.guild.max_presences),
                 max_video_channel_users: Some(cfg.defaults.guild.max_video_channel_users as u8),
