@@ -131,4 +131,6 @@ async fn main() {
     let _handle = log4rs::init_config(config).unwrap();
 
     log::info!(target: "symfonia", "Starting up Symfonia");
+
+    api::start_api().await.unwrap();
 }
