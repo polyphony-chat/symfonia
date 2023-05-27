@@ -104,4 +104,8 @@ impl Application {
         let u = User::get_by_id(db, &self.owner_id).await?.unwrap(); // Unwrap the option since this should absolutely never fail
         Ok(u)
     }
+
+    pub fn public_json(&self) -> String {
+        serde_json::to_string(&self.inner).unwrap()
+    }
 }
