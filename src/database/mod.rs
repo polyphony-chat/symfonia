@@ -1,12 +1,6 @@
-mod application;
-mod config;
-mod user;
+pub mod entities;
 
-pub use application::ApplicationService;
-pub use config::ConfigService;
-pub use user::UserService;
-
-use polyphony_types::errors::Error;
+use crate::errors::Error;
 use sqlx::{Executor, MySqlPool};
 
 pub trait Queryer<'c>: Executor<'c, Database = sqlx::MySql> {}
