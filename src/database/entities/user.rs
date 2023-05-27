@@ -25,6 +25,9 @@ pub struct User {
     #[sqlx(rename = "settingsIndex")]
     pub settings_index: i32,
     pub rights: String,
+    #[sqlx(skip)]
+    pub settings: UserSettings,
+    pub extended_settings: sqlx::types::Json<Value>,
 }
 
 impl Deref for User {
@@ -76,7 +79,6 @@ impl User {
                 } else {
                     Some(false)
                 },
-                extended_settings: sqlx::types::Json(Value::Object(Map::default())),
                 ..Default::default()
             },
             data: sqlx::types::Json(UserData {
@@ -90,6 +92,8 @@ impl User {
             },
             rights: cfg.register.default_rights.clone(),
             settings_index: user_settings.index as i32, // TODO: Idk why spacebar uses an int, it should be an unsigned bigint (u64)
+            extended_settings: sqlx::types::Json(Value::Object(Map::default())),
+            settings: user_settings,
             ..Default::default()
         };
 
@@ -99,7 +103,7 @@ impl User {
             .bind(email)
             .bind(&user.data)
             .bind(&user.fingerprints)
-            .bind(user_settings.index)
+            .bind(user.settings.index)
             .execute(db)
             .await?;
 
