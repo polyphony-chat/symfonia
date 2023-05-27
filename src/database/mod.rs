@@ -3,7 +3,7 @@ pub mod entities;
 use crate::errors::Error;
 use sqlx::{Executor, MySqlPool};
 
-pub trait Queryer<'c>: Executor<'c, Database = sqlx::MySql> {}
+pub trait Queryer<'c>: Executor<'c, Database = sqlx::MySql> + Copy {}
 
 impl<'c> Queryer<'c> for &MySqlPool {}
 
