@@ -1,5 +1,8 @@
 use crate::{
-    database::{entities::user::User, Queryer},
+    database::{
+        entities::{user::User, Config},
+        Queryer,
+    },
     errors::Error,
 };
 use bitflags::Flags;
@@ -33,6 +36,7 @@ impl DerefMut for Application {
 impl Application {
     pub async fn create<'c, C: Queryer<'c>>(
         db: C,
+        cfg: &Config,
         name: &str,
         summary: &str,
         owner_id: &Snowflake,
@@ -41,6 +45,9 @@ impl Application {
         create_bot_user: bool,
     ) -> Result<Self, Error> {
         let bot_user_id = if create_bot_user {
+            let bot_user = User::create(db, cfg, name, None, None, None, None, true).await?;
+
+            Some(bot_user.id.to_owned())
         } else {
             None
         };
@@ -54,7 +61,7 @@ impl Application {
                 ..Default::default()
             },
             owner_id: owner_id.to_owned(),
-            bot_user_id: None, // TODO: replace with generated bot user
+            bot_user_id,
             team_id: None,
         };
 
