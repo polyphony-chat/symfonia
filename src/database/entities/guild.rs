@@ -55,15 +55,15 @@ impl Guild {
                     description: Some("Fill in your description".to_string()),
                     welcome_channels: Vec::default(),
                 })),
-                afk_timeout: Some(cfg.defaults.guild.afk_timeout as u8),
+                afk_timeout: Some(cfg.defaults.guild.afk_timeout as i32),
                 default_message_notifications: Some(
-                    cfg.defaults.guild.default_message_notifications,
+                    cfg.defaults.guild.default_message_notifications as i32,
                 ),
-                explicit_content_filter: Some(cfg.defaults.guild.explicit_content_filter),
+                explicit_content_filter: Some(cfg.defaults.guild.explicit_content_filter as i32),
                 features: Default::default(), // TODO: cfg.guild.default_features
-                max_members: Some(cfg.limits.guild.max_members),
-                max_presences: Some(cfg.defaults.guild.max_presences),
-                max_video_channel_users: Some(cfg.defaults.guild.max_video_channel_users as u8),
+                max_members: Some(cfg.limits.guild.max_members as i32),
+                max_presences: Some(cfg.defaults.guild.max_presences as i32),
+                max_video_channel_users: Some(cfg.defaults.guild.max_video_channel_users as i32),
                 region: Some(cfg.regions.default.clone()),
                 ..Default::default()
             },
