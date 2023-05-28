@@ -4,7 +4,6 @@ use poem::{
     listener::{Listener, TcpListener},
     post, EndpointExt, Route, Server,
 };
-use polyphony_types::{config, errors::Error};
 
 use crate::{database, database::ConfigService};
 
