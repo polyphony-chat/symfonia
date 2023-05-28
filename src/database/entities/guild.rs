@@ -45,7 +45,7 @@ impl Guild {
     ) -> Result<Self, Error> {
         let guild = Self {
             inner: chorus::types::Guild {
-                name: name.to_string(),
+                name: Some(name.to_string()),
                 icon: Default::default(), // TODO: Handle guild Icon
                 owner_id: Some(owner_id.to_owned()),
                 preferred_locale: Some("en-US".to_string()),
