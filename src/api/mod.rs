@@ -5,14 +5,14 @@ use poem::{
     post, EndpointExt, Route, Server,
 };
 
-use crate::{database, database::ConfigService};
+use crate::{database, database::entities::Config, errors::Error};
 
 pub async fn start_api() -> Result<(), Error> {
     log::info!(target: "symfonia::api::db", "Establishing database connection");
     let db = database::establish_connection().await?;
 
     log::info!(target: "symfonia::api::cfg", "Loading configuration");
-    let config = ConfigService::init(&db).await?;
+    let config = Config::init(&db).await?;
 
     if config.sentry.enabled {
         let _guard = sentry::init((
