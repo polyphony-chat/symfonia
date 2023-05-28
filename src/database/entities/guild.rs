@@ -13,10 +13,8 @@ use std::ops::{Deref, DerefMut};
 pub struct Guild {
     #[sqlx(flatten)]
     inner: chorus::types::Guild,
-    #[sqlx(rename = "features")]
-    pub features_array: String, // This is actually a 'simple array', delimited by commas
-    pub member_count: Option<u64>,
-    pub presence_count: Option<u64>,
+    pub member_count: Option<i32>,
+    pub presence_count: Option<i32>,
     pub unavailable: bool,
     pub parent: Option<String>,
     pub template_id: Option<Snowflake>,
