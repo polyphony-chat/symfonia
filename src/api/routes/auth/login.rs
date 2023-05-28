@@ -1,13 +1,9 @@
-use crate::database::UserService;
+use crate::database::entities::{Config, User};
+use chorus::types::{jwt, APIError, AuthError, ConfigValue, LoginSchema};
 use poem::{
     handler,
     web::{Data, Json},
     IntoResponse, Request, Response,
-};
-use polyphony_types::{
-    config::ConfigValue,
-    schema::{APIError, AuthError, LoginSchema},
-    utils::jwt,
 };
 use reqwest::StatusCode;
 use serde_json::json;
@@ -15,7 +11,7 @@ use serde_json::json;
 #[handler]
 pub async fn login(
     Data(db): Data<&sqlx::MySqlPool>,
-    Data(cfg): Data<&ConfigValue>,
+    Data(cfg): Data<&Config>,
     Json(payload): Json<LoginSchema>,
     req: &Request,
 ) -> Result<impl IntoResponse, APIError> {
@@ -30,7 +26,7 @@ pub async fn login(
         // TODO: verify captcha
     }
 
-    let Some(user) = UserService::get_user_by_email_or_phone(db, &payload.login, "").await? else {
+    let Some(user) = User::get_user_by_email_or_phone(db, &payload.login, "").await.unwrap() else {
         return Err(APIError::Auth(AuthError::InvalidLogin));
     };
 
@@ -44,21 +40,21 @@ pub async fn login(
         return Err(APIError::Auth(AuthError::InvalidLogin));
     }
 
-    if cfg.login.require_verification && !user.verified {
-        return Err(APIError::Auth(AuthError::Unverified));
+    if cfg.login.require_verification && !user.verified.unwrap_or_default() {
+        return Err(APIError::Auth(AuthError::InvalidLogin));
     }
 
     // TODO: MFA / WebauthN
 
     if payload.undelete.unwrap_or(false) {
-        if user.disabled {
+        if user.disabled.unwrap_or_default() {
             todo!()
         }
         if user.deleted {
             todo!()
         }
     } else {
-        if user.disabled {
+        if user.disabled.unwrap_or_default() {
             return Ok(Response::builder()
                 .status(StatusCode::BAD_REQUEST)
                 .body(
@@ -86,7 +82,7 @@ pub async fn login(
 
     let token = jwt::generate_token(
         &user.id,
-        user.email.unwrap_or_default(),
+        user.email.clone().unwrap_or_default(),
         &cfg.security.jwt_secret,
     );
 

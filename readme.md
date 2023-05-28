@@ -9,7 +9,7 @@
 
 <p align="center">
   
-  <img width="128" src="https://raw.githubusercontent.com/polyphony-chat/design/main/branding/polyphony-symfonia-transparent-8bit.png" />
+  <img width="128" src="https://github.com/polyphony-chat/design/blob/main/branding/polyphony-symfonia-round%400.5x.png" />
   <h1 align="center">Symfonia</h1>
 </p>
 
@@ -26,5 +26,5 @@ A partial implementation of:
 
 [Discord]: https://dcbadge.vercel.app/api/server/m3FpcapGDD?style=flat
 [Discord-invite]: https://discord.com/invite/m3FpcapGDD
-[build-shield]: https://img.shields.io/github/actions/workflow/status/polyphony-chat/symfonia/rust.yml?style=plastic
+[build-shield]: https://img.shields.io/github/actions/workflow/status/polyphony-chat/symfonia/rust.yml?style=flat
 [build-url]: https://github.com/polyphony-chat/symfonia/blob/main/.github/workflows/rust.yml
