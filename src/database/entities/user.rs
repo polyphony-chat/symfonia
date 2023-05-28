@@ -73,7 +73,7 @@ impl User {
                 email: email.clone(),
                 premium: cfg.defaults.user.premium,
                 premium_type: cfg.defaults.user.premium_type,
-                bot,
+                bot: Some(bot),
                 verified: if cfg.defaults.user.verified {
                     Some(true)
                 } else {

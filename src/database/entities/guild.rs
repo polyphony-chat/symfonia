@@ -13,10 +13,8 @@ use std::ops::{Deref, DerefMut};
 pub struct Guild {
     #[sqlx(flatten)]
     inner: chorus::types::Guild,
-    #[sqlx(rename = "features")]
-    pub features_array: String, // This is actually a 'simple array', delimited by commas
-    pub member_count: Option<u64>,
-    pub presence_count: Option<u64>,
+    pub member_count: Option<i32>,
+    pub presence_count: Option<i32>,
     pub unavailable: bool,
     pub parent: Option<String>,
     pub template_id: Option<Snowflake>,
@@ -47,7 +45,7 @@ impl Guild {
     ) -> Result<Self, Error> {
         let guild = Self {
             inner: chorus::types::Guild {
-                name: name.to_string(),
+                name: Some(name.to_string()),
                 icon: Default::default(), // TODO: Handle guild Icon
                 owner_id: Some(owner_id.to_owned()),
                 preferred_locale: Some("en-US".to_string()),
@@ -57,15 +55,15 @@ impl Guild {
                     description: Some("Fill in your description".to_string()),
                     welcome_channels: Vec::default(),
                 })),
-                afk_timeout: Some(cfg.defaults.guild.afk_timeout as u8),
+                afk_timeout: Some(cfg.defaults.guild.afk_timeout as i32),
                 default_message_notifications: Some(
-                    cfg.defaults.guild.default_message_notifications,
+                    cfg.defaults.guild.default_message_notifications as i32,
                 ),
-                explicit_content_filter: Some(cfg.defaults.guild.explicit_content_filter),
-                features: String::default(), // TODO: cfg.guild.default_features
-                max_members: Some(cfg.limits.guild.max_members),
-                max_presences: Some(cfg.defaults.guild.max_presences),
-                max_video_channel_users: Some(cfg.defaults.guild.max_video_channel_users as u8),
+                explicit_content_filter: Some(cfg.defaults.guild.explicit_content_filter as i32),
+                features: Default::default(), // TODO: cfg.guild.default_features
+                max_members: Some(cfg.limits.guild.max_members as i32),
+                max_presences: Some(cfg.defaults.guild.max_presences as i32),
+                max_video_channel_users: Some(cfg.defaults.guild.max_video_channel_users as i32),
                 region: Some(cfg.regions.default.clone()),
                 ..Default::default()
             },
