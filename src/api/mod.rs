@@ -4,23 +4,22 @@ use poem::{
     listener::{Listener, TcpListener},
     post, EndpointExt, Route, Server,
 };
-use polyphony_types::{config, errors::Error};
 
-use crate::{database, database::ConfigService};
+use crate::{database, database::entities::Config, errors::Error};
 
 pub async fn start_api() -> Result<(), Error> {
     log::info!(target: "symfonia::api::db", "Establishing database connection");
     let db = database::establish_connection().await?;
 
     log::info!(target: "symfonia::api::cfg", "Loading configuration");
-    let config = ConfigService::init(&db).await?;
+    let config = Config::init(&db).await?;
 
     if config.sentry.enabled {
         let _guard = sentry::init((
             "https://241c6fb08adb469da1bb82522b25c99f@sentry.quartzinc.space/3",
             sentry::ClientOptions {
                 release: sentry::release_name!(),
-                traces_sample_rate: config.sentry.trace_sample_rate,
+                traces_sample_rate: config.sentry.trace_sample_rate as f32,
                 ..Default::default()
             },
         ));
