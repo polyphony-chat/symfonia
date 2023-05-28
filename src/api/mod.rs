@@ -19,7 +19,7 @@ pub async fn start_api() -> Result<(), Error> {
             "https://241c6fb08adb469da1bb82522b25c99f@sentry.quartzinc.space/3",
             sentry::ClientOptions {
                 release: sentry::release_name!(),
-                traces_sample_rate: config.sentry.trace_sample_rate,
+                traces_sample_rate: config.sentry.trace_sample_rate as f32,
                 ..Default::default()
             },
         ));
