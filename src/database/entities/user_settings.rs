@@ -7,6 +7,7 @@ use std::ops::{Deref, DerefMut};
 #[derive(Debug, Clone, Default, Serialize, Deserialize, sqlx::FromRow)]
 pub struct UserSettings {
     #[sqlx(flatten)]
+    #[serde(flatten)]
     inner: chorus::types::UserSettings,
     pub index: u64,
 }
