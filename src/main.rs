@@ -47,7 +47,7 @@ async fn main() {
         .build();
 
     let api_log = RollingFileAppender::builder()
-        .encoder(Box::new(PatternEncoder::new("{d} - {m}{n}")))
+        .encoder(Box::new(PatternEncoder::new("{d} {l} - {m}{n}")))
         .build(
             "log/api.log",
             Box::new(CompoundPolicy::new(
@@ -58,7 +58,7 @@ async fn main() {
         .unwrap();
 
     let cdn_log = RollingFileAppender::builder()
-        .encoder(Box::new(PatternEncoder::new("{d} - {m}{n}")))
+        .encoder(Box::new(PatternEncoder::new("{d} {l} - {m}{n}")))
         .build(
             "log/cdn.log",
             Box::new(CompoundPolicy::new(
@@ -69,7 +69,7 @@ async fn main() {
         .unwrap();
 
     let gateway_log = RollingFileAppender::builder()
-        .encoder(Box::new(PatternEncoder::new("{d} - {m}{n}")))
+        .encoder(Box::new(PatternEncoder::new("{d} {l} - {m}{n}")))
         .build(
             "log/gateway.log",
             Box::new(CompoundPolicy::new(
