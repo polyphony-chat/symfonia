@@ -35,16 +35,7 @@ pub async fn start_api() -> Result<(), Error> {
             "/users",
             users::setup_routes().with(AuthenticationMiddleware),
         )
-        .nest(
-            "/policies",
-            Route::new().at("/stats", routes::policies::stats).nest(
-                "/instance",
-                Route::new()
-                    .at("/domain", routes::policies::instance::domain)
-                    .at("/limits", routes::policies::instance::limits)
-                    .at("/", routes::policies::instance::general_config),
-            ),
-        )
+        .nest("/policies", routes::policies::setup_routes())
         .data(db)
         .data(config)
         .with(NormalizePath::new(TrailingSlash::Trim));
