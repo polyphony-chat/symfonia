@@ -84,7 +84,7 @@ pub async fn login(
     }
 
     let token = jwt::generate_token(
-        &user.id,
+        user.id,
         user.email.clone().unwrap_or_default(),
         &cfg.security.jwt_secret,
     );
