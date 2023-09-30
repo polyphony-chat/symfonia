@@ -2,7 +2,7 @@ use chorus::types::Snowflake;
 use serde::{Deserialize, Serialize};
 use std::ops::{Deref, DerefMut};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct VoiceState {
     #[sqlx(flatten)]
     inner: chorus::types::VoiceState,
