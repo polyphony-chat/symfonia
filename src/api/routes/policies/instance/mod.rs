@@ -5,12 +5,19 @@ use crate::database::entities::Config;
 pub use domain::*;
 pub use limits::*;
 use poem::{
-    handler,
+    get, handler,
     web::{Data, Json},
-    IntoResponse,
+    IntoResponse, Route,
 };
 
 #[handler]
 pub async fn general_config(Data(cfg): Data<&Config>) -> impl IntoResponse {
     Json(serde_json::to_value(&cfg.general).unwrap())
+}
+
+pub fn setup_routes() -> Route {
+    Route::new()
+        .at("/", get(general_config))
+        .at("/limits", get(limits))
+        .at("/domains", get(domain))
 }
