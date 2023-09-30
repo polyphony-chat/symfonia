@@ -1,4 +1,3 @@
-mod middleware;
 mod routes;
 
 use poem::middleware::{NormalizePath, TrailingSlash};
@@ -34,6 +33,16 @@ pub async fn start_api() -> Result<(), Error> {
         .nest(
             "/users",
             users::setup_routes().with(AuthenticationMiddleware),
+        )
+        .nest(
+            "/policies",
+            Route::new().at("/stats", routes::policies::stats).nest(
+                "/instance",
+                Route::new()
+                    .at("/domain", routes::policies::instance::domain)
+                    .at("/limits", routes::policies::instance::limits)
+                    .at("/", routes::policies::instance::general_config),
+            ),
         )
         .data(db)
         .data(config)
