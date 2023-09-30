@@ -1,10 +1,13 @@
+mod middleware;
 mod routes;
 
+use poem::middleware::{NormalizePath, TrailingSlash};
 use poem::{
     listener::{Listener, TcpListener},
     post, EndpointExt, Route, Server,
 };
 
+use crate::api::middleware::authentication::AuthenticationMiddleware;
 use crate::{database, database::entities::Config, errors::Error};
 
 pub async fn start_api() -> Result<(), Error> {
@@ -31,7 +34,8 @@ pub async fn start_api() -> Result<(), Error> {
             Route::new().at("/login", post(routes::auth::login)),
         )
         .data(db)
-        .data(config);
+        .data(config)
+        .with(NormalizePath::new(TrailingSlash::Trim));
 
     let v9_api = Route::new().nest("/api/v9", routes);
 
