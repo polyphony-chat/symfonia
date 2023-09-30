@@ -22,4 +22,8 @@ pub enum UserError {
     InvalidEmail,
     #[error("DISCRIMINATOR_INVALID")]
     InvalidDiscriminator,
+    #[error("INVALID_USER")]
+    InvalidUser,
+    #[error("INVALID_TOKEN")]
+    InvalidToken,
 }
