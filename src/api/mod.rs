@@ -1,3 +1,4 @@
+mod middleware;
 mod routes;
 
 use poem::middleware::{NormalizePath, TrailingSlash};
