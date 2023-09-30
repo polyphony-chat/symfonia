@@ -19,6 +19,7 @@ use std::{
 #[derive(Debug, Clone, Default, Serialize, Deserialize, sqlx::FromRow)]
 pub struct User {
     #[sqlx(flatten)]
+    #[serde(flatten)]
     inner: chorus::types::User,
     pub data: sqlx::types::Json<UserData>,
     pub deleted: bool,
