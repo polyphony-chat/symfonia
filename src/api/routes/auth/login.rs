@@ -26,7 +26,10 @@ pub async fn login(
         // TODO: verify captcha
     }
 
-    let Some(user) = User::get_user_by_email_or_phone(db, &payload.login, "").await.unwrap() else {
+    let Some(user) = User::get_user_by_email_or_phone(db, &payload.login, "")
+        .await
+        .unwrap()
+    else {
         return Err(APIError::Auth(AuthError::InvalidLogin));
     };
 
@@ -34,7 +37,7 @@ pub async fn login(
         .data
         .hash
         .as_ref()
-        .map(|hash| bcrypt::verify(payload.password.unwrap_or_default(), hash).unwrap_or_default())
+        .map(|hash| bcrypt::verify(payload.password, hash).unwrap_or_default())
         .unwrap_or_default()
     {
         return Err(APIError::Auth(AuthError::InvalidLogin));
