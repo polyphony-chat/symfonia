@@ -1,6 +1,7 @@
 use crate::{database::Queryer, errors::Error};
 use poem::EndpointExt;
 use serde::{Deserialize, Serialize};
+use sqlx::MySqlPool;
 use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, sqlx::FromRow)]
@@ -24,7 +25,7 @@ impl DerefMut for UserSettings {
 }
 
 impl UserSettings {
-    pub async fn create<'c, C: Queryer<'c>>(db: C, locale: &str) -> Result<Self, Error> {
+    pub async fn create(db: &MySqlPool, locale: &str) -> Result<Self, Error> {
         let mut settings = Self {
             inner: chorus::types::UserSettings {
                 locale: locale.to_string(),
@@ -43,10 +44,7 @@ impl UserSettings {
         Ok(settings)
     }
 
-    pub async fn get_by_index<'c, C: Queryer<'c>>(
-        db: C,
-        index: u64,
-    ) -> Result<UserSettings, Error> {
+    pub async fn get_by_index(db: &MySqlPool, index: u64) -> Result<UserSettings, Error> {
         sqlx::query_as("SELECT * FROM user_settings WHERE index = ?")
             .bind(index)
             .fetch_one(db)

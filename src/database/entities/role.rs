@@ -1,6 +1,7 @@
 use crate::{database::Queryer, errors::Error};
 use chorus::types::Snowflake;
 use serde::{Deserialize, Serialize};
+use sqlx::MySqlPool;
 use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, sqlx::FromRow)]
@@ -25,8 +26,8 @@ impl DerefMut for Role {
 }
 
 impl Role {
-    pub async fn create<'c, C: Queryer<'c>>(
-        db: C,
+    pub async fn create(
+        db: &MySqlPool,
         id: Option<Snowflake>,
         guild_id: &Snowflake,
         name: &str,

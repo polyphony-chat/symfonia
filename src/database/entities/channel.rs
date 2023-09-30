@@ -1,6 +1,7 @@
 use crate::{database::Queryer, errors::Error};
 use chorus::types::{ChannelType, Snowflake};
 use serde::{Deserialize, Serialize};
+use sqlx::MySqlPool;
 use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, sqlx::FromRow)]
@@ -23,8 +24,8 @@ impl DerefMut for Channel {
 }
 
 impl Channel {
-    pub async fn create<'c, C: Queryer<'c>>(
-        db: C,
+    pub async fn create(
+        db: &MySqlPool,
         channel_type: ChannelType,
         name: Option<String>,
         nsfw: bool,
@@ -81,10 +82,7 @@ impl Channel {
         Ok(channel)
     }
 
-    pub async fn get_by_id<'c, C: Queryer<'c>>(
-        db: C,
-        id: &Snowflake,
-    ) -> Result<Option<Self>, Error> {
+    pub async fn get_by_id(db: &MySqlPool, id: &Snowflake) -> Result<Option<Self>, Error> {
         sqlx::query_as("SELECT * FROM channels WHERE id = ?")
             .bind(id)
             .fetch_optional(db)

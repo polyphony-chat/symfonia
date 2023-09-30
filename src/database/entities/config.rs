@@ -1,7 +1,9 @@
 use crate::{database::Queryer, errors::Error};
+use chorus::types::ConfigValue;
 use futures::FutureExt;
 use poem::EndpointExt;
 use serde_json::{Map, Value};
+use sqlx::MySqlPool;
 use std::ops::{Deref, DerefMut};
 use tokio::io::AsyncReadExt;
 
@@ -22,7 +24,7 @@ impl DerefMut for Config {
 }
 
 impl Config {
-    pub async fn init<'c, C: Queryer<'c>>(db: C) -> Result<Self, Error> {
+    pub async fn init(db: &MySqlPool) -> Result<Self, Error> {
         let config = if let Ok(confg_path) = std::env::var("CONFIG_PATH") {
             if let Ok(mut f) = tokio::fs::File::open(&confg_path).await {
                 let mut data = String::new();
@@ -62,7 +64,11 @@ impl Config {
             }
         }
 
-        Self(serde_json::from_value(value).unwrap())
+        if let Ok(v) = serde_json::from_value(value) {
+            return Self(v);
+        }
+
+        Self(ConfigValue::default())
     }
 
     fn generate_pairs(obj: &Value, key: &str) -> Vec<ConfigEntity> {
@@ -110,7 +116,7 @@ impl DerefMut for ConfigEntity {
 }
 
 impl ConfigEntity {
-    pub async fn get_entity_by_key<'c, C: Queryer<'c>>(db: C, key: &str) -> Result<Self, Error> {
+    pub async fn get_entity_by_key(db: &MySqlPool, key: &str) -> Result<Self, Error> {
         sqlx::query_as("SELECT * FROM config WHERE `key` = ?")
             .bind(key)
             .fetch_one(db)
@@ -119,7 +125,7 @@ impl ConfigEntity {
             .map_err(Error::SQLX)
     }
 
-    pub async fn collect_entities<'c, C: Queryer<'c>>(db: C) -> Result<Vec<Self>, Error> {
+    pub async fn collect_entities(db: &MySqlPool) -> Result<Vec<Self>, Error> {
         sqlx::query_as("SELECT * FROM config")
             .fetch_all(db)
             .await

@@ -10,6 +10,7 @@ use chrono::Utc;
 use futures::FutureExt;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
+use sqlx::MySqlPool;
 use std::{
     default::Default,
     ops::{Deref, DerefMut},
@@ -44,8 +45,8 @@ impl DerefMut for User {
 }
 
 impl User {
-    pub async fn create<'c, C: Queryer<'c> + Copy>(
-        db: C,
+    pub async fn create(
+        db: &MySqlPool,
         cfg: &Config,
         username: &str,
         password: Option<String>,
@@ -97,12 +98,18 @@ impl User {
             ..Default::default()
         };
 
-        sqlx::query("INSERT INTO users (id, username, email, data, fingerprint, settingsIndex) VALUES (?, ?, ?, ?, ?, ?)")
-            .bind(&user.id)
+        sqlx::query("INSERT INTO users (id, username, email, data, fingerprints, discriminator, desktop, mobile, premium, premium_type, bot, bio, system, nsfw_allowed, mfa_enabled, created_at, verified, disabled, deleted, flags, public_flags, purchased_flags, premium_usage_flags, rights&mut dddd, extended_settings, settingsIndex) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, '', 0, ?, 0, NOW(), 0, 0, 0, ?, 0, 0, 0, 0, '{}', ?)")
+            .bind(user.id)
             .bind(username)
             .bind(email)
             .bind(&user.data)
             .bind(&user.fingerprints)
+            .bind("0000")
+            .bind(true)
+            .bind(false)
+            .bind(bot)
+            .bind(false) // TODO: Base nsfw off date of birth
+            .bind(0) // TODO: flags
             .bind(user.settings.index)
             .execute(db)
             .await?;
@@ -110,18 +117,12 @@ impl User {
         Ok(user)
     }
 
-    async fn find_unused_discriminator<'c, C: Queryer<'c>>(
-        db: C,
-        cfg: &Config,
-    ) -> Result<String, Error> {
+    async fn find_unused_discriminator(db: &MySqlPool, cfg: &Config) -> Result<String, Error> {
         // TODO: intelligently find unused discriminator: https://dba.stackexchange.com/questions/48594/find-numbers-not-used-in-a-column
         todo!()
     }
 
-    pub async fn get_by_id<'c, C: Queryer<'c>>(
-        db: C,
-        id: &Snowflake,
-    ) -> Result<Option<Self>, Error> {
+    pub async fn get_by_id(db: &MySqlPool, id: Snowflake) -> Result<Option<Self>, Error> {
         sqlx::query_as("SELECT * FROM users WHERE id = ?")
             .bind(id)
             .fetch_optional(db)
@@ -129,8 +130,8 @@ impl User {
             .map_err(Error::SQLX)
     }
 
-    pub async fn find_by_user_and_discrim<'c, C: Queryer<'c>>(
-        db: C,
+    pub async fn find_by_user_and_discrim(
+        db: &MySqlPool,
         user: &str,
         discrim: &str,
     ) -> Result<Option<Self>, Error> {
@@ -142,8 +143,8 @@ impl User {
             .map_err(Error::SQLX)
     }
 
-    pub async fn get_user_by_email_or_phone<'c, C: Queryer<'c>>(
-        db: C,
+    pub async fn get_user_by_email_or_phone(
+        db: &MySqlPool,
         email: &str,
         phone: &str,
     ) -> Result<Option<Self>, Error> {
