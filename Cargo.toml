@@ -28,8 +28,8 @@ regex = "1.9.5"
 reqwest = "0.11.20"
 serde = { version = "1.0.188", features = ["derive"] }
 serde_json = { version = "1.0.107", features = ["raw_value"] }
-sqlx = { version = "0.7.1", features = ["mysql", "sqlite", "json", "chrono", "ipnetwork", "runtime-tokio-native-tls", "any"] }
+sqlx = { version = "0.7.1", features = ["json", "chrono", "ipnetwork", "runtime-tokio-native-tls", "any"] }
 thiserror = "1.0.48"
 tokio = { version = "1.32.0", features = ["full"] }
-chorus = { git="https://github.com/polyphony-chat/chorus", features = ["backend"], default-features = false }
+chorus = { git="https://github.com/Zert3x/chorus", branch = "misc/backend-stuff", features = ["backend"], default-features = false } #git="https://github.com/Zert3x/chorus" path="../chorus"
 sentry = "0.31.7"
