@@ -58,7 +58,7 @@ impl Guild {
                 })),
                 afk_timeout: Some(cfg.defaults.guild.afk_timeout as i32),
                 default_message_notifications: Some(
-                    cfg.defaults.guild.default_message_notifications as i32,
+                    cfg.defaults.guild.default_message_notifications,
                 ),
                 explicit_content_filter: Some(cfg.defaults.guild.explicit_content_filter as i32),
                 features: Default::default(), // TODO: cfg.guild.default_features

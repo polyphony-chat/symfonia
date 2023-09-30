@@ -26,7 +26,7 @@ pub struct User {
     pub fingerprints: String, // TODO: Simple-array, should actually be a vec
     #[sqlx(rename = "settingsIndex")]
     pub settings_index: i32,
-    pub rights: String,
+    pub rights: i64,
     #[sqlx(skip)]
     pub settings: UserSettings,
     pub extended_settings: sqlx::types::Json<Value>,
@@ -73,14 +73,10 @@ impl User {
                 username: username.to_string(),
                 discriminator: "0001".to_string(),
                 email: email.clone(),
-                premium: cfg.defaults.user.premium,
-                premium_type: cfg.defaults.user.premium_type,
+                premium: cfg.defaults.user.premium.into(),
+                premium_type: cfg.defaults.user.premium_type.into(),
                 bot: Some(bot),
-                verified: if cfg.defaults.user.verified {
-                    Some(true)
-                } else {
-                    Some(false)
-                },
+                verified: cfg.defaults.user.verified.into(),
                 ..Default::default()
             },
             data: sqlx::types::Json(UserData {
