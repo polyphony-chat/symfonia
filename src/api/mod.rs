@@ -8,6 +8,7 @@ use poem::{
 };
 
 use crate::api::middleware::authentication::AuthenticationMiddleware;
+use crate::api::routes::{auth, users};
 use crate::{database, database::entities::Config, errors::Error};
 
 pub async fn start_api() -> Result<(), Error> {
@@ -29,9 +30,10 @@ pub async fn start_api() -> Result<(), Error> {
     }
 
     let routes = Route::new()
+        .nest("/auth", auth::setup_routes())
         .nest(
-            "/auth",
-            Route::new().at("/login", post(routes::auth::login)),
+            "/users",
+            users::setup_routes().with(AuthenticationMiddleware),
         )
         .data(db)
         .data(config)
