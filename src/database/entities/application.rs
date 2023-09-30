@@ -8,7 +8,7 @@ use crate::{
 use bitflags::Flags;
 use chorus::types::{ApplicationFlags, Snowflake};
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
+use sqlx::{FromRow, MySqlPool};
 use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, sqlx::FromRow)]
@@ -34,8 +34,8 @@ impl DerefMut for Application {
 }
 
 impl Application {
-    pub async fn create<'c, C: Queryer<'c>>(
-        db: C,
+    pub async fn create(
+        db: &MySqlPool,
         cfg: &Config,
         name: &str,
         summary: &str,
@@ -78,10 +78,7 @@ impl Application {
         Ok(application)
     }
 
-    pub async fn get_by_id<'c, C: Queryer<'c>>(
-        db: C,
-        id: &Snowflake,
-    ) -> Result<Option<Self>, Error> {
+    pub async fn get_by_id(db: &MySqlPool, id: &Snowflake) -> Result<Option<Self>, Error> {
         sqlx::query_as("SELECT * FROM applications WHERE id = ?")
             .bind(id)
             .fetch_optional(db)
@@ -89,10 +86,7 @@ impl Application {
             .map_err(Error::SQLX)
     }
 
-    pub async fn get_by_owner<'c, C: Queryer<'c>>(
-        db: C,
-        owner_id: &Snowflake,
-    ) -> Result<Vec<Self>, Error> {
+    pub async fn get_by_owner(db: &MySqlPool, owner_id: &Snowflake) -> Result<Vec<Self>, Error> {
         sqlx::query_as("SELECT * FROM applications WHERE owner_id = ?")
             .bind(owner_id)
             .fetch_all(db)
@@ -100,8 +94,8 @@ impl Application {
             .map_err(Error::SQLX)
     }
 
-    pub async fn get_owner<'c, C: Queryer<'c>>(&self, db: C) -> Result<User, Error> {
-        let u = User::get_by_id(db, &self.owner_id).await?.unwrap(); // Unwrap the option since this should absolutely never fail
+    pub async fn get_owner(&self, db: &MySqlPool) -> Result<User, Error> {
+        let u = User::get_by_id(db, self.owner_id).await?.unwrap(); // Unwrap the option since this should absolutely never fail
         Ok(u)
     }
 

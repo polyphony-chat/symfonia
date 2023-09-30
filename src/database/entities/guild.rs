@@ -7,6 +7,7 @@ use crate::{
 };
 use chorus::types::{ChannelType, Snowflake, WelcomeScreenObject};
 use serde::{Deserialize, Serialize};
+use sqlx::MySqlPool;
 use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, sqlx::FromRow)]
@@ -35,8 +36,8 @@ impl DerefMut for Guild {
 }
 
 impl Guild {
-    pub async fn create<'c, C: Queryer<'c>>(
-        db: C,
+    pub async fn create(
+        db: &MySqlPool,
         cfg: &Config,
         name: &str,
         icon: Option<String>,
@@ -109,10 +110,7 @@ impl Guild {
         Ok(guild)
     }
 
-    pub async fn get_by_id<'c, C: Queryer<'c>>(
-        db: C,
-        id: &Snowflake,
-    ) -> Result<Option<Self>, Error> {
+    pub async fn get_by_id(db: &MySqlPool, id: &Snowflake) -> Result<Option<Self>, Error> {
         sqlx::query_as("SELECT * FROM guilds WHERE id = ?")
             .bind(id)
             .fetch_optional(db)

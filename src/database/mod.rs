@@ -1,11 +1,15 @@
 pub mod entities;
 
 use crate::errors::Error;
-use sqlx::{Executor, MySqlPool};
+use sqlx::{AnyPool, Database, Executor, MySqlPool, SqlitePool};
 
-pub trait Queryer<'c>: Executor<'c, Database = sqlx::MySql> + Copy {}
+pub trait Queryer<'c, DB: Database>: Executor<'c, Database = DB> {}
 
-impl<'c> Queryer<'c> for &MySqlPool {}
+impl<'c> Queryer<'c, sqlx::MySql> for &MySqlPool {}
+
+impl<'c> Queryer<'c, sqlx::Sqlite> for &SqlitePool {}
+
+impl<'c> Queryer<'c, sqlx::Any> for &AnyPool {}
 
 pub async fn establish_connection() -> Result<sqlx::MySqlPool, Error> {
     let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
@@ -13,7 +17,8 @@ pub async fn establish_connection() -> Result<sqlx::MySqlPool, Error> {
         "sqlite::memory:".to_string()
     });
 
-    let pool = sqlx::MySqlPool::connect(&db_url).await?;
+    let pool = MySqlPool::connect(&db_url).await?;
+    //install_default_drivers();
 
     Ok(pool)
 }

@@ -1,6 +1,7 @@
 use crate::{database::Queryer, errors::Error};
 use chorus::types::Snowflake;
 use serde::{Deserialize, Serialize};
+use sqlx::MySqlPool;
 use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
@@ -25,10 +26,7 @@ impl DerefMut for Emoji {
 }
 
 impl Emoji {
-    pub async fn get_by_id<'c, C: Queryer<'c>>(
-        db: C,
-        id: &Snowflake,
-    ) -> Result<Option<Self>, Error> {
+    pub async fn get_by_id(db: &MySqlPool, id: &Snowflake) -> Result<Option<Self>, Error> {
         sqlx::query_as("SELECT * FROM emojis WHERE id = ?")
             .bind(id)
             .fetch_optional(db)
