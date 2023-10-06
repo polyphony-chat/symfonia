@@ -1,3 +1,4 @@
+use crate::database::entities::{GuildMember, User};
 use crate::{
     database::{
         entities::{Channel, Config, Role},
@@ -5,14 +6,17 @@ use crate::{
     },
     errors::Error,
 };
-use chorus::types::{ChannelType, Snowflake, WelcomeScreenObject};
+use chorus::types::types::guild_configuration::GuildFeaturesList;
+use chorus::types::{ChannelType, PremiumTier, Snowflake, WelcomeScreenObject};
 use serde::{Deserialize, Serialize};
 use sqlx::MySqlPool;
 use std::ops::{Deref, DerefMut};
+use std::sync::{Arc, RwLock};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Guild {
     #[sqlx(flatten)]
+    #[serde(flatten)]
     inner: chorus::types::Guild,
     pub member_count: Option<i32>,
     pub presence_count: Option<i32>,
@@ -41,10 +45,10 @@ impl Guild {
         cfg: &Config,
         name: &str,
         icon: Option<String>,
-        owner_id: &Snowflake,
+        owner_id: Snowflake,
         channels: Vec<Channel>,
     ) -> Result<Self, Error> {
-        let guild = Self {
+        let mut guild = Self {
             inner: chorus::types::Guild {
                 name: Some(name.to_string()),
                 icon: Default::default(), // TODO: Handle guild Icon
@@ -60,32 +64,63 @@ impl Guild {
                 default_message_notifications: Some(
                     cfg.defaults.guild.default_message_notifications,
                 ),
-                explicit_content_filter: Some(cfg.defaults.guild.explicit_content_filter as i32),
-                features: Default::default(), // TODO: cfg.guild.default_features
+                explicit_content_filter: Some(cfg.defaults.guild.explicit_content_filter),
+                features: Some(GuildFeaturesList::new(cfg.guild.default_features.clone())),
                 max_members: Some(cfg.limits.guild.max_members as i32),
                 max_presences: Some(cfg.defaults.guild.max_presences as i32),
                 max_video_channel_users: Some(cfg.defaults.guild.max_video_channel_users as i32),
                 region: Some(cfg.regions.default.clone()),
+                premium_tier: Some(PremiumTier::Tier3),
+                nsfw_level: Some(chorus::types::NSFWLevel::Default),
                 ..Default::default()
             },
             ..Default::default()
         };
 
+        let res = sqlx::query("INSERT INTO guilds (id, afk_timeout, default_message_notifications, explicit_content_filter, features, icon, max_members, max_presences, max_video_channel_users, name, owner_id, region, system_channel_flags, preferred_locale, welcome_screen, large, premium_tier, unavailable, widget_enabled, nsfw) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,0,0,?)")
+            .bind(guild.id)
+            .bind(guild.afk_timeout)
+            .bind(guild.default_message_notifications)
+            .bind(guild.explicit_content_filter)
+            .bind(guild.features.as_ref())
+            .bind(&guild.icon)
+            .bind(guild.max_members)
+            .bind(guild.max_presences)
+            .bind(guild.max_video_channel_users)
+            .bind(&guild.name)
+            .bind(guild.owner_id)
+            .bind(&guild.region)
+            .bind(guild.system_channel_flags)
+            .bind(&guild.preferred_locale)
+            .bind(&guild.welcome_screen)
+            .bind(guild.premium_tier)
+            .bind(guild.nsfw_level)
+            .execute(db)
+            .await?;
+        log::debug!(target: "symfonia::guilds", "Created guild with id {}", guild.id);
+
         let everyone = Role::create(
             db,
-            Some(guild.id.clone()),
-            &guild.id,
+            Some(guild.id),
+            guild.id,
             "@everyone",
-            0.,
+            0,
             false,
             true,
             false,
-            "2251804225",
+            "2251804225", // 559623605571137?
             0,
             None,
             None,
         )
         .await?;
+
+        let user = User::get_by_id(db, owner_id).await?.unwrap();
+
+        user.add_to_guild(db, guild.id).await?;
+        guild.owner = Some(true);
+
+        guild.roles = vec![everyone.to_inner()];
 
         let channels = if channels.is_empty() {
             vec![
@@ -107,10 +142,12 @@ impl Guild {
             channels
         };
 
+        guild.channels = channels.into_iter().map(|c| c.to_inner()).collect();
+
         Ok(guild)
     }
 
-    pub async fn get_by_id(db: &MySqlPool, id: &Snowflake) -> Result<Option<Self>, Error> {
+    pub async fn get_by_id(db: &MySqlPool, id: Snowflake) -> Result<Option<Self>, Error> {
         sqlx::query_as("SELECT * FROM guilds WHERE id = ?")
             .bind(id)
             .fetch_optional(db)
