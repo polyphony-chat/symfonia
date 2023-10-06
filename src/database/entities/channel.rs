@@ -92,4 +92,12 @@ impl Channel {
             .await
             .map_err(Error::SQLX)
     }
+
+    pub async fn get_by_guild_id(db: &MySqlPool, guild_id: Snowflake) -> Result<Vec<Self>, Error> {
+        sqlx::query_as("SELECT * FROM channels WHERE guild_id = ?")
+            .bind(guild_id)
+            .fetch_all(db)
+            .await
+            .map_err(Error::SQLX)
+    }
 }
