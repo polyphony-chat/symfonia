@@ -1,3 +1,5 @@
+use crate::database::entities::{Guild, GuildMember};
+use crate::errors::GuildError;
 use crate::{
     database::{
         entities::{Config, UserSettings},
@@ -151,5 +153,31 @@ impl User {
             .fetch_optional(db)
             .await
             .map_err(Error::SQLX)
+    }
+
+    pub async fn add_to_guild(
+        &self,
+        db: &MySqlPool,
+        guild_id: Snowflake,
+    ) -> Result<GuildMember, Error> {
+        let public = self.to_public_user();
+
+        // TODO: check if user is banned
+        // TODO: Check max guild count
+
+        let guild = Guild::get_by_id(db, guild_id)
+            .await?
+            .ok_or(Error::Guild(GuildError::InvalidGuild))?;
+
+        if let Err(e) = GuildMember::get_by_id(db, self.id, guild_id).await {
+            match e {
+                Error::Guild(GuildError::MemberNotFound) => {
+                    // Continue adding user to guild
+                }
+                _ => return Err(e),
+            }
+        }
+
+        GuildMember::create(db, self, &guild).await
     }
 }
