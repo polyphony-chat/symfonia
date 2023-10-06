@@ -1,12 +1,17 @@
+mod settings;
+
 use crate::database::entities::User;
 use crate::errors::{Error, UserError};
 use chorus::types::jwt::Claims;
 use poem::web::{Data, Json};
 use poem::{get, handler, IntoResponse, Route};
+use settings::{get_settings, update_settings};
 use sqlx::MySqlPool;
 
 pub fn setup_routes() -> Route {
-    Route::new().at("/", get(get_data))
+    Route::new()
+        .at("/", get(get_data))
+        .at("/settings", get(get_settings).patch(update_settings))
 }
 
 #[handler]
