@@ -1,4 +1,4 @@
-use crate::{database::Queryer, errors::Error};
+use crate::errors::Error;
 use poem::EndpointExt;
 use serde::{Deserialize, Serialize};
 use sqlx::MySqlPool;
@@ -26,6 +26,10 @@ impl DerefMut for UserSettings {
 }
 
 impl UserSettings {
+    pub fn consume(inner: chorus::types::UserSettings, index: u64) -> Self {
+        Self { inner, index }
+    }
+
     pub async fn create(db: &MySqlPool, locale: &str) -> Result<Self, Error> {
         let mut settings = Self {
             inner: chorus::types::UserSettings {
