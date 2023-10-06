@@ -5,7 +5,7 @@ use crate::{
     },
     errors::Error,
 };
-use chorus::types::{Snowflake, UserData};
+use chorus::types::{Rights, Snowflake, UserData};
 use chrono::Utc;
 use futures::FutureExt;
 use serde::{Deserialize, Serialize};
@@ -26,7 +26,7 @@ pub struct User {
     pub fingerprints: String, // TODO: Simple-array, should actually be a vec
     #[sqlx(rename = "settingsIndex")]
     pub settings_index: i32,
-    pub rights: i64,
+    pub rights: Rights,
     #[sqlx(skip)]
     pub settings: UserSettings,
     pub extended_settings: sqlx::types::Json<Value>,
