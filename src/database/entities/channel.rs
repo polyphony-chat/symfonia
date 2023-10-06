@@ -70,12 +70,15 @@ impl Channel {
             },
         };
 
-        sqlx::query("INSERT INTO channels (id, type, name, nsfw, guild_id) VALUES (?, ?, ?, ?, ?)")
-            .bind(&channel.id)
+        sqlx::query("INSERT INTO channels (id, type, name, nsfw, guild_id, parent_id, flags, default_thread_rate_limit_per_user, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())")
+            .bind(channel.id)
             .bind(channel.channel_type)
             .bind(&channel.name)
-            .bind(&channel.nsfw)
-            .bind(&channel.guild_id)
+            .bind(channel.nsfw)
+            .bind(channel.guild_id)
+            .bind(channel.parent_id)
+            .bind(0)
+            .bind(0)
             .execute(db)
             .await?;
 
