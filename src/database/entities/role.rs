@@ -26,17 +26,21 @@ impl DerefMut for Role {
 }
 
 impl Role {
+    pub fn to_inner(self) -> chorus::types::RoleObject {
+        self.inner
+    }
+
     pub async fn create(
         db: &MySqlPool,
         id: Option<Snowflake>,
-        guild_id: &Snowflake,
+        guild_id: Snowflake,
         name: &str,
-        color: f64,
+        color: i32,
         hoist: bool,
         managed: bool,
         mentionable: bool,
         permissions: &str,
-        position: u16,
+        position: i32,
         icon: Option<String>,
         unicode_emoji: Option<String>,
     ) -> Result<Self, Error> {
@@ -61,9 +65,9 @@ impl Role {
             guild_id: guild_id.to_owned(),
         };
 
-        sqlx::query("INSERT INTO roles (id, guild_id, name, color, hoist, managed, mentionable, permissions, position, icon, unicode_emoji) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-            .bind(&role.id)
-            .bind(&role.guild_id)
+        sqlx::query("INSERT INTO roles (id, guild_id, name, color, hoist, managed, mentionable, permissions, position, icon, unicode_emoji) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+            .bind(role.id)
+            .bind(role.guild_id)
             .bind(&role.name)
             .bind(role.color)
             .bind(role.hoist)
@@ -77,5 +81,13 @@ impl Role {
             .await?;
 
         Ok(role)
+    }
+
+    pub async fn get_by_guild_id(db: &MySqlPool, guild_id: Snowflake) -> Result<Vec<Self>, Error> {
+        sqlx::query_as("SELECT * FROM roles WHERE guild_id = ?")
+            .bind(guild_id)
+            .fetch_all(db)
+            .await
+            .map_err(Error::SQLX)
     }
 }
