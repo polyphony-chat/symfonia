@@ -63,12 +63,17 @@ impl Config {
                 }
             }
         }
-
-        if let Ok(v) = serde_json::from_value(value) {
-            return Self(v);
+        // let s = serde_json::to_string_pretty(&value).unwrap();
+        // std::fs::write("debug.json", &s);
+        // let jd = &mut serde_json::Deserializer::from_str(&s);
+        // let cf: ConfigValue = serde_path_to_error::deserialize(jd).unwrap();
+        match serde_json::from_value(value) {
+            Ok(v) => Self(v),
+            Err(e) => {
+                log::error!(target: "symfonia::api::cfg", "Failed to parse config: {}", e);
+                Self(ConfigValue::default())
+            }
         }
-
-        Self(ConfigValue::default())
     }
 
     fn generate_pairs(obj: &Value, key: &str) -> Vec<ConfigEntity> {
