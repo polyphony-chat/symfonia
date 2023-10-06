@@ -85,7 +85,7 @@ impl Channel {
         Ok(channel)
     }
 
-    pub async fn get_by_id(db: &MySqlPool, id: &Snowflake) -> Result<Option<Self>, Error> {
+    pub async fn get_by_id(db: &MySqlPool, id: Snowflake) -> Result<Option<Self>, Error> {
         sqlx::query_as("SELECT * FROM channels WHERE id = ?")
             .bind(id)
             .fetch_optional(db)
