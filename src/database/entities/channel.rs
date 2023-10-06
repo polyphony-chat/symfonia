@@ -24,6 +24,10 @@ impl DerefMut for Channel {
 }
 
 impl Channel {
+    pub fn to_inner(self) -> chorus::types::Channel {
+        self.inner
+    }
+
     pub async fn create(
         db: &MySqlPool,
         channel_type: ChannelType,
