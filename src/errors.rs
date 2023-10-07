@@ -12,6 +12,9 @@ pub enum Error {
     #[error(transparent)]
     Guild(#[from] GuildError),
 
+    #[error(transparent)]
+    Channel(#[from] ChannelError),
+
     #[error("SQLX error: {0}")]
     SQLX(#[from] sqlx::Error),
 
@@ -49,6 +52,12 @@ pub enum GuildError {
     AlreadyInGuild,
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum ChannelError {
+    #[error("Unknown Channel")]
+    InvalidChannel, // code 10003
+}
+
 impl ResponseError for Error {
     fn status(&self) -> StatusCode {
         match self {
@@ -63,6 +72,9 @@ impl ResponseError for Error {
                 GuildError::InvalidGuild => StatusCode::NOT_FOUND,
                 GuildError::MemberNotFound => StatusCode::NOT_FOUND,
                 GuildError::AlreadyInGuild => StatusCode::BAD_REQUEST,
+            },
+            Error::Channel(err) => match err {
+                ChannelError::InvalidChannel => StatusCode::NOT_FOUND,
             },
             Error::SQLX(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::Serde(_) => StatusCode::INTERNAL_SERVER_ERROR,
