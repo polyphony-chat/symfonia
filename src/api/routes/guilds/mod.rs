@@ -1,5 +1,6 @@
 mod id;
 
+use crate::api::routes::guilds::id::channels::{create_channel, get_channels};
 use crate::api::routes::guilds::id::get_guild;
 use crate::database::entities::{Config, Guild, User};
 use crate::errors::{Error, UserError};
@@ -13,6 +14,10 @@ pub fn setup_routes() -> Route {
     Route::new()
         .at("/", post(create_guild))
         .at("/:guild_id", get(get_guild))
+        .at(
+            "/:guild_id/channels",
+            get(get_channels).post(create_channel),
+        )
 }
 
 #[handler]

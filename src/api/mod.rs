@@ -10,7 +10,7 @@ use poem::{
 use serde_json::json;
 
 use crate::api::middleware::authentication::AuthenticationMiddleware;
-use crate::api::routes::{auth, guilds, users};
+use crate::api::routes::{auth, channels, guilds, users};
 use crate::{database, database::entities::Config, errors::Error};
 
 pub async fn start_api() -> Result<(), Error> {
@@ -40,6 +40,10 @@ pub async fn start_api() -> Result<(), Error> {
         .nest(
             "/guilds",
             guilds::setup_routes().with(AuthenticationMiddleware),
+        )
+        .nest(
+            "/channels",
+            channels::setup_routes().with(AuthenticationMiddleware),
         )
         .nest("/policies", routes::policies::setup_routes())
         .nest("/-", routes::health::setup_routes())

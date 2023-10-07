@@ -1,3 +1,5 @@
+pub mod channels;
+
 use crate::database::entities::{Channel, Guild, GuildMember, Role};
 use crate::errors::{Error, GuildError};
 use chorus::types::jwt::Claims;
