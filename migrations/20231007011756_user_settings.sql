@@ -1,0 +1,37 @@
+create table if not exists user_settings
+(
+    `index`                          int auto_increment
+    primary key,
+    afk_timeout                      int          null,
+    allow_accessibility_detection    tinyint      null,
+    animate_emoji                    tinyint      null,
+    animate_stickers                 int          null,
+    contact_sync_enabled             tinyint      null,
+    convert_emoticons                tinyint      null,
+    custom_status                    text         null,
+    default_guilds_restricted        tinyint      null,
+    detect_platform_accounts         tinyint      null,
+    developer_mode                   tinyint      null,
+    disable_games_tab                tinyint      null,
+    enable_tts_command               tinyint      null,
+    explicit_content_filter          int          null,
+    friend_source_flags              text         null,
+    gateway_connected                tinyint      null,
+    gif_auto_play                    tinyint      null,
+    guild_folders                    text         null,
+    guild_positions                  text         null,
+    inline_attachment_media          tinyint      null,
+    inline_embed_media               tinyint      null,
+    locale                           varchar(255) null,
+    message_display_compact          tinyint      null,
+    native_phone_integration_enabled tinyint      null,
+    render_embeds                    tinyint      null,
+    render_reactions                 tinyint      null,
+    restricted_guilds                text         null,
+    show_current_game                tinyint      null,
+    status                           varchar(255) null,
+    stream_notifications_enabled     tinyint      null,
+    theme                            varchar(255) null,
+    timezone_offset                  int          null
+);
+
