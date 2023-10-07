@@ -8,18 +8,13 @@ use poem::{
     post, EndpointExt, IntoResponse, Route, Server,
 };
 use serde_json::json;
+use sqlx::MySqlPool;
 
 use crate::api::middleware::authentication::AuthenticationMiddleware;
 use crate::api::routes::{auth, channels, guilds, users};
 use crate::{database, database::entities::Config, errors::Error};
 
-pub async fn start_api() -> Result<(), Error> {
-    log::info!(target: "symfonia::api::db", "Establishing database connection");
-    let db = database::establish_connection().await?;
-
-    log::info!(target: "symfonia::api::db", "Running migrations");
-    sqlx::migrate!().run(&db).await?;
-
+pub async fn start_api(db: MySqlPool) -> Result<(), Error> {
     log::info!(target: "symfonia::api::cfg", "Loading configuration");
     let config = Config::init(&db).await?;
 

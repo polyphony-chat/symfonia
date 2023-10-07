@@ -1,3 +1,4 @@
+use clap::Parser;
 use log::LevelFilter;
 use log4rs::{
     append::{
@@ -35,8 +36,16 @@ impl Filter for LogFilter {
     }
 }
 
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    #[arg(short, long, default_value = "false")]
+    migrate: bool,
+}
+
 #[tokio::main]
 async fn main() {
+    let args = Args::parse();
     dotenv::dotenv().ok();
 
     let stdout = ConsoleAppender::builder()
@@ -132,5 +141,45 @@ async fn main() {
 
     log::info!(target: "symfonia", "Starting up Symfonia");
 
-    api::start_api().await.unwrap();
+    log::info!(target: "symfonia::db", "Establishing database connection");
+    let db = database::establish_connection()
+        .await
+        .expect("Failed to establish database connection");
+
+    if database::check_migrating_from_spacebar(&db)
+        .await
+        .expect("Failed to check migrating from spacebar")
+    {
+        if !args.migrate {
+            log::error!(target: "symfonia::db", "The database seems to be from spacebar.  Please run with --migrate option to migrate the database.  This is not irreversible.");
+            std::process::exit(0);
+        } else {
+            log::warn!(target: "symfonia::db", "Migrating from spacebar to symfonia");
+            database::delete_spacebar_migrations(&db)
+                .await
+                .expect("Failed to delete spacebar migrations table");
+            log::info!(target: "symfonia::db", "Running migrations");
+            sqlx::migrate!("./spacebar-migrations")
+                .run(&db)
+                .await
+                .expect("Failed to run migrations");
+        }
+    } else {
+        sqlx::migrate!()
+            .run(&db)
+            .await
+            .expect("Failed to run migrations");
+    }
+
+    if database::check_fresh_db(&db)
+        .await
+        .expect("Failed to check fresh db")
+    {
+        log::info!(target: "symfonia::db", "Fresh database detected.  Seeding database with config data");
+        database::seed_config(&db)
+            .await
+            .expect("Failed to seed config");
+    }
+
+    api::start_api(db).await.unwrap();
 }

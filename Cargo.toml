@@ -33,3 +33,4 @@ thiserror = "1.0.48"
 tokio = { version = "1.32.0", features = ["full"] }
 chorus = { git="https://github.com/Zert3x/chorus", branch = "misc/backend-stuff", features = ["backend"], default-features = false } #git="https://github.com/Zert3x/chorus" path="../chorus"
 sentry = "0.31.7"
+clap = { version = "4.4.6", features = ["derive"] }
