@@ -17,6 +17,9 @@ pub async fn start_api() -> Result<(), Error> {
     log::info!(target: "symfonia::api::db", "Establishing database connection");
     let db = database::establish_connection().await?;
 
+    log::info!(target: "symfonia::api::db", "Running migrations");
+    sqlx::migrate!().run(&db).await?;
+
     log::info!(target: "symfonia::api::cfg", "Loading configuration");
     let config = Config::init(&db).await?;
 

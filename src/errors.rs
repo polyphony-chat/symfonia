@@ -18,6 +18,9 @@ pub enum Error {
     #[error("SQLX error: {0}")]
     SQLX(#[from] sqlx::Error),
 
+    #[error("Migration error: {0}")]
+    SQLXMigration(#[from] sqlx::migrate::MigrateError),
+
     #[error("serde: {0}")]
     Serde(#[from] serde_json::Error),
 
@@ -77,6 +80,7 @@ impl ResponseError for Error {
                 ChannelError::InvalidChannel => StatusCode::NOT_FOUND,
             },
             Error::SQLX(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::SQLXMigration(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::Serde(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::IO(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::Chorus(err) => match err {
