@@ -27,7 +27,7 @@ pub struct User {
     pub deleted: bool,
     pub fingerprints: String, // TODO: Simple-array, should actually be a vec
     #[sqlx(rename = "settingsIndex")]
-    pub settings_index: i32,
+    pub settings_index: u64,
     pub rights: Rights,
     #[sqlx(skip)]
     pub settings: UserSettings,
@@ -91,7 +91,7 @@ impl User {
                 String::default()
             },
             rights: cfg.register.default_rights.clone(),
-            settings_index: user_settings.index as i32, // TODO: Idk why spacebar uses an int, it should be an unsigned bigint (u64)
+            settings_index: user_settings.index,
             extended_settings: sqlx::types::Json(Value::Object(Map::default())),
             settings: user_settings,
             ..Default::default()
