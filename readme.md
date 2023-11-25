@@ -9,7 +9,7 @@
 
 <p align="center">
   
-  <img width="128" src="https://github.com/polyphony-chat/design/blob/main/branding/polyphony-symfonia-round%400.5x.png" />
+  <img width="128" src="https://github.com/polyphony-chat/branding/blob/main/logos/polyphony-symfonia-transparent-8bit.png" alt="The Symfonia logo. a dark, square background with rounded edges. on this background, there are four vertically stacked, purple lines. The lines are all vaguely u-shaped and resemble sound waves being emitted into one direction, with the lower lines being thicker and wider than the upper lines." />
   <h1 align="center">Symfonia</h1>
 </p>
 
