@@ -1,10 +1,11 @@
-use crate::database::entities::{Config, User};
-use crate::util;
 use chorus::types::jwt::generate_token;
 use chorus::types::{APIError, AuthError, RegisterSchema};
 use poem::web::{Data, Json};
 use poem::{handler, IntoResponse, Request};
 use serde_json::json;
+
+use crate::database::entities::{Config, User};
+use crate::util;
 
 #[handler]
 pub async fn register(
@@ -46,7 +47,7 @@ pub async fn register(
     // TODO: Invite
 
     let token = generate_token(
-        user.id,
+        &user.id,
         user.email.clone().unwrap(),
         &cfg.security.jwt_secret,
     );

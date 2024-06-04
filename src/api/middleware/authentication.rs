@@ -1,8 +1,9 @@
+use poem::http::StatusCode;
+use poem::{Endpoint, Middleware, Request};
+use sqlx::MySqlPool;
+
 use crate::database::entities::Config;
 use crate::util::token::check_token;
-use poem::http::StatusCode;
-use poem::{async_trait, Endpoint, Middleware, Request};
-use sqlx::MySqlPool;
 
 pub struct AuthenticationMiddleware;
 
@@ -17,7 +18,6 @@ pub struct AuthenticationMiddlewareImpl<E> {
     ep: E,
 }
 
-#[async_trait]
 impl<E: Endpoint> Endpoint for AuthenticationMiddlewareImpl<E> {
     type Output = E::Output;
 

@@ -1,10 +1,11 @@
-use crate::database::entities::Channel;
 use chorus::types::jwt::Claims;
 use chorus::types::{ChannelModifySchema, ChannelType, Snowflake};
 use poem::web::{Data, Json, Path};
-use poem::{handler, IntoResponse, Response};
+use poem::{handler, IntoResponse};
 use reqwest::StatusCode;
 use sqlx::MySqlPool;
+
+use crate::database::entities::Channel;
 
 #[handler]
 pub async fn get_channels(

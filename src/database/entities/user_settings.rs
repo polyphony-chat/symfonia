@@ -1,8 +1,9 @@
-use crate::errors::Error;
-use poem::EndpointExt;
+use std::ops::{Deref, DerefMut};
+
 use serde::{Deserialize, Serialize};
 use sqlx::MySqlPool;
-use std::ops::{Deref, DerefMut};
+
+use crate::errors::Error;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, sqlx::FromRow)]
 pub struct UserSettings {
