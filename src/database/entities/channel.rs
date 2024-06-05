@@ -111,6 +111,10 @@ impl Channel {
             .map_err(Error::SQLX)
     }
 
+    pub async fn get_invites(&self, db: &MySqlPool) -> Result<Vec<Invite>, Error> {
+        Invite::get_by_channel(db, self.id).await
+    }
+
     pub async fn delete(&self, db: &MySqlPool) -> Result<(), Error> {
         sqlx::query("DELETE FROM channels WHERE id = ?")
             .bind(self.id)

@@ -129,6 +129,22 @@ impl Invite {
         Ok(invite)
     }
 
+    pub async fn get_by_guild(db: &MySqlPool, guild_id: Snowflake) -> Result<Vec<Self>, Error> {
+        sqlx::query_as("SELECT * FROM invites WHERE guild_id = ?")
+            .bind(guild_id)
+            .fetch_all(db)
+            .await
+            .map_err(Error::SQLX)
+    }
+
+    pub async fn get_by_channel(db: &MySqlPool, channel_id: Snowflake) -> Result<Vec<Self>, Error> {
+        sqlx::query_as("SELECT * FROM invites WHERE channel_id = ?")
+            .bind(channel_id)
+            .fetch_all(db)
+            .await
+            .map_err(Error::SQLX)
+    }
+
     pub async fn delete(&self, db: &MySqlPool) -> Result<(), Error> {
         sqlx::query("DELETE FROM invites WHERE code = ?")
             .bind(&self.code)
