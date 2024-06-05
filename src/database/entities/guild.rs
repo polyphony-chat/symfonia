@@ -170,6 +170,14 @@ impl Guild {
     pub async fn get_invites(&self, db: &MySqlPool) -> Result<Vec<Invite>, Error> {
         Invite::get_by_guild(db, self.id).await
     }
+
+    pub fn into_inner(self) -> chorus::types::Guild {
+        self.inner
+    }
+
+    pub fn to_inner(&self) -> &chorus::types::Guild {
+        &self.inner
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
