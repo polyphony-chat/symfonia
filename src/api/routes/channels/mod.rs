@@ -1,10 +1,10 @@
 use chorus::types::{ChannelModifySchema, Snowflake};
 use chorus::types::jwt::Claims;
-use poem::{get, handler, IntoResponse, post, Route};
+use poem::{get, handler, IntoResponse, Route};
 use poem::web::{Data, Json, Path};
 use sqlx::MySqlPool;
 
-use invites::create_invite;
+use invites::{create_invite, get_invites};
 
 use crate::database::entities::Channel;
 use crate::errors::{ChannelError, Error};
@@ -19,7 +19,7 @@ pub fn setup_routes() -> Route {
                 .delete(delete_channel)
                 .patch(modify_channel),
         )
-        .at("/:channel_id/invites", post(create_invite))
+        .at("/:channel_id/invites", get(get_invites).post(create_invite))
 }
 
 #[handler]

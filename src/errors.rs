@@ -69,6 +69,8 @@ pub enum GuildError {
 pub enum ChannelError {
     #[error("Unknown Channel")]
     InvalidChannel, // code 10003
+    #[error("Invalid Channel Type")]
+    InvalidChannelType,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -94,6 +96,7 @@ impl ResponseError for Error {
             },
             Error::Channel(err) => match err {
                 ChannelError::InvalidChannel => StatusCode::NOT_FOUND,
+                ChannelError::InvalidChannelType => StatusCode::BAD_REQUEST,
             },
             Error::Invite(err) => match err {
                 InviteError::InvalidInvite => StatusCode::NOT_FOUND,
