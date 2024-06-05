@@ -1,8 +1,10 @@
-use crate::{database::Queryer, errors::Error};
+use std::ops::{Deref, DerefMut};
+
 use chorus::types::Snowflake;
 use serde::{Deserialize, Serialize};
 use sqlx::MySqlPool;
-use std::ops::{Deref, DerefMut};
+
+use crate::errors::Error;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Role {
@@ -35,12 +37,12 @@ impl Role {
         id: Option<Snowflake>,
         guild_id: Snowflake,
         name: &str,
-        color: i32,
+        color: f64,
         hoist: bool,
         managed: bool,
         mentionable: bool,
         permissions: &str,
-        position: i32,
+        position: u16,
         icon: Option<String>,
         unicode_emoji: Option<String>,
     ) -> Result<Self, Error> {

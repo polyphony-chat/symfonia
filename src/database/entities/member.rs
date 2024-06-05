@@ -1,11 +1,11 @@
-use crate::database::entities::{Guild, Role, User};
-use crate::errors::{Error, GuildError, UserError};
-use chorus::types::{PublicUser, Snowflake, UserGuildSettingsUpdate};
-use chrono::{DateTime, Utc};
+use std::ops::{Deref, DerefMut};
+
+use chorus::types::{Snowflake, UserGuildSettingsUpdate};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
-use std::ops::{Deref, DerefMut};
-use std::sync::{Arc, RwLock};
+
+use crate::database::entities::{Guild, User};
+use crate::errors::{Error, GuildError, UserError};
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize, FromRow)]
 pub struct GuildMember {
@@ -35,26 +35,26 @@ impl DerefMut for GuildMember {
 
 impl GuildMember {
     pub async fn create(db: &sqlx::MySqlPool, user: &User, guild: &Guild) -> Result<Self, Error> {
-        let public = user.to_public_user();
+        let user = user.to_owned();
         let mut member = Self {
+            index: 0,
+            id: user.id,
+            guild_id: guild.id,
+            settings: Default::default(),
+            user_data: user.to_owned(),
             inner: chorus::types::GuildMember {
-                user: Some(public),
+                user: None,
                 nick: None,
                 avatar: None, // TODO
                 roles: vec![guild.id],
                 joined_at: chrono::Utc::now(),
                 ..Default::default()
             },
-            index: 0,
-            id: user.id,
-            guild_id: guild.id,
-            settings: Default::default(),
-            user_data: user.to_owned(),
         };
 
         let res = sqlx::query("INSERT INTO members (id, guild_id, joined_at, deaf, mute, pending, settings, bio) VALUES (?, ?, NOW(), 0, 0, 0, ?, ?)")
             .bind(user.id)
-            .bind(guild.id)
+            .bind(guild.id) 
             .bind(sqlx::types::Json(UserGuildSettingsUpdate::default()))
             .bind(user.bio.clone().unwrap_or_default())
             .execute(db)

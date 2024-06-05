@@ -20,6 +20,8 @@ pub async fn get_channel(
         .await?
         .ok_or(Error::Channel(ChannelError::InvalidChannel))?;
 
+    // TODO: Check if the user has permission to read the channel
+
     Ok(Json(channel.to_inner()))
 }
 

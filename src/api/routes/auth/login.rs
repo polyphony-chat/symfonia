@@ -1,4 +1,3 @@
-use crate::database::entities::{Config, User};
 use chorus::types::{jwt, APIError, AuthError, ConfigValue, LoginSchema};
 use poem::{
     handler,
@@ -7,6 +6,8 @@ use poem::{
 };
 use reqwest::StatusCode;
 use serde_json::json;
+
+use crate::database::entities::{Config, User};
 
 #[handler]
 pub async fn login(
@@ -84,7 +85,7 @@ pub async fn login(
     }
 
     let token = jwt::generate_token(
-        user.id,
+        &user.id,
         user.email.clone().unwrap_or_default(),
         &cfg.security.jwt_secret,
     );

@@ -1,13 +1,14 @@
-pub mod channels;
-
-use crate::database::entities::{Channel, Guild, GuildMember, Role};
-use crate::errors::{Error, GuildError};
 use chorus::types::jwt::Claims;
 use chorus::types::Snowflake;
 use poem::web::{Data, Json, Path};
 use poem::{handler, IntoResponse};
-use serde_json::{json, Number};
+use serde_json::Number;
 use sqlx::MySqlPool;
+
+use crate::database::entities::{Channel, Guild, GuildMember, Role};
+use crate::errors::{Error, GuildError};
+
+pub mod channels;
 
 #[handler]
 pub async fn get_guild(
@@ -21,11 +22,11 @@ pub async fn get_guild(
 
     let channels = Channel::get_by_guild_id(db, guild_id).await?;
 
-    guild.channels = channels.into_iter().map(|c| c.to_inner()).collect();
+    guild.channels = Some(channels.into_iter().map(|c| c.to_inner()).collect());
 
     let roles = Role::get_by_guild_id(db, guild_id).await?;
 
-    guild.roles = roles.into_iter().map(|r| r.to_inner()).collect();
+    guild.roles = Some(roles.into_iter().map(|r| r.to_inner()).collect());
 
     let member = GuildMember::get_by_id(db, claims.id, guild_id)
         .await?
