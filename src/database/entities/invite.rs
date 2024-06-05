@@ -6,7 +6,7 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 use sqlx::MySqlPool;
 
-use crate::database::entities::{Channel, User};
+use crate::database::entities::{Channel, Guild, User};
 use crate::errors::{ChannelError, Error, GuildError};
 
 #[derive(Debug, Deserialize, Serialize, sqlx::FromRow)]
@@ -130,11 +130,21 @@ impl Invite {
     }
 
     pub async fn get_by_guild(db: &MySqlPool, guild_id: Snowflake) -> Result<Vec<Self>, Error> {
-        sqlx::query_as("SELECT * FROM invites WHERE guild_id = ?")
+        let guild = Guild::get_by_id(db, guild_id)
+            .await?
+            .ok_or(Error::Guild(GuildError::InvalidGuild))?;
+
+        let mut invites = sqlx::query_as("SELECT * FROM invites WHERE guild_id = ?")
             .bind(guild_id)
             .fetch_all(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::SQLX)?;
+
+        invites
+            .iter_mut()
+            .for_each(|invite: &mut Invite| invite.guild = Some(guild.clone().into_inner().into()));
+
+        Ok(invites)
     }
 
     pub async fn get_by_channel(db: &MySqlPool, channel_id: Snowflake) -> Result<Vec<Self>, Error> {
