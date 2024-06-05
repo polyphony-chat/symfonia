@@ -1,18 +1,18 @@
-mod middleware;
-mod routes;
-
+use poem::{
+    EndpointExt,
+    IntoResponse, listener::{Listener, TcpListener}, post, Route, Server,
+};
 use poem::middleware::{NormalizePath, TrailingSlash};
 use poem::web::Json;
-use poem::{
-    listener::{Listener, TcpListener},
-    post, EndpointExt, IntoResponse, Route, Server,
-};
 use serde_json::json;
 use sqlx::MySqlPool;
 
+use crate::{database, database::entities::Config, errors::Error};
 use crate::api::middleware::authentication::AuthenticationMiddleware;
 use crate::api::routes::{auth, channels, guilds, users};
-use crate::{database, database::entities::Config, errors::Error};
+
+mod middleware;
+mod routes;
 
 pub async fn start_api(db: MySqlPool) -> Result<(), Error> {
     log::info!(target: "symfonia::api::cfg", "Loading configuration");
@@ -42,6 +42,10 @@ pub async fn start_api(db: MySqlPool) -> Result<(), Error> {
         .nest(
             "/channels",
             channels::setup_routes().with(AuthenticationMiddleware),
+        )
+        .nest(
+            "/invites",
+            routes::invites::setup_routes().with(AuthenticationMiddleware),
         )
         .nest("/policies", routes::policies::setup_routes())
         .nest("/-", routes::health::setup_routes())
