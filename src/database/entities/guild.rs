@@ -1,3 +1,11 @@
+use std::ops::{Deref, DerefMut};
+use std::sync::{Arc, RwLock};
+
+use chorus::types::types::guild_configuration::GuildFeaturesList;
+use chorus::types::{ChannelType, PremiumTier, Snowflake, WelcomeScreenObject};
+use serde::{Deserialize, Serialize};
+use sqlx::MySqlPool;
+
 use crate::database::entities::{GuildMember, User};
 use crate::{
     database::{
@@ -6,12 +14,6 @@ use crate::{
     },
     errors::Error,
 };
-use chorus::types::types::guild_configuration::GuildFeaturesList;
-use chorus::types::{ChannelType, PremiumTier, Snowflake, WelcomeScreenObject};
-use serde::{Deserialize, Serialize};
-use sqlx::MySqlPool;
-use std::ops::{Deref, DerefMut};
-use std::sync::{Arc, RwLock};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Guild {
@@ -65,7 +67,7 @@ impl Guild {
                     cfg.defaults.guild.default_message_notifications,
                 ),
                 explicit_content_filter: Some(cfg.defaults.guild.explicit_content_filter),
-                features: Some(GuildFeaturesList::new(cfg.guild.default_features.clone())),
+                features: Some(cfg.guild.default_features.clone().into()),
                 max_members: Some(cfg.limits.guild.max_members as i32),
                 max_presences: Some(cfg.defaults.guild.max_presences as i32),
                 max_video_channel_users: Some(cfg.defaults.guild.max_video_channel_users as i32),
@@ -104,7 +106,7 @@ impl Guild {
             Some(guild.id),
             guild.id,
             "@everyone",
-            0,
+            0.,
             false,
             true,
             false,
@@ -120,7 +122,7 @@ impl Guild {
         user.add_to_guild(db, guild.id).await?;
         guild.owner = Some(true);
 
-        guild.roles = vec![everyone.to_inner()];
+        guild.roles = Some(vec![everyone.to_inner()]);
 
         let channels = if channels.is_empty() {
             vec![
@@ -142,7 +144,7 @@ impl Guild {
             channels
         };
 
-        guild.channels = channels.into_iter().map(|c| c.to_inner()).collect();
+        guild.channels = Some(channels.into_iter().map(|c| c.to_inner()).collect());
 
         Ok(guild)
     }

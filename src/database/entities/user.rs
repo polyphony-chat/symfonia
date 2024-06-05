@@ -1,21 +1,19 @@
-use crate::database::entities::{Guild, GuildMember};
-use crate::errors::GuildError;
-use crate::{
-    database::{
-        entities::{Config, UserSettings},
-        Queryer,
-    },
-    errors::Error,
-};
-use chorus::types::{Rights, Snowflake, UserData};
-use chrono::Utc;
-use futures::FutureExt;
-use serde::{Deserialize, Serialize};
-use serde_json::{Map, Value};
-use sqlx::MySqlPool;
 use std::{
     default::Default,
     ops::{Deref, DerefMut},
+};
+
+use chorus::types::{PublicUser, Rights, Snowflake, UserData};
+use chrono::{NaiveDate, Utc};
+use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
+use sqlx::MySqlPool;
+
+use crate::database::entities::{Guild, GuildMember};
+use crate::errors::GuildError;
+use crate::{
+    database::entities::{Config, UserSettings},
+    errors::Error,
 };
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, sqlx::FromRow)]
@@ -55,7 +53,7 @@ impl User {
         password: Option<String>,
         email: Option<String>,
         fingerprint: Option<String>,
-        date_of_birth: Option<String>,
+        date_of_birth: Option<NaiveDate>,
         bot: bool,
     ) -> Result<Self, Error> {
         // TODO: trim username
@@ -90,7 +88,7 @@ impl User {
             } else {
                 String::default()
             },
-            rights: cfg.register.default_rights.clone(),
+            rights: cfg.register.default_rights,
             settings_index: user_settings.index,
             extended_settings: sqlx::types::Json(Value::Object(Map::default())),
             settings: user_settings,
@@ -120,7 +118,7 @@ impl User {
         // TODO: intelligently find unused discriminator: https://dba.stackexchange.com/questions/48594/find-numbers-not-used-in-a-column
         todo!()
     }
-
+    // 02:00:00:4a:14:7e
     pub async fn get_by_id(db: &MySqlPool, id: Snowflake) -> Result<Option<Self>, Error> {
         sqlx::query_as("SELECT * FROM users WHERE id = ?")
             .bind(id)
@@ -179,5 +177,9 @@ impl User {
         }
 
         GuildMember::create(db, self, &guild).await
+    }
+
+    pub fn to_public_user(&self) -> PublicUser {
+        self.inner.to_owned().into_public_user()
     }
 }
