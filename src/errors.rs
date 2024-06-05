@@ -1,8 +1,9 @@
+use std::error::Error as StdError;
+
 use chorus::types::{APIError, AuthError};
 use poem::error::ResponseError;
 use poem::http::StatusCode;
 use poem::Response;
-use std::error::Error as StdError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -14,6 +15,9 @@ pub enum Error {
 
     #[error(transparent)]
     Channel(#[from] ChannelError),
+
+    #[error(transparent)]
+    Invite(#[from] InviteError),
 
     #[error("SQLX error: {0}")]
     SQLX(#[from] sqlx::Error),
@@ -29,6 +33,12 @@ pub enum Error {
 
     #[error(transparent)]
     Chorus(#[from] chorus::types::APIError),
+
+    #[error(transparent)]
+    Rand(#[from] rand::Error),
+
+    #[error(transparent)]
+    Utf8(#[from] std::string::FromUtf8Error),
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -61,6 +71,12 @@ pub enum ChannelError {
     InvalidChannel, // code 10003
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum InviteError {
+    #[error("INVALID_INVITE")]
+    InvalidInvite,
+}
+
 impl ResponseError for Error {
     fn status(&self) -> StatusCode {
         match self {
@@ -79,6 +95,9 @@ impl ResponseError for Error {
             Error::Channel(err) => match err {
                 ChannelError::InvalidChannel => StatusCode::NOT_FOUND,
             },
+            Error::Invite(err) => match err {
+                InviteError::InvalidInvite => StatusCode::NOT_FOUND,
+            },
             Error::SQLX(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::SQLXMigration(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::Serde(_) => StatusCode::INTERNAL_SERVER_ERROR,
@@ -89,6 +108,8 @@ impl ResponseError for Error {
                     AuthError::InvalidCaptcha => StatusCode::BAD_REQUEST,
                 },
             },
+            Error::Rand(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::Utf8(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 
