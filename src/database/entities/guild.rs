@@ -1,12 +1,11 @@
 use std::ops::{Deref, DerefMut};
 use std::sync::{Arc, RwLock};
 
-use chorus::types::types::guild_configuration::GuildFeaturesList;
 use chorus::types::{ChannelType, PremiumTier, Snowflake, WelcomeScreenObject};
+use chorus::types::types::guild_configuration::GuildFeaturesList;
 use serde::{Deserialize, Serialize};
 use sqlx::MySqlPool;
 
-use crate::database::entities::{GuildMember, User};
 use crate::{
     database::{
         entities::{Channel, Config, Role},
@@ -14,6 +13,7 @@ use crate::{
     },
     errors::Error,
 };
+use crate::database::entities::{GuildMember, Invite, User};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Guild {
@@ -155,6 +155,28 @@ impl Guild {
             .fetch_optional(db)
             .await
             .map_err(Error::SQLX)
+    }
+
+    pub async fn has_member(&self, db: &MySqlPool, user_id: Snowflake) -> Result<bool, Error> {
+        sqlx::query_as("SELECT * FROM guild_members WHERE guild_id = ? AND user_id =?")
+            .bind(self.id)
+            .bind(user_id)
+            .fetch_optional(db)
+            .await
+            .map_err(Error::SQLX)
+            .map(|r: Option<GuildMember>| r.is_some())
+    }
+
+    pub async fn get_invites(&self, db: &MySqlPool) -> Result<Vec<Invite>, Error> {
+        Invite::get_by_guild(db, self.id).await
+    }
+
+    pub fn into_inner(self) -> chorus::types::Guild {
+        self.inner
+    }
+
+    pub fn to_inner(&self) -> &chorus::types::Guild {
+        &self.inner
     }
 }
 

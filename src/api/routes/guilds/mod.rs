@@ -1,14 +1,15 @@
-mod id;
+use chorus::types::GuildCreateSchema;
+use chorus::types::jwt::Claims;
+use poem::{get, handler, IntoResponse, post, Route};
+use poem::web::{Data, Json};
+use sqlx::MySqlPool;
 
 use crate::api::routes::guilds::id::channels::{create_channel, get_channels};
 use crate::api::routes::guilds::id::get_guild;
 use crate::database::entities::{Config, Guild, User};
 use crate::errors::{Error, UserError};
-use chorus::types::jwt::Claims;
-use chorus::types::GuildCreateSchema;
-use poem::web::{Data, Json};
-use poem::{get, handler, post, IntoResponse, Route};
-use sqlx::MySqlPool;
+
+mod id;
 
 pub fn setup_routes() -> Route {
     Route::new()
@@ -18,6 +19,7 @@ pub fn setup_routes() -> Route {
             "/:guild_id/channels",
             get(get_channels).post(create_channel),
         )
+        .at("/:guild_id/invites", get(id::invites::get_invites))
 }
 
 #[handler]

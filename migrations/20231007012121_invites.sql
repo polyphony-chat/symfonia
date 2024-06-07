@@ -2,6 +2,7 @@ create table if not exists invites
 (
     code             varchar(255) not null
         primary key,
+    type             smallint     not null,
     temporary        tinyint      not null,
     uses             int          not null,
     max_uses         int          not null,
