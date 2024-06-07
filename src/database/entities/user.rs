@@ -118,7 +118,7 @@ impl User {
         // TODO: intelligently find unused discriminator: https://dba.stackexchange.com/questions/48594/find-numbers-not-used-in-a-column
         todo!()
     }
-    // 02:00:00:4a:14:7e
+
     pub async fn get_by_id(db: &MySqlPool, id: Snowflake) -> Result<Option<Self>, Error> {
         sqlx::query_as("SELECT * FROM users WHERE id = ?")
             .bind(id)
