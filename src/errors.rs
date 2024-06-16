@@ -19,6 +19,12 @@ pub enum Error {
     #[error(transparent)]
     Invite(#[from] InviteError),
 
+    #[error(transparent)]
+    RateLimit(#[from] RateLimitError),
+
+    #[error(transparent)]
+    Reaction(#[from] ReactionError),
+
     #[error("SQLX error: {0}")]
     SQLX(#[from] sqlx::Error),
 
@@ -71,12 +77,34 @@ pub enum ChannelError {
     InvalidChannel, // code 10003
     #[error("Invalid Channel Type")]
     InvalidChannelType,
+    #[error("Message Content length over max character limit")]
+    MessageTooLong,
+    #[error("Empty messages are not allowed")]
+    EmptyMessage,
+    #[error("Invalid Message")]
+    InvalidMessage,
 }
 
 #[derive(Debug, thiserror::Error)]
 pub enum InviteError {
     #[error("INVALID_INVITE")]
     InvalidInvite,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum RateLimitError {
+    #[error("TOO_MANY_MESSAGES")]
+    TooManyMessages,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ReactionError {
+    #[error("INVALID_REACTION")]
+    Invalid,
+    #[error("REACTION_ALREADY_EXISTS")]
+    AlreadyExists,
+    #[error("REACTION_NOT_FOUND")]
+    NotFound,
 }
 
 impl ResponseError for Error {
@@ -97,9 +125,20 @@ impl ResponseError for Error {
             Error::Channel(err) => match err {
                 ChannelError::InvalidChannel => StatusCode::NOT_FOUND,
                 ChannelError::InvalidChannelType => StatusCode::BAD_REQUEST,
+                ChannelError::MessageTooLong => StatusCode::PAYLOAD_TOO_LARGE,
+                ChannelError::EmptyMessage => StatusCode::BAD_REQUEST,
+                ChannelError::InvalidMessage => StatusCode::NOT_FOUND,
             },
             Error::Invite(err) => match err {
                 InviteError::InvalidInvite => StatusCode::NOT_FOUND,
+            },
+            Error::RateLimit(err) => match err {
+                RateLimitError::TooManyMessages => StatusCode::TOO_MANY_REQUESTS,
+            },
+            Error::Reaction(err) => match err {
+                ReactionError::Invalid => StatusCode::NOT_FOUND,
+                ReactionError::AlreadyExists => StatusCode::BAD_REQUEST,
+                ReactionError::NotFound => StatusCode::NOT_FOUND,
             },
             Error::SQLX(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::SQLXMigration(_) => StatusCode::INTERNAL_SERVER_ERROR,

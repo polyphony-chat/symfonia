@@ -1,20 +1,20 @@
 use clap::Parser;
-use log::LevelFilter;
 use log4rs::{
     append::{
         console::{ConsoleAppender, Target},
         rolling_file::{
             policy::compound::{
-                roll::delete::DeleteRoller, trigger::size::SizeTrigger, CompoundPolicy,
+                CompoundPolicy, roll::delete::DeleteRoller, trigger::size::SizeTrigger,
             },
             RollingFileAppender,
         },
     },
     config::{Appender, Logger, Root},
+    Config,
     encode::pattern::PatternEncoder,
     filter::Filter,
-    Config,
 };
+use log::LevelFilter;
 
 mod api;
 mod cdn;
