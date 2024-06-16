@@ -151,7 +151,7 @@ async fn main() {
         .expect("Failed to check migrating from spacebar")
     {
         if !args.migrate {
-            log::error!(target: "symfonia::db", "The database seems to be from spacebar.  Please run with --migrate option to migrate the database.  This is not irreversible.");
+            log::error!(target: "symfonia::db", "The database seems to be from spacebar.  Please run with --migrate option to migrate the database.  This is not reversible.");
             std::process::exit(0);
         } else {
             log::warn!(target: "symfonia::db", "Migrating from spacebar to symfonia");
