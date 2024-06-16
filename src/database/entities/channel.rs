@@ -1,14 +1,16 @@
 use std::ops::{Deref, DerefMut};
 
 use chorus::types::{
-    ChannelModifySchema, ChannelType, CreateChannelInviteSchema, InviteType, Snowflake,
+    ChannelMessagesAnchor, ChannelModifySchema, ChannelType, CreateChannelInviteSchema, InviteType,
+    MessageSendSchema, Snowflake,
 };
 use serde::{Deserialize, Serialize};
-use sqlx::MySqlPool;
-use sqlx::types::Json;
+use sqlx::{MySqlPool, types::Json};
 
-use crate::database::entities::invite::Invite;
-use crate::errors::Error;
+use crate::{
+    database::entities::{GuildMember, invite::Invite, message::Message, read_state::ReadState},
+    errors::{ChannelError, Error, GuildError},
+};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Channel {
@@ -115,6 +117,60 @@ impl Channel {
         Invite::get_by_channel(db, self.id).await
     }
 
+    pub async fn create_message(
+        &mut self,
+        db: &MySqlPool,
+        payload: MessageSendSchema,
+        author_id: Snowflake,
+    ) -> Result<Message, Error> {
+        let mut message = Message::create(db, payload, self.guild_id, self.id, author_id).await?;
+
+        self.last_message_id = Some(message.id);
+        self.save(db).await?;
+
+        // TODO: emit events
+        // TODO: Get partial GuildMember?
+        if let Some(mut read_state) =
+            ReadState::get_by_user_and_channel(db, self.id, author_id).await?
+        {
+            read_state.last_message_id = Some(message.id);
+            read_state.save(db).await?;
+        } else {
+            ReadState::create(db, self.id, author_id, Some(message.id)).await?;
+        }
+
+        if let Some(guild_id) = self.guild_id {
+            let mut member = GuildMember::get_by_id(db, author_id, guild_id)
+                .await?
+                .ok_or(Error::Guild(GuildError::MemberNotFound))?;
+
+            // TODO: Update guild member last_message_id
+        }
+
+        message.populate_relations(db).await?;
+
+        Ok(message)
+    }
+
+    pub async fn get_messages(
+        &self,
+        db: &MySqlPool,
+        anchor: Option<ChannelMessagesAnchor>,
+        limit: i32,
+    ) -> Result<Vec<Message>, Error> {
+        let anchor = anchor.unwrap_or(ChannelMessagesAnchor::Before(
+            self.last_message_id
+                .ok_or(Error::Channel(ChannelError::InvalidMessage))?,
+        )); // TODO: Make this better
+        let mut messages = Message::get_by_channel_id(db, self.id, anchor, limit).await?;
+        if let Some(latest_message) =
+            Message::get_by_id(db, self.id, self.last_message_id.unwrap()).await?
+        {
+            messages.push(latest_message);
+        }
+        Ok(messages)
+    }
+
     pub async fn delete(&self, db: &MySqlPool) -> Result<(), Error> {
         sqlx::query("DELETE FROM channels WHERE id = ?")
             .bind(self.id)
@@ -148,7 +204,7 @@ impl Channel {
     }
 
     pub async fn save(&self, db: &MySqlPool) -> Result<(), Error> {
-        sqlx::query("UPDATE channels SET name = ?, topic = ?, nsfw = ?, position = ?, permission_overwrites = ?, rate_limit_per_user = ?, parent_id = ?, bitrate = ?, icon = ?, user_limit = ?, rtc_region = ?, default_auto_archive_duration = ?, default_reaction_emoji = ?, flags = ?, default_thread_rate_limit_per_user = ?, video_quality_mode = ?, channel_type = ? WHERE id = ?")
+        sqlx::query("UPDATE channels SET name = ?, topic = ?, nsfw = ?, position = ?, permission_overwrites = ?, rate_limit_per_user = ?, parent_id = ?, bitrate = ?, icon = ?, user_limit = ?, rtc_region = ?, default_auto_archive_duration = ?, default_reaction_emoji = ?, flags = ?, default_thread_rate_limit_per_user = ?, video_quality_mode = ?, channel_type = ?, last_message_id = ? WHERE id = ?")
             .bind(&self.name)
             .bind(&self.topic)
             .bind(&self.nsfw)
@@ -166,6 +222,7 @@ impl Channel {
             .bind(&self.default_thread_rate_limit_per_user)
             .bind(&self.video_quality_mode)
             .bind(&self.channel_type)
+            .bind(&self.last_message_id)
             .bind(&self.id)
             .execute(db)
             .await?;
@@ -180,5 +237,17 @@ impl Channel {
         inviter_id: Option<Snowflake>,
     ) -> Result<Invite, Error> {
         Invite::create(db, payload, Some(self.id), inviter_id, InviteType::Guild).await
+    }
+
+    pub fn is_text(&self) -> bool {
+        self.channel_type == ChannelType::GuildText
+            || self.channel_type == ChannelType::Dm
+            || self.channel_type == ChannelType::GroupDm
+    }
+
+    pub fn is_writeable(&self) -> bool {
+        !(self.channel_type == ChannelType::GuildCategory
+            || self.channel_type == ChannelType::GuildStageVoice
+            || self.channel_type == ChannelType::VoicelessWhiteboard)
     }
 }

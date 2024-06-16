@@ -1,19 +1,22 @@
-use std::ops::{Deref, DerefMut};
-use std::sync::{Arc, RwLock};
+use std::{
+    ops::{Deref, DerefMut},
+    sync::{Arc, RwLock},
+};
 
-use chorus::types::{ChannelType, PremiumTier, Snowflake, WelcomeScreenObject};
-use chorus::types::types::guild_configuration::GuildFeaturesList;
+use chorus::types::{
+    ChannelType, NSFWLevel, PremiumTier, Snowflake, SystemChannelFlags,
+    types::guild_configuration::GuildFeaturesList, WelcomeScreenObject,
+};
 use serde::{Deserialize, Serialize};
 use sqlx::MySqlPool;
 
 use crate::{
     database::{
-        entities::{Channel, Config, Role},
+        entities::{Channel, Config, GuildMember, Invite, Role, User},
         Queryer,
     },
     errors::Error,
 };
-use crate::database::entities::{GuildMember, Invite, User};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Guild {
@@ -56,8 +59,10 @@ impl Guild {
                 icon: Default::default(), // TODO: Handle guild Icon
                 owner_id: Some(owner_id.to_owned()),
                 preferred_locale: Some("en-US".to_string()),
-                system_channel_flags: Some(4),
-                welcome_screen: Some(sqlx::types::Json(WelcomeScreenObject {
+                system_channel_flags: Some(
+                    SystemChannelFlags::SUPPRESS_ROLE_SUBSCRIPTION_PURCHASE_NOTIFICATIONS,
+                ),
+                welcome_screen: sqlx::types::Json(Some(WelcomeScreenObject {
                     enabled: false,
                     description: Some("Fill in your description".to_string()),
                     welcome_channels: Vec::default(),
@@ -67,38 +72,45 @@ impl Guild {
                     cfg.defaults.guild.default_message_notifications,
                 ),
                 explicit_content_filter: Some(cfg.defaults.guild.explicit_content_filter),
-                features: Some(cfg.guild.default_features.clone().into()),
+                features: cfg.guild.default_features.clone().into(),
                 max_members: Some(cfg.limits.guild.max_members as i32),
                 max_presences: Some(cfg.defaults.guild.max_presences as i32),
                 max_video_channel_users: Some(cfg.defaults.guild.max_video_channel_users as i32),
                 region: Some(cfg.regions.default.clone()),
-                premium_tier: Some(PremiumTier::Tier3),
-                nsfw_level: Some(chorus::types::NSFWLevel::Default),
+                premium_tier: Some(PremiumTier::Tier3), // Maybe make this configurable?
+                nsfw_level: Some(NSFWLevel::Default),
                 ..Default::default()
             },
             ..Default::default()
         };
 
+        let features = guild
+            .features
+            .iter()
+            .map(|x| x.to_str())
+            .collect::<Vec<_>>()
+            .join(",");
+        println!("{:?}", features);
         let res = sqlx::query("INSERT INTO guilds (id, afk_timeout, default_message_notifications, explicit_content_filter, features, icon, max_members, max_presences, max_video_channel_users, name, owner_id, region, system_channel_flags, preferred_locale, welcome_screen, large, premium_tier, unavailable, widget_enabled, nsfw) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,0,0,?)")
             .bind(guild.id)
             .bind(guild.afk_timeout)
             .bind(guild.default_message_notifications)
             .bind(guild.explicit_content_filter)
-            .bind(guild.features.as_ref())
-            .bind(&guild.icon)
-            .bind(guild.max_members)
-            .bind(guild.max_presences)
-            .bind(guild.max_video_channel_users)
+            .bind(""/*&guild.features*/)
+            .bind(""/*&guild.icon*/)
+            .bind(500/*guild.max_members*/)
+            .bind(500/*guild.max_presences*/)
+            .bind(0/*guild.max_video_channel_users*/)
             .bind(&guild.name)
             .bind(guild.owner_id)
-            .bind(&guild.region)
+            .bind(""/*&guild.region*/)
             .bind(guild.system_channel_flags)
-            .bind(&guild.preferred_locale)
-            .bind(&guild.welcome_screen)
-            .bind(guild.premium_tier)
-            .bind(guild.nsfw_level)
+            .bind("en-US"/*&guild.preferred_locale*/)
+            .bind("null"/*&guild.welcome_screen*/)
+            .bind(2/*guild.premium_tier*/)
+            .bind(true) // TODO: Do this better guild.nsfw_level
             .execute(db)
-            .await?;
+            .await.unwrap();
         log::debug!(target: "symfonia::guilds", "Created guild with id {}", guild.id);
 
         let everyone = Role::create(

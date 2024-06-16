@@ -1,11 +1,13 @@
-use crate::{database::Queryer, errors::Error};
+use std::ops::{Deref, DerefMut};
+
 use chorus::types::ConfigValue;
 use futures::FutureExt;
 use poem::EndpointExt;
 use serde_json::{Map, Value};
 use sqlx::MySqlPool;
-use std::ops::{Deref, DerefMut};
 use tokio::io::AsyncReadExt;
+
+use crate::{database::Queryer, errors::Error};
 
 #[derive(Debug, Clone, Default)]
 pub struct Config(chorus::types::ConfigValue);
@@ -63,10 +65,12 @@ impl Config {
                 }
             }
         }
-        // let s = serde_json::to_string_pretty(&value).unwrap();
-        // std::fs::write("debug.json", &s);
-        // let jd = &mut serde_json::Deserializer::from_str(&s);
-        // let cf: ConfigValue = serde_path_to_error::deserialize(jd).unwrap();
+
+        // TODO: Remove this eventually
+        let s = serde_json::to_string_pretty(&value).unwrap();
+        std::fs::write("debug.json", &s);
+        let jd = &mut serde_json::Deserializer::from_str(&s);
+        let cf: ConfigValue = serde_path_to_error::deserialize(jd).unwrap();
         match serde_json::from_value(value) {
             Ok(v) => Self(v),
             Err(e) => {

@@ -7,13 +7,11 @@ use chorus::types::{PublicUser, Rights, Snowflake, UserData};
 use chrono::{NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use sqlx::MySqlPool;
+use sqlx::{FromRow, MySqlPool};
 
-use crate::database::entities::{Guild, GuildMember};
-use crate::errors::GuildError;
 use crate::{
-    database::entities::{Config, UserSettings},
-    errors::Error,
+    database::entities::{Config, Guild, GuildMember, UserSettings},
+    errors::{Error, GuildError},
 };
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, sqlx::FromRow)]
@@ -62,11 +60,7 @@ impl User {
         // TODO: dynamically figure out locale
         let user_settings = UserSettings::create(db, "en-US").await?;
 
-        let password = if let Some(password) = password {
-            Some(bcrypt::hash(password, 14).unwrap())
-        } else {
-            None
-        };
+        let password = password.map(|password| bcrypt::hash(password, 14).unwrap());
 
         let user = Self {
             inner: chorus::types::User {
@@ -83,11 +77,7 @@ impl User {
                 hash: password,
                 valid_tokens_since: Utc::now(),
             }),
-            fingerprints: if let Some(fingerprint) = fingerprint {
-                fingerprint
-            } else {
-                String::default()
-            },
+            fingerprints: fingerprint.unwrap_or_default(),
             rights: cfg.register.default_rights,
             settings_index: user_settings.index,
             extended_settings: sqlx::types::Json(Value::Object(Map::default())),
@@ -95,18 +85,19 @@ impl User {
             ..Default::default()
         };
 
-        sqlx::query("INSERT INTO users (id, username, email, data, fingerprints, discriminator, desktop, mobile, premium, premium_type, bot, bio, system, nsfw_allowed, mfa_enabled, created_at, verified, disabled, deleted, flags, public_flags, purchased_flags, premium_usage_flags, rights&mut dddd, extended_settings, settingsIndex) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, '', 0, ?, 0, NOW(), 0, 0, 0, ?, 0, 0, 0, 0, '{}', ?)")
+        sqlx::query("INSERT INTO users (id, username, email, data, fingerprints, discriminator, desktop, mobile, premium, premium_type, bot, bio, system, nsfw_allowed, mfa_enabled, created_at, verified, disabled, deleted, flags, public_flags, purchased_flags, premium_usage_flags, rights, extended_settings, settingsIndex) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, '', 0, ?, 0, NOW(), 0, 0, 0, ?, 0, 0, 0, ?, '{}', ?)")
             .bind(user.id)
             .bind(username)
             .bind(email)
             .bind(&user.data)
             .bind(&user.fingerprints)
-            .bind("0000")
+            .bind("0001")
             .bind(true)
             .bind(false)
             .bind(bot)
             .bind(false) // TODO: Base nsfw off date of birth
-            .bind(0) // TODO: flags
+            .bind(0u32) // TODO: flags
+            .bind(Rights::default())
             .bind(user.settings.index)
             .execute(db)
             .await?;
@@ -125,6 +116,38 @@ impl User {
             .fetch_optional(db)
             .await
             .map_err(Error::SQLX)
+    }
+
+    pub async fn get_by_id_list(
+        db: &MySqlPool,
+        ids: &[Snowflake],
+        after: Option<Snowflake>,
+        limit: u32,
+    ) -> Result<Vec<Self>, Error> {
+        let mut query_builder = sqlx::QueryBuilder::new("SELECT * FROM users WHERE id IN (");
+        let mut separated = query_builder.separated(", ");
+        for id in ids {
+            separated.push_bind(id);
+        }
+        separated.push_unseparated(") ");
+
+        if let Some(after) = after {
+            separated.push_unseparated("AND id > ? ");
+            separated.push_bind_unseparated(after);
+        }
+        separated.push_unseparated("LIMIT ?");
+        separated.push_bind_unseparated(limit);
+
+        let query = query_builder.build();
+
+        let r = query.fetch_all(db).await.map_err(Error::SQLX)?;
+        let users = r
+            .iter()
+            .map(User::from_row)
+            .map_while(|u| u.ok())
+            .collect::<Vec<_>>();
+
+        Ok(users)
     }
 
     pub async fn find_by_user_and_discrim(
