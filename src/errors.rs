@@ -1,9 +1,7 @@
 use std::error::Error as StdError;
 
 use chorus::types::{APIError, AuthError};
-use poem::error::ResponseError;
-use poem::http::StatusCode;
-use poem::Response;
+use poem::{error::ResponseError, http::StatusCode, Response};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
