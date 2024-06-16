@@ -1,15 +1,20 @@
-use chorus::types::{ChannelModifySchema, Snowflake};
-use chorus::types::jwt::Claims;
-use poem::{get, handler, IntoResponse, Route};
-use poem::web::{Data, Json, Path};
+use chorus::types::{ChannelModifySchema, jwt::Claims, Snowflake};
+use poem::{
+    delete, get, handler, IntoResponse, post,
+    put,
+    Route, web::{Data, Json, Path},
+};
 use sqlx::MySqlPool;
 
 use invites::{create_invite, get_invites};
 
-use crate::database::entities::Channel;
-use crate::errors::{ChannelError, Error};
+use crate::{
+    database::entities::Channel,
+    errors::{ChannelError, Error},
+};
 
 mod invites;
+mod messages;
 
 pub fn setup_routes() -> Route {
     Route::new()
@@ -20,6 +25,37 @@ pub fn setup_routes() -> Route {
                 .patch(modify_channel),
         )
         .at("/:channel_id/invites", get(get_invites).post(create_invite))
+        .at(
+            "/:channel_id/messages",
+            get(messages::get_messages).post(messages::create_message),
+        )
+        .at(
+            "/:channel_id/messages/:message_id",
+            get(messages::id::get_message)
+                .delete(messages::id::delete_message)
+                .patch(messages::id::edit_message),
+        )
+        .at(
+            "/:channel_id/messages/:message_id/ack",
+            post(messages::id::ack::acknowledge_message),
+        )
+        .at(
+            "/:channel_id/messages/:message_id/crosspost",
+            get(messages::id::crosspost::create_crosspost_message),
+        )
+        .at(
+            "/:channel_id/messages/:message_id/reactions",
+            delete(messages::id::reactions::delete_all_reactions),
+        )
+        .at(
+            "/:channel_id/messages/:message_id/reactions/:emoji",
+            get(messages::id::reactions::get_reaction)
+                .delete(messages::id::reactions::delete_reaction),
+        )
+        .at(
+            "/:channel_id/messages/:message_id/reactions/:emoji/:user_id",
+            put(messages::id::reactions::add_reaction),
+        )
 }
 
 #[handler]
@@ -29,7 +65,8 @@ pub async fn get_channel(
     Path(channel_id): Path<Snowflake>,
 ) -> poem::Result<impl IntoResponse> {
     let channel = Channel::get_by_id(db, channel_id)
-        .await?
+        .await //?
+        .expect("Failed to get channel data")
         .ok_or(Error::Channel(ChannelError::InvalidChannel))?;
 
     // TODO: Check if the user has permission to read the channel
