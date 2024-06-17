@@ -15,6 +15,7 @@ use crate::{
 
 mod invites;
 mod messages;
+mod typing;
 
 pub fn setup_routes() -> Route {
     Route::new()
