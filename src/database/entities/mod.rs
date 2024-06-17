@@ -9,6 +9,7 @@ pub use read_state::*;
 pub use role::*;
 pub use user::*;
 pub use user_settings::*;
+pub use webhook::*;
 
 mod application;
 mod attachment;

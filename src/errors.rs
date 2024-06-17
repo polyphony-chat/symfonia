@@ -85,6 +85,8 @@ pub enum ChannelError {
     TooManyMessages(u32),
     #[error("Maxmimum pins reached")]
     MaxPinsReached,
+    #[error("Maxmimum webhooks reached")]
+    MaxWebhooksReached,
 }
 
 #[derive(Debug, thiserror::Error)]

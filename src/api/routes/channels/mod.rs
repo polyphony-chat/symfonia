@@ -17,6 +17,7 @@ mod invites;
 mod messages;
 mod pins;
 mod typing;
+mod webhooks;
 
 pub fn setup_routes() -> Route {
     Route::new()
@@ -66,6 +67,10 @@ pub fn setup_routes() -> Route {
         .at(
             "/:channel_id/pins/:message_id",
             put(pins::add_pinned_message).delete(pins::remove_pinned_message),
+        )
+        .at(
+            "/:channel_id/webhooks",
+            get(webhooks::get_webhooks).post(webhooks::create_webhook),
         )
 }
 
