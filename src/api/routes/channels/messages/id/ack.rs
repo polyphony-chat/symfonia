@@ -16,8 +16,7 @@ use crate::{
 pub async fn acknowledge_message(
     Data(db): Data<&MySqlPool>,
     Data(claims): Data<&Claims>,
-    Path(channel_id): Path<Snowflake>,
-    Path(message_id): Path<Snowflake>,
+    Path((channel_id, message_id)): Path<(Snowflake, Snowflake)>,
     Json(payload): Json<MessageACK>,
 ) -> poem::Result<impl IntoResponse> {
     let channel = Channel::get_by_id(db, channel_id)

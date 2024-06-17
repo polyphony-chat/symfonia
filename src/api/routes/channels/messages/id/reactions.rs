@@ -16,10 +16,8 @@ use crate::{
 pub async fn add_reaction(
     Data(db): Data<&MySqlPool>,
     Data(claims): Data<&Claims>,
-    Path(channel_id): Path<Snowflake>,
-    Path(message_id): Path<Snowflake>,
-    Path(emoji): Path<String>,
-    Path(user_id): Path<String>,
+    Path((channel_id, message_id)): Path<(Snowflake, Snowflake)>,
+    Path((emoji, user_id)): Path<(String, String)>,
 ) -> poem::Result<impl IntoResponse> {
     if user_id != "@me" {
         return Err(Error::User(UserError::InvalidUser).into());
@@ -96,8 +94,7 @@ pub async fn add_reaction(
 #[handler]
 pub async fn delete_all_reactions(
     Data(db): Data<&MySqlPool>,
-    Path(channel_id): Path<Snowflake>,
-    Path(message_id): Path<Snowflake>,
+    Path((channel_id, message_id)): Path<(Snowflake, Snowflake)>,
 ) -> poem::Result<impl IntoResponse> {
     // TODO: Check permissions
     let mut message = Message::get_by_id(db, channel_id, message_id)
@@ -115,10 +112,8 @@ pub async fn delete_all_reactions(
 pub async fn delete_reaction(
     Data(db): Data<&MySqlPool>,
     Data(claims): Data<&Claims>,
-    Path(channel_id): Path<Snowflake>,
-    Path(message_id): Path<Snowflake>,
-    Path(emoji): Path<String>,
-    Path(user_id): Path<String>,
+    Path((channel_id, message_id)): Path<(Snowflake, Snowflake)>,
+    Path((emoji, user_id)): Path<(String, String)>,
 ) -> poem::Result<impl IntoResponse> {
     let partial_emoji = get_partial_emoji(&emoji).ok_or(Error::Reaction(ReactionError::Invalid))?;
 
@@ -153,8 +148,7 @@ pub async fn delete_reaction(
 #[handler]
 pub async fn get_reaction(
     Data(db): Data<&MySqlPool>,
-    Path(channel_id): Path<Snowflake>,
-    Path(message_id): Path<Snowflake>,
+    Path((channel_id, message_id)): Path<(Snowflake, Snowflake)>,
     Path(emoji): Path<String>,
     Query(query): Query<ReactionQuerySchema>,
 ) -> poem::Result<impl IntoResponse> {

@@ -3,7 +3,7 @@ use poem::{
     IntoResponse,
     listener::{Listener, TcpListener},
     middleware::{NormalizePath, TrailingSlash},
-    post, Route, Server, web::Json,
+    post, Route, Server, web::{Json, Path},
 };
 use serde_json::json;
 use sqlx::MySqlPool;
