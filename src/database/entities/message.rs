@@ -6,7 +6,7 @@ use chorus::types::{
 };
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use sqlx::{MySqlPool, Row};
+use sqlx::{MySqlPool, QueryBuilder, Row};
 
 use crate::{
     database::entities::User,
@@ -302,6 +302,23 @@ impl Message {
             .await
             .map(|_| ())
             .map_err(Error::SQLX)
+    }
+
+    pub async fn bulk_delete(db: &MySqlPool, ids: Vec<Snowflake>) -> Result<(), Error> {
+        // TODO: Limit the timeframe?
+        let mut query_builder = QueryBuilder::new("DELETE FROM `messages` WHERE `id` IN (");
+
+        let mut separated = query_builder.separated(", ");
+        for id in ids {
+            separated.push_bind(id);
+        }
+        separated.push_unseparated(") ");
+
+        let query = query_builder.build();
+
+        query.execute(db).await?;
+
+        Ok(())
     }
 
     pub fn get_reaction(&self, emoji: &PartialEmoji) -> Option<&Reaction> {

@@ -30,6 +30,10 @@ pub fn setup_routes() -> Route {
             get(messages::get_messages).post(messages::create_message),
         )
         .at(
+            "/:channel_id/messages/bulk_delete",
+            post(messages::bulk_delete::bulk_delete),
+        )
+        .at(
             "/:channel_id/messages/:message_id",
             get(messages::id::get_message)
                 .delete(messages::id::delete_message)
