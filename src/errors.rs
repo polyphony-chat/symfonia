@@ -81,6 +81,8 @@ pub enum ChannelError {
     EmptyMessage,
     #[error("Invalid Message")]
     InvalidMessage,
+    #[error("You cannot delete more than {0} messages")]
+    TooManyMessages(u32),
 }
 
 #[derive(Debug, thiserror::Error)]
