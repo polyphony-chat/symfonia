@@ -42,19 +42,27 @@ pub async fn start_api(db: MySqlPool) -> Result<(), Error> {
         .nest("/auth", auth::setup_routes())
         .nest(
             "/users",
-            users::setup_routes().with(AuthenticationMiddleware), // .with(CurrentUserMiddleware),
+            users::setup_routes()
+                .with(AuthenticationMiddleware)
+                .with(CurrentUserMiddleware),
         )
         .nest(
             "/guilds",
-            guilds::setup_routes().with(AuthenticationMiddleware), // .with(CurrentUserMiddleware),
+            guilds::setup_routes()
+                .with(AuthenticationMiddleware)
+                .with(CurrentUserMiddleware),
         )
         .nest(
             "/channels",
-            channels::setup_routes().with(AuthenticationMiddleware), // .with(CurrentUserMiddleware),
+            channels::setup_routes()
+                .with(AuthenticationMiddleware)
+                .with(CurrentUserMiddleware),
         )
         .nest(
             "/invites",
-            routes::invites::setup_routes().with(AuthenticationMiddleware), // .with(CurrentUserMiddleware),
+            routes::invites::setup_routes()
+                .with(AuthenticationMiddleware)
+                .with(CurrentUserMiddleware),
         )
         .nest("/policies", routes::policies::setup_routes())
         .nest("/-", routes::health::setup_routes());
