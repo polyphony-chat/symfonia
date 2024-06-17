@@ -15,6 +15,7 @@ use crate::{
 
 mod invites;
 mod messages;
+mod pins;
 mod typing;
 
 pub fn setup_routes() -> Route {
@@ -60,6 +61,11 @@ pub fn setup_routes() -> Route {
         .at(
             "/:channel_id/messages/:message_id/reactions/:emoji/:user_id",
             put(messages::id::reactions::add_reaction),
+        )
+        .at("/:channel_id/pins", get(pins::get_pinned_messages))
+        .at(
+            "/:channel_id/pins/:message_id",
+            put(pins::add_pinned_message).delete(pins::remove_pinned_message),
         )
 }
 

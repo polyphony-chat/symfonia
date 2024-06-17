@@ -206,6 +206,14 @@ impl Message {
         }
     }
 
+    pub async fn get_pinned(db: &MySqlPool, channel_id: Snowflake) -> Result<Vec<Self>, Error> {
+        sqlx::query_as("SELECT * FROM `messages` WHERE `channel_id` = ? AND `pinned` = true")
+            .bind(channel_id)
+            .fetch_all(db)
+            .await
+            .map_err(Error::SQLX)
+    }
+
     pub async fn count_by_user_in_window(
         db: &MySqlPool,
         channel_id: Snowflake,
@@ -218,6 +226,18 @@ impl Message {
             .bind(window)
             .fetch_one(db)
             .await?;
+
+        let data = res.get::<i32, _>(0);
+        Ok(data)
+    }
+
+    pub async fn count_pinned(db: &MySqlPool, channel_id: Snowflake) -> Result<i32, Error> {
+        let res = sqlx::query(
+            "SELECT COUNT(*) FROM `messages` WHERE `channel_id` = ? AND `pinned` = true",
+        )
+        .bind(channel_id)
+        .fetch_one(db)
+        .await?;
 
         let data = res.get::<i32, _>(0);
         Ok(data)
@@ -252,6 +272,18 @@ impl Message {
         }
 
         todo!()
+    }
+
+    pub async fn set_pinned(&mut self, db: &MySqlPool, pinned: bool) -> Result<(), Error> {
+        self.pinned = pinned;
+        sqlx::query("UPDATE `messages` SET `pinned` = ? WHERE `id` = ?")
+            .bind(pinned)
+            .bind(self.id)
+            .execute(db)
+            .await
+            .map_err(Error::SQLX)?;
+
+        Ok(())
     }
 
     pub async fn clear_reactions(&mut self, db: &MySqlPool) -> Result<(), Error> {

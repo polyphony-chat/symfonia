@@ -83,6 +83,8 @@ pub enum ChannelError {
     InvalidMessage,
     #[error("You cannot delete more than {0} messages")]
     TooManyMessages(u32),
+    #[error("Maxmimum pins reached")]
+    MaxPinsReached,
 }
 
 #[derive(Debug, thiserror::Error)]
