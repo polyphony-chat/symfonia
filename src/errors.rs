@@ -130,6 +130,8 @@ impl ResponseError for Error {
                 ChannelError::MessageTooLong => StatusCode::PAYLOAD_TOO_LARGE,
                 ChannelError::EmptyMessage => StatusCode::BAD_REQUEST,
                 ChannelError::InvalidMessage => StatusCode::NOT_FOUND,
+                ChannelError::TooManyMessages(_) => StatusCode::BAD_REQUEST,
+                ChannelError::MaxPinsReached => StatusCode::BAD_REQUEST,
             },
             Error::Invite(err) => match err {
                 InviteError::InvalidInvite => StatusCode::NOT_FOUND,
