@@ -87,6 +87,8 @@ pub enum ChannelError {
     MaxPinsReached,
     #[error("Maxmimum webhooks reached")]
     MaxWebhooksReached,
+    #[error("User is already a recipient of this channel")]
+    InvalidRecipient,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -132,6 +134,10 @@ impl ResponseError for Error {
                 ChannelError::MessageTooLong => StatusCode::PAYLOAD_TOO_LARGE,
                 ChannelError::EmptyMessage => StatusCode::BAD_REQUEST,
                 ChannelError::InvalidMessage => StatusCode::NOT_FOUND,
+                ChannelError::TooManyMessages(_) => StatusCode::BAD_REQUEST,
+                ChannelError::MaxPinsReached => StatusCode::BAD_REQUEST,
+                ChannelError::MaxWebhooksReached => StatusCode::BAD_REQUEST,
+                ChannelError::InvalidRecipient => StatusCode::NOT_FOUND,
             },
             Error::Invite(err) => match err {
                 InviteError::InvalidInvite => StatusCode::NOT_FOUND,

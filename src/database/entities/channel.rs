@@ -4,12 +4,16 @@ use chorus::types::{
     ChannelMessagesAnchor, ChannelModifySchema, ChannelType, CreateChannelInviteSchema, InviteType,
     MessageSendSchema, Snowflake,
 };
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use sqlx::{MySqlPool, types::Json};
 
 use crate::{
-    database::entities::{GuildMember, invite::Invite, message::Message, read_state::ReadState},
-    errors::{ChannelError, Error, GuildError},
+    database::entities::{
+        GuildMember, invite::Invite, message::Message, read_state::ReadState, recipient::Recipient,
+        User, Webhook,
+    },
+    errors::{ChannelError, Error, GuildError, UserError},
 };
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, sqlx::FromRow)]
@@ -63,7 +67,9 @@ impl Channel {
                 }
             }
             ChannelType::Dm | ChannelType::GroupDm => {
-                todo!() // TODO: No dms in a guild!
+                if guild_id.is_some() {
+                    return Err(Error::Channel(ChannelError::InvalidChannelType));
+                }
             }
             ChannelType::GuildCategory | ChannelType::Unhandled => {}
             ChannelType::GuildStore => {}
@@ -95,6 +101,51 @@ impl Channel {
             .await?;
 
         Ok(channel)
+    }
+
+    pub async fn create_dm_channel(
+        db: &MySqlPool,
+        recipients: Vec<Snowflake>,
+        creator_id: Snowflake,
+        name: impl Into<Option<String>>,
+    ) -> Result<Self, Error> {
+        let mut unique_recipients = recipients.into_iter().unique().collect::<Vec<_>>();
+
+        let name = name.into();
+
+        let dm_type = if unique_recipients.len() == 1 {
+            ChannelType::Dm
+        } else {
+            ChannelType::GroupDm
+        };
+
+        unique_recipients.push(creator_id);
+
+        let channel = Channel::create(
+            db, dm_type, name, false, None, None, false, false, false, false,
+        )
+        .await?;
+
+        for recipient in unique_recipients {
+            Recipient::create(db, recipient, channel.id).await?;
+
+            // TODO: Emit event 'CHANNEL_CREATE'
+        }
+
+        Ok(channel)
+    }
+
+    pub async fn populate_relations(&mut self, db: &MySqlPool) -> Result<(), Error> {
+        let recipients = Recipient::get_by_channel_id(db, self.id).await?;
+        let mut recipient_users = vec![];
+        for recipient in recipients {
+            let user = User::get_by_id(db, recipient.user_id)
+                .await?
+                .ok_or(Error::User(UserError::InvalidUser))?;
+            recipient_users.push(user.to_inner());
+        }
+        self.recipients = Some(recipient_users);
+        Ok(())
     }
 
     pub async fn get_by_id(db: &MySqlPool, id: Snowflake) -> Result<Option<Self>, Error> {
@@ -249,5 +300,27 @@ impl Channel {
         !(self.channel_type == ChannelType::GuildCategory
             || self.channel_type == ChannelType::GuildStageVoice
             || self.channel_type == ChannelType::VoicelessWhiteboard)
+    }
+
+    pub async fn get_follower_webhooks(&self, db: &MySqlPool) -> Result<Vec<Webhook>, Error> {
+        sqlx::query_as("SELECT * FROM webhooks WHERE id IN (SELECT webhook_id FROM channel_followers WHERE channel_id = ?)")
+            .bind(self.id)
+            .fetch_all(db)
+            .await
+            .map_err(Error::SQLX)
+    }
+
+    pub async fn add_follower_webhook(
+        &self,
+        db: &MySqlPool,
+        webhook_id: Snowflake,
+    ) -> Result<(), Error> {
+        sqlx::query("INSERT INTO channel_followers (channel_id, webhook_id) VALUES (?,?)")
+            .bind(self.id)
+            .bind(webhook_id)
+            .execute(db)
+            .await
+            .map(|_| ())
+            .map_err(Error::from)
     }
 }
