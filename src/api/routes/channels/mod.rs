@@ -16,6 +16,7 @@ use crate::{
 mod followers;
 mod invites;
 mod messages;
+mod permissions;
 mod pins;
 mod recipients;
 mod typing;
@@ -78,6 +79,10 @@ pub fn setup_routes() -> Route {
         .at(
             "/:channel_id/recipients",
             put(recipients::add_recipient).delete(recipients::remove_recipient),
+        )
+        .at(
+            "/:channel_id/permissions/:overwrite_id",
+            put(permissions::add_overwrite).delete(permissions::remove_overwrite),
         )
 }
 

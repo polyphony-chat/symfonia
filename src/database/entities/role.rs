@@ -85,6 +85,14 @@ impl Role {
         Ok(role)
     }
 
+    pub async fn get_by_id(db: &MySqlPool, id: Snowflake) -> Result<Option<Self>, Error> {
+        sqlx::query_as("SELECT * FROM roles WHERE id = ?")
+            .bind(id)
+            .fetch_optional(db)
+            .await
+            .map_err(Error::SQLX)
+    }
+
     pub async fn get_by_guild_id(db: &MySqlPool, guild_id: Snowflake) -> Result<Vec<Self>, Error> {
         sqlx::query_as("SELECT * FROM roles WHERE guild_id = ?")
             .bind(guild_id)
