@@ -12,6 +12,7 @@ use crate::{
     errors::{Error, GuildError},
 };
 
+pub(crate) mod bans;
 pub mod channels;
 pub(crate) mod invites;
 

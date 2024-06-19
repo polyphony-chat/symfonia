@@ -69,6 +69,10 @@ pub enum GuildError {
     AlreadyInGuild,
     #[error("ROLE_NOT_FOUND")]
     InvalidRole,
+    #[error("UNKNOWN_BAN")]
+    BanNotFound,
+    #[error("ALREADY_BANNED")]
+    BanAlreadyExists,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -130,6 +134,8 @@ impl ResponseError for Error {
                 GuildError::MemberNotFound => StatusCode::NOT_FOUND,
                 GuildError::AlreadyInGuild => StatusCode::BAD_REQUEST,
                 GuildError::InvalidRole => StatusCode::NOT_FOUND,
+                GuildError::BanNotFound => StatusCode::NOT_FOUND,
+                GuildError::BanAlreadyExists => StatusCode::BAD_REQUEST,
             },
             Error::Channel(err) => match err {
                 ChannelError::InvalidChannel => StatusCode::NOT_FOUND,

@@ -4,18 +4,18 @@ use std::{
 };
 
 use chorus::types::{
-    ChannelType, NSFWLevel, PremiumTier, Snowflake, SystemChannelFlags,
-    types::guild_configuration::GuildFeaturesList, WelcomeScreenObject,
+    ChannelType, NSFWLevel, PremiumTier, PublicUser, Snowflake,
+    SystemChannelFlags, types::guild_configuration::GuildFeaturesList, WelcomeScreenObject,
 };
 use serde::{Deserialize, Serialize};
-use sqlx::{MySqlPool, Row};
+use sqlx::{FromRow, MySqlPool, QueryBuilder, Row};
 
 use crate::{
     database::{
         entities::{Channel, Config, GuildMember, Invite, Role, User},
         Queryer,
     },
-    errors::Error,
+    errors::{Error, GuildError, UserError},
 };
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, sqlx::FromRow)]
@@ -202,9 +202,12 @@ impl Guild {
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct GuildBan {
+    #[sqlx(flatten)]
     inner: chorus::types::GuildBan,
     pub id: Snowflake,
     pub executor_id: Snowflake,
+    pub guild_id: Snowflake,
+    pub user_id: Snowflake,
     pub ip: String,
 }
 
@@ -218,5 +221,175 @@ impl Deref for GuildBan {
 impl DerefMut for GuildBan {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner
+    }
+}
+
+impl GuildBan {
+    pub async fn create(
+        db: &MySqlPool,
+        guild_id: Snowflake,
+        user_id: Snowflake,
+        executing_user_id: Snowflake,
+        reason: impl Into<Option<String>>,
+    ) -> Result<Self, Error> {
+        let ban_id = Snowflake::default();
+        let reason = reason.into();
+        let user = GuildMember::get_by_id(db, user_id, guild_id)
+            .await?
+            .ok_or(Error::Guild(GuildError::MemberNotFound))?;
+
+        sqlx::query("INSERT INTO guild_bans (id, guild_id, user_id, executor_id, reason, ip) VALUES (?,?,?,?,?,'127.0.0.1')") // TODO: Do something to get the users IP
+            .bind(ban_id)
+            .bind(guild_id)
+            .bind(user_id)
+            .bind(executing_user_id)
+            .bind(&reason)
+            .execute(db)
+            .await
+            .map_err(Error::SQLX)?;
+
+        Ok(Self {
+            inner: chorus::types::GuildBan {
+                reason,
+                user: user.user_data.to_public_user(),
+            },
+            guild_id,
+            user_id,
+            executor_id: executing_user_id,
+            id: ban_id,
+            ip: "127.0.0.1".to_string(),
+        })
+    }
+
+    pub async fn builk_create(
+        db: &MySqlPool,
+        guild_id: Snowflake,
+        user_ids: Vec<Snowflake>,
+        executing_user_id: Snowflake,
+        reason: impl Into<Option<String>>,
+    ) -> Result<Vec<GuildBan>, Error> {
+        let mut query_builder = QueryBuilder::new(
+            "INSERT INTO guild_bans (id, guild_id, user_id, executor_id, reason, ip) VALUES ",
+        );
+        let mut rows = user_ids
+            .into_iter()
+            .map(|user_id| GuildBan {
+                inner: chorus::types::GuildBan {
+                    user: Default::default(),
+                    reason: None,
+                },
+                id: Snowflake::default(),
+                executor_id: executing_user_id,
+                guild_id,
+                user_id,
+                ip: "127.0.0.1".to_string(), // TODO: Somehow get the users IP
+            })
+            .collect::<Vec<_>>();
+
+        let reason = reason.into();
+
+        query_builder.push_values(rows.iter(), |mut b, user| {
+            b.push_bind(user.id)
+                .push_bind(user.guild_id)
+                .push_bind(user.user_id)
+                .push_bind(user.executor_id)
+                .push_bind(&reason)
+                .push_bind("127.0.0.1");
+        });
+
+        let query = query_builder.build();
+
+        query.execute(db).await?;
+
+        for row in rows.iter_mut() {
+            row.user = User::get_by_id(db, row.user_id)
+                .await?
+                .ok_or(Error::User(UserError::InvalidUser))?
+                .to_public_user();
+        }
+
+        Ok(rows)
+    }
+
+    pub async fn populate_relations(&mut self, db: &MySqlPool) -> Result<(), Error> {
+        let user = User::get_by_id(db, self.user_id)
+            .await?
+            .ok_or(Error::User(UserError::InvalidUser))?;
+        self.user = user.to_public_user();
+        Ok(())
+    }
+
+    pub async fn get_by_id(db: &MySqlPool, id: Snowflake) -> Result<Option<GuildBan>, Error> {
+        sqlx::query_as("SELECT * FROM guild_bans WHERE id = ?")
+            .bind(id)
+            .fetch_optional(db)
+            .await
+            .map_err(Error::SQLX)
+    }
+
+    pub async fn get_by_guild(
+        db: &MySqlPool,
+        guild_id: Snowflake,
+        before: Option<Snowflake>,
+        after: Option<Snowflake>,
+        limit: Option<u16>,
+    ) -> Result<Vec<GuildBan>, Error> {
+        sqlx::query_as("SELECT * FROM bans WHERE (user_id < ? OR ? IS NULL) AND (user_id > ? OR ? IS NULL) AND guild_id = ? LIMIT IFNULL(?, 1000)")
+            .bind(before)
+            .bind(before)
+            .bind(after)
+            .bind(after)
+            .bind(guild_id)
+            .bind(limit)
+            .fetch_all(db)
+            .await
+            .map_err(Error::SQLX)
+    }
+
+    pub async fn get_by_user(
+        db: &MySqlPool,
+        guild_id: Snowflake,
+        user_id: Snowflake,
+    ) -> Result<Option<Self>, Error> {
+        sqlx::query_as("SELECT * FROM guild_bans WHERE user_id = ? AND guild_id = ?")
+            .bind(user_id)
+            .bind(guild_id)
+            .fetch_optional(db)
+            .await
+            .map_err(Error::SQLX)
+    }
+
+    pub async fn find_by_username(
+        db: &MySqlPool,
+        guild_id: Snowflake,
+        search_term: &str,
+        limit: u16,
+    ) -> Result<Vec<Self>, Error> {
+        let mut query = QueryBuilder::new("SELECT b.* FROM bans b JOIN members m ON b.user_id = m.id AND b.guild_id = m.guild_id JOIN users u ON b.user_id = u.id WHERE u.username LIKE '%");
+        query.push_bind(search_term);
+        query.push("%' AND b.guild_id = ");
+        query.push_bind(guild_id);
+        query.push(" LIMIT ");
+        query.push_bind(limit);
+        let query = query.build();
+        let res = query.fetch_all(db).await?;
+        let results = res
+            .into_iter()
+            .map(|r| GuildBan::from_row(&r).unwrap())
+            .collect::<Vec<_>>();
+        Ok(results)
+    }
+
+    pub async fn delete(self, db: &MySqlPool) -> Result<(), Error> {
+        sqlx::query("DELETE FROM guild_bans WHERE id = ?")
+            .bind(self.id)
+            .execute(db)
+            .await
+            .map_err(Error::SQLX)?;
+        Ok(())
+    }
+
+    pub fn into_inner(self) -> chorus::types::GuildBan {
+        self.inner
     }
 }

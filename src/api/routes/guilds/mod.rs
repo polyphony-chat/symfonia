@@ -1,13 +1,19 @@
-use chorus::types::GuildCreateSchema;
-use chorus::types::jwt::Claims;
-use poem::{get, handler, IntoResponse, post, Route};
-use poem::web::{Data, Json};
+use chorus::types::{GuildCreateSchema, jwt::Claims};
+use poem::{
+    get, handler, IntoResponse, post,
+    put,
+    Route, web::{Data, Json},
+};
 use sqlx::MySqlPool;
 
-use crate::api::routes::guilds::id::channels::{create_channel, get_channels};
-use crate::api::routes::guilds::id::get_guild;
-use crate::database::entities::{Config, Guild, User};
-use crate::errors::{Error, UserError};
+use crate::{
+    api::routes::guilds::id::{
+        channels::{create_channel, get_channels},
+        get_guild,
+    },
+    database::entities::{Config, Guild, User},
+    errors::{Error, UserError},
+};
 
 mod id;
 
@@ -20,6 +26,15 @@ pub fn setup_routes() -> Route {
             get(get_channels).post(create_channel),
         )
         .at("/:guild_id/invites", get(id::invites::get_invites))
+        .at("/:guild_id/bans", get(id::bans::get_bans))
+        .at("/:guild_id/bans/search", post(id::bans::search))
+        .at("/:guild_id/bulk-ban", post(id::bans::bulk_ban))
+        .at(
+            "/:guild_id/bans/:user_id",
+            put(id::bans::create_ban)
+                .get(id::bans::get_banned_user)
+                .delete(id::bans::delete_ban),
+        )
 }
 
 #[handler]
