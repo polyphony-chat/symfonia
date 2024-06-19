@@ -41,7 +41,7 @@ impl Webhook {
         application_id: Option<Snowflake>,
     ) -> Result<Self, Error> {
         let mut token_data = [0u8; 24];
-        openssl::rand::rand_bytes(&mut token_data)?;
+        let _ = openssl::rand::rand_bytes(&mut token_data);
 
         let webhook = Self {
             inner: chorus::types::Webhook {
@@ -103,6 +103,6 @@ impl Webhook {
             .fetch_one(db)
             .await
             .map_err(Error::SQLX)
-            .map(|row| row.get::<i32, _>())
+            .map(|row| row.get::<i32, _>(0))
     }
 }

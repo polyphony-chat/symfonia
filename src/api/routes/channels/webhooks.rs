@@ -14,8 +14,6 @@ use crate::{
 #[handler]
 pub async fn get_webhooks(
     Data(db): Data<&MySqlPool>,
-    Data(config): Data<&Config>,
-    Data(user): Data<&User>,
     Path(channel_id): Path<Snowflake>,
 ) -> poem::Result<impl IntoResponse> {
     // TODO: Check permissions 'MANAGE_WEBHOOKS'
@@ -23,25 +21,30 @@ pub async fn get_webhooks(
     let channel = Channel::get_by_id(db, channel_id)
         .await?
         .ok_or(Error::Channel(ChannelError::InvalidChannel))?;
-    if !channel.is_text() || channel.guild_id.is_none() {
-        return Err(Error::Channel(ChannelError::InvalidChannelType).into());
+
+    let mut webhooks = Webhook::get_by_channel_id(db, channel.id).await?;
+
+    for webhook in webhooks.iter_mut() {
+        if let Some(user) = User::get_by_id(db, webhook.user_id).await? {
+            webhook.user = Some(user.to_inner());
+        }
     }
 
-    let webhooks = Webhook::get_by_channel_id(db, channel_id).await?;
     Ok(Json(webhooks))
 }
 
 #[handler]
 pub async fn create_webhook(
     Data(db): Data<&MySqlPool>,
-    Data(config): Data<&Config>,
     Data(user): Data<&User>,
+    Data(config): Data<&Config>,
     Path(channel_id): Path<Snowflake>,
     Json(payload): Json<CreateWebhookSchema>,
 ) -> poem::Result<impl IntoResponse> {
     let channel = Channel::get_by_id(db, channel_id)
         .await?
         .ok_or(Error::Channel(ChannelError::InvalidChannel))?;
+
     if !channel.is_text() {
         return Err(Error::Channel(ChannelError::InvalidChannelType).into());
     }
@@ -51,13 +54,15 @@ pub async fn create_webhook(
     };
 
     let webhook_count = Webhook::count_by_channel(db, channel_id).await?;
-    if webhook_count > config.limits.channel.max_webhooks as i32 {
+
+    if webhook_count >= config.limits.channel.max_webhooks as i32 {
         return Err(Error::Channel(ChannelError::MaxWebhooksReached).into());
     }
 
-    // TODO: Handle avatar_url
+    // TODO: Reserved names?
+    // TODO: Avatar file handling
 
-    let hook = Webhook::create(
+    let mut hook = Webhook::create(
         db,
         &payload.name,
         guild_id,
@@ -69,6 +74,7 @@ pub async fn create_webhook(
         None,
     )
     .await?;
+    hook.user = Some(user.to_inner());
 
     Ok(Json(hook))
 }
