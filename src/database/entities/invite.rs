@@ -6,8 +6,10 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 use sqlx::MySqlPool;
 
-use crate::database::entities::{Channel, Guild, User};
-use crate::errors::{ChannelError, Error, GuildError};
+use crate::{
+    database::entities::{Channel, Guild, User},
+    errors::{ChannelError, Error, GuildError},
+};
 
 #[derive(Debug, Deserialize, Serialize, sqlx::FromRow)]
 pub struct Invite {
@@ -97,11 +99,11 @@ impl Invite {
         code, type, temporary, uses, max_uses, max_age, created_at, expires_at, guild_id, channel_id, inviter_id, target_user_id, target_user_type, vanity_url, flags
          */
 
-        sqlx::query("code, type, temporary, uses, max_uses, max_age, created_at, expires_at, guild_id, channel_id, inviter_id, target_user_id, target_user_type, vanity_url, flags) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+        sqlx::query("INSERT INTO invites (code, type, temporary, uses, max_uses, max_age, created_at, expires_at, guild_id, channel_id, inviter_id, target_user_id, target_user_type, vanity_url, flags) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
             .bind(random_code)
             .bind(invite.invite_type)
             .bind(invite.temporary)
-            .bind(invite.uses)
+            .bind(invite.uses.unwrap_or(0))
             .bind(invite.max_uses)
             .bind(invite.max_age)
             .bind(invite.created_at)
@@ -184,7 +186,7 @@ impl Invite {
             // TODO: Some form of handling for invites without an invite type?  maybe just default to guild?
         }
 
-        let max_uses = self.max_uses.unwrap_or(0) as i32;
+        let max_uses = self.max_uses.unwrap_or(0) as u32;
         if self.uses.unwrap_or(0) > max_uses && max_uses > 0 {
             self.delete(db).await?;
         }
@@ -195,7 +197,7 @@ impl Invite {
     pub async fn increase_uses(&mut self, db: &MySqlPool) -> Result<(), Error> {
         self.uses = self.uses.map(|uses| uses + 1);
         sqlx::query("UPDATE invites SET uses = ? WHERE code = ?")
-            .bind(&self.uses)
+            .bind(self.uses)
             .bind(&self.code)
             .execute(db)
             .await

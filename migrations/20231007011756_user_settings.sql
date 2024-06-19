@@ -1,7 +1,7 @@
 create table if not exists user_settings
 (
-    `index`                          int auto_increment
-    primary key,
+    `index`                          bigint unsigned auto_increment
+        primary key,
     afk_timeout                      int          null,
     allow_accessibility_detection    tinyint      null,
     animate_emoji                    tinyint      null,

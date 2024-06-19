@@ -13,7 +13,7 @@ create table if not exists users
     desktop             tinyint           not null,
     mobile              tinyint           not null,
     premium             tinyint           not null,
-    premium_type        int               not null,
+    premium_type        tinyint unsigned  not null,
     bot                 tinyint           not null,
     bio                 varchar(255)      not null,
     `system`            tinyint           not null,
@@ -28,18 +28,18 @@ create table if not exists users
     disabled            tinyint           not null,
     deleted             tinyint           not null,
     email               varchar(255)      null,
-    flags               int               not null,
-    public_flags        int               not null,
+    flags               bigint unsigned   not null,
+    public_flags        int unsigned      not null,
     purchased_flags     int               not null,
     premium_usage_flags int               not null,
     rights              bigint            not null,
     data                text              not null,
     fingerprints        text              not null,
     extended_settings   text              not null,
-    settingsIndex       int               null,
-    constraint REL_0c14beb78d8c5ccba66072adbc
+    settingsIndex       bigint unsigned   null,
+    constraint users_settingsIndex_uindex
         unique (settingsIndex),
-    constraint FK_0c14beb78d8c5ccba66072adbc7
+    constraint users_user_settings_index_fk
         foreign key (settingsIndex) references user_settings (`index`)
 );
 

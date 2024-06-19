@@ -1,15 +1,14 @@
-use crate::{
-    database::{
-        entities::{user::User, Config},
-        Queryer,
-    },
-    errors::Error,
-};
+use std::ops::{Deref, DerefMut};
+
 use bitflags::Flags;
 use chorus::types::{ApplicationFlags, Snowflake};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, MySqlPool};
-use std::ops::{Deref, DerefMut};
+
+use crate::{
+    database::entities::{Config, user::User},
+    errors::Error,
+};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Application {
@@ -57,7 +56,7 @@ impl Application {
                 name: name.to_string(),
                 summary: Some(summary.to_string()),
                 verify_key: verify_key.to_string(),
-                flags: flags.bits(),
+                flags,
                 ..Default::default()
             },
             owner_id: owner_id.to_owned(),

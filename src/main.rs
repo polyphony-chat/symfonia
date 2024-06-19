@@ -1,20 +1,20 @@
 use clap::Parser;
-use log::LevelFilter;
 use log4rs::{
     append::{
         console::{ConsoleAppender, Target},
         rolling_file::{
             policy::compound::{
-                roll::delete::DeleteRoller, trigger::size::SizeTrigger, CompoundPolicy,
+                CompoundPolicy, roll::delete::DeleteRoller, trigger::size::SizeTrigger,
             },
             RollingFileAppender,
         },
     },
     config::{Appender, Logger, Root},
+    Config,
     encode::pattern::PatternEncoder,
     filter::Filter,
-    Config,
 };
+use log::LevelFilter;
 
 mod api;
 mod cdn;
@@ -151,7 +151,7 @@ async fn main() {
         .expect("Failed to check migrating from spacebar")
     {
         if !args.migrate {
-            log::error!(target: "symfonia::db", "The database seems to be from spacebar.  Please run with --migrate option to migrate the database.  This is not irreversible.");
+            log::error!(target: "symfonia::db", "The database seems to be from spacebar.  Please run with --migrate option to migrate the database.  This is not reversible.");
             std::process::exit(0);
         } else {
             log::warn!(target: "symfonia::db", "Migrating from spacebar to symfonia");

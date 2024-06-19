@@ -1,12 +1,16 @@
-use chorus::types::jwt::Claims;
-use chorus::types::Snowflake;
-use poem::{handler, IntoResponse};
-use poem::web::{Data, Json, Path};
+use chorus::types::{jwt::Claims, Snowflake};
+use poem::{
+    handler,
+    IntoResponse,
+    web::{Data, Json, Path},
+};
 use serde_json::Number;
 use sqlx::MySqlPool;
 
-use crate::database::entities::{Channel, Guild, GuildMember, Role};
-use crate::errors::{Error, GuildError};
+use crate::{
+    database::entities::{Channel, Guild, GuildMember, Role},
+    errors::{Error, GuildError},
+};
 
 pub mod channels;
 pub(crate) mod invites;

@@ -1,7 +1,8 @@
-pub mod entities;
+use sqlx::{AnyPool, Database, Executor, MySqlPool, Row, SqlitePool};
 
 use crate::errors::Error;
-use sqlx::{AnyPool, Database, Executor, MySqlPool, Row, SqlitePool};
+
+pub mod entities;
 
 pub trait Queryer<'c, DB: Database>: Executor<'c, Database = DB> {}
 
@@ -132,7 +133,7 @@ pub async fn seed_config(db: &MySqlPool) -> Result<(), Error> {
     sqlx::query(r#"INSERT INTO config (`key`, value) VALUES ('email_smtp_port', null);"#)
         .execute(db)
         .await?;
-    sqlx::query(r#"INSERT INTO config (`key`, value) VALUES ('email_smtp_secure', null);"#)
+    sqlx::query(r#"INSERT INTO config (`key`, value) VALUES ('email_smtp_secure', 'false');"#)
         .execute(db)
         .await?;
     sqlx::query(r#"INSERT INTO config (`key`, value) VALUES ('email_smtp_username', null);"#)
@@ -480,9 +481,11 @@ pub async fn seed_config(db: &MySqlPool) -> Result<(), Error> {
     sqlx::query(r#"INSERT INTO config (`key`, value) VALUES ('security_captcha_secret', null);"#)
         .execute(db)
         .await?;
-    sqlx::query(r#"INSERT INTO config (`key`, value) VALUES ('security_captcha_service', null);"#)
-        .execute(db)
-        .await?;
+    sqlx::query(
+        r#"INSERT INTO config (`key`, value) VALUES ('security_captcha_service', '"hcaptcha"');"#,
+    )
+    .execute(db)
+    .await?;
     sqlx::query(r#"INSERT INTO config (`key`, value) VALUES ('security_captcha_sitekey', null);"#)
         .execute(db)
         .await?;

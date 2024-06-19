@@ -1,9 +1,10 @@
-use poem::http::StatusCode;
-use poem::{Endpoint, Middleware, Request};
+use poem::{Endpoint, http::StatusCode, Middleware, Request};
 use sqlx::MySqlPool;
 
-use crate::database::entities::Config;
-use crate::util::token::check_token;
+use crate::{
+    database::entities::{Config, User},
+    util::token::check_token,
+};
 
 pub struct AuthenticationMiddleware;
 
@@ -34,8 +35,10 @@ impl<E: Endpoint> Endpoint for AuthenticationMiddlewareImpl<E> {
             auth.trim_start_matches("Bearer "),
             &cfg.security.jwt_secret,
         )
-        .await
-        .unwrap();
+        .await?;
+        if let Some(user) = User::get_by_id(db, claims.id).await? {
+            req.set_data(user);
+        }
         req.set_data(claims);
 
         self.ep.call(req).await
