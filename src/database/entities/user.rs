@@ -203,6 +203,10 @@ impl User {
     }
 
     pub fn to_public_user(&self) -> PublicUser {
-        self.inner.to_owned().into_public_user()
+        self.to_inner().into_public_user()
+    }
+
+    pub fn to_inner(&self) -> chorus::types::User {
+        self.inner.clone()
     }
 }

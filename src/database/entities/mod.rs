@@ -6,9 +6,11 @@ pub use invite::*;
 pub use member::*;
 pub use message::*;
 pub use read_state::*;
+pub use recipient::*;
 pub use role::*;
 pub use user::*;
 pub use user_settings::*;
+pub use webhook::*;
 
 mod application;
 mod attachment;
@@ -20,6 +22,7 @@ mod invite;
 mod member;
 mod message;
 mod read_state;
+mod recipient;
 mod role;
 mod sticker;
 mod template;
@@ -27,7 +30,6 @@ mod user;
 mod user_settings;
 mod voice_state;
 mod webhook;
-
 /*#[async_trait]
 pub trait BaseObject<'a>: Sized {
     const TABLE: &'a str;

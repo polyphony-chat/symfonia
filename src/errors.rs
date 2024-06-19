@@ -67,6 +67,8 @@ pub enum GuildError {
     MemberNotFound,
     #[error("ALREADY_IN_GUILD")]
     AlreadyInGuild,
+    #[error("ROLE_NOT_FOUND")]
+    InvalidRole,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -85,6 +87,10 @@ pub enum ChannelError {
     TooManyMessages(u32),
     #[error("Maxmimum pins reached")]
     MaxPinsReached,
+    #[error("Maxmimum webhooks reached")]
+    MaxWebhooksReached,
+    #[error("User is already a recipient of this channel")]
+    InvalidRecipient,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -123,6 +129,7 @@ impl ResponseError for Error {
                 GuildError::InvalidGuild => StatusCode::NOT_FOUND,
                 GuildError::MemberNotFound => StatusCode::NOT_FOUND,
                 GuildError::AlreadyInGuild => StatusCode::BAD_REQUEST,
+                GuildError::InvalidRole => StatusCode::NOT_FOUND,
             },
             Error::Channel(err) => match err {
                 ChannelError::InvalidChannel => StatusCode::NOT_FOUND,
@@ -132,6 +139,8 @@ impl ResponseError for Error {
                 ChannelError::InvalidMessage => StatusCode::NOT_FOUND,
                 ChannelError::TooManyMessages(_) => StatusCode::BAD_REQUEST,
                 ChannelError::MaxPinsReached => StatusCode::BAD_REQUEST,
+                ChannelError::MaxWebhooksReached => StatusCode::BAD_REQUEST,
+                ChannelError::InvalidRecipient => StatusCode::NOT_FOUND,
             },
             Error::Invite(err) => match err {
                 InviteError::InvalidInvite => StatusCode::NOT_FOUND,

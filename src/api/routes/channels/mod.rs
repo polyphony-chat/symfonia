@@ -13,10 +13,14 @@ use crate::{
     errors::{ChannelError, Error},
 };
 
+mod followers;
 mod invites;
 mod messages;
+mod permissions;
 mod pins;
+mod recipients;
 mod typing;
+mod webhooks;
 
 pub fn setup_routes() -> Route {
     Route::new()
@@ -66,6 +70,19 @@ pub fn setup_routes() -> Route {
         .at(
             "/:channel_id/pins/:message_id",
             put(pins::add_pinned_message).delete(pins::remove_pinned_message),
+        )
+        .at(
+            "/:channel_id/webhooks",
+            get(webhooks::get_webhooks).post(webhooks::create_webhook),
+        )
+        .at("/:channel_id/followers", post(followers::create_following))
+        .at(
+            "/:channel_id/recipients",
+            put(recipients::add_recipient).delete(recipients::remove_recipient),
+        )
+        .at(
+            "/:channel_id/permissions/:overwrite_id",
+            put(permissions::add_overwrite).delete(permissions::remove_overwrite),
         )
 }
 
