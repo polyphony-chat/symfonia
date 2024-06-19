@@ -19,8 +19,8 @@ pub(crate) mod reactions;
 #[handler]
 pub async fn edit_message(
     Data(db): Data<&MySqlPool>,
-    Data(claims): Data<&Claims>,
-    Data(config): Data<&Config>,
+    Data(_claims): Data<&Claims>,
+    Data(_config): Data<&Config>,
     Data(authed_user): Data<&User>,
     Path((channel_id, message_id)): Path<(Snowflake, Snowflake)>,
     Json(payload): Json<MessageModifySchema>,
@@ -69,7 +69,7 @@ pub async fn get_message(
 #[handler]
 pub async fn delete_message(
     Data(db): Data<&MySqlPool>,
-    Data(claims): Data<&Claims>,
+    Data(_claims): Data<&Claims>,
     Data(authed_user): Data<&User>,
     Path((channel_id, message_id)): Path<(Snowflake, Snowflake)>,
 ) -> poem::Result<impl IntoResponse> {
@@ -77,7 +77,7 @@ pub async fn delete_message(
         .await?
         .ok_or(Error::Channel(ChannelError::InvalidChannel))?;
 
-    let message = Message::get_by_id(db, channel_id, message_id)
+    let message = Message::get_by_id(db, channel.id, message_id)
         .await?
         .ok_or(Error::Channel(ChannelError::InvalidMessage))?;
 

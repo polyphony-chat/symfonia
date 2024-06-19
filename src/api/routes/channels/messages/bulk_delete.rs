@@ -20,6 +20,7 @@ pub async fn bulk_delete(
     Path(channel_id): Path<Snowflake>,
     Json(ids): Json<Vec<Snowflake>>,
 ) -> poem::Result<impl IntoResponse> {
+    // TODO: Make this bot only
     let channel = Channel::get_by_id(&db, channel_id)
         .await?
         .ok_or(Error::Channel(ChannelError::InvalidChannel))?;

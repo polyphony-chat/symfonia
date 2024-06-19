@@ -81,7 +81,7 @@ pub async fn add_reaction(
     message.save(db).await?;
 
     if let Some(guild_id) = channel.guild_id {
-        let member = GuildMember::get_by_id(db, claims.id, guild_id)
+        let _member = GuildMember::get_by_id(db, claims.id, guild_id)
             .await?
             .ok_or(Error::Guild(GuildError::InvalidGuild))?;
 
@@ -121,7 +121,7 @@ pub async fn delete_reaction(
         .await?
         .ok_or(Error::Channel(ChannelError::InvalidChannel))?;
 
-    let mut message = Message::get_by_id(db, channel_id, message_id)
+    let mut message = Message::get_by_id(db, channel.id, message_id)
         .await?
         .ok_or(Error::Channel(ChannelError::InvalidMessage))?;
 
