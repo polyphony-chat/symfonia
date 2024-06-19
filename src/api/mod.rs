@@ -1,9 +1,8 @@
 use poem::{
     EndpointExt,
     IntoResponse,
-    listener::{Listener, TcpListener},
-    middleware::{NormalizePath, TrailingSlash},
-    post, Route, Server, web::{Json, Path},
+    listener::TcpListener,
+    middleware::{NormalizePath, TrailingSlash}, Route, Server, web::Json,
 };
 use serde_json::json;
 use sqlx::MySqlPool;
@@ -15,7 +14,6 @@ use crate::{
         },
         routes::{auth, channels, guilds, users},
     },
-    database,
     database::entities::Config,
     errors::Error,
 };

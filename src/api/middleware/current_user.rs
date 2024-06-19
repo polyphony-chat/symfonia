@@ -24,11 +24,8 @@ impl<E: Endpoint> Endpoint for CurrentUserMiddlewareImpl<E> {
         let db = req
             .data::<MySqlPool>()
             .expect("Failed to get database connection");
-        println!("Trying to get user from claims");
         if let Some(claims) = req.data::<Claims>() {
-            println!("{:?}", claims);
             if let Some(user) = User::get_by_id(db, claims.id).await? {
-                println!("Got user");
                 req.set_data(user);
             }
         }

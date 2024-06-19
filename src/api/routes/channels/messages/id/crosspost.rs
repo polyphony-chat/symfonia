@@ -14,7 +14,7 @@ use crate::{
 #[handler]
 pub async fn create_crosspost_message(
     Data(db): Data<&MySqlPool>,
-    Data(claims): Data<&Claims>,
+    Data(_claims): Data<&Claims>,
     Data(authed_user): Data<&User>,
     Path(channel_id): Path<Snowflake>,
     Json(payload): Json<MessageSendSchema>,
@@ -31,8 +31,14 @@ pub async fn create_crosspost_message(
         .await?
         .ok_or(Error::Channel(ChannelError::InvalidMessage))?;
 
-    let message =
-        Message::create(db, payload, channel.guild_id, channel_id, authed_user.id).await?;
+    let message = Message::create(
+        db,
+        payload,
+        channel.guild_id,
+        referenced_message.channel_id,
+        authed_user.id,
+    )
+    .await?;
 
     Ok(Json(message))
 }
