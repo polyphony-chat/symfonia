@@ -31,4 +31,3 @@ jobs:
             cargo build --verbose --all-features
             cargo test --verbose --all-features
           fi
-        working-directory: ../
