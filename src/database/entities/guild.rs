@@ -8,7 +8,7 @@ use chorus::types::{
     types::guild_configuration::GuildFeaturesList, WelcomeScreenObject,
 };
 use serde::{Deserialize, Serialize};
-use sqlx::MySqlPool;
+use sqlx::{MySqlPool, Row};
 
 use crate::{
     database::{
@@ -181,6 +181,14 @@ impl Guild {
 
     pub async fn get_invites(&self, db: &MySqlPool) -> Result<Vec<Invite>, Error> {
         Invite::get_by_guild(db, self.id).await
+    }
+
+    pub async fn count(db: &MySqlPool) -> Result<i32, Error> {
+        sqlx::query("SELECT COUNT(*) FROM guilds")
+            .fetch_one(db)
+            .await
+            .map_err(Error::SQLX)
+            .map(|r| r.get::<i32, _>(0))
     }
 
     pub fn into_inner(self) -> chorus::types::Guild {

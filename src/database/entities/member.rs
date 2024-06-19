@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use chorus::types::{Snowflake, UserGuildSettingsUpdate};
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
+use sqlx::{FromRow, Row};
 
 use crate::database::entities::{Guild, User};
 use crate::errors::{Error, GuildError, UserError};
@@ -96,5 +96,13 @@ impl GuildMember {
         member.user_data = user;
 
         Ok(Some(member))
+    }
+
+    pub async fn count(db: &sqlx::MySqlPool) -> Result<i32, Error> {
+        sqlx::query("SELECT COUNT(*) FROM members")
+           .fetch_one(db)
+           .await
+           .map_err(Error::from)
+           .map(|row| row.get::<i32, _>(0))
     }
 }

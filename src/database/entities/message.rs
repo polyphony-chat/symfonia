@@ -243,6 +243,14 @@ impl Message {
         Ok(data)
     }
 
+    pub async fn count(db: &MySqlPool) -> Result<i32, Error> {
+        sqlx::query("SELECT COUNT(*) FROM `messages`")
+            .fetch_one(db)
+            .await
+            .map_err(Error::from)
+            .map(|r| r.get::<i32, _>(0))
+    }
+
     pub async fn populate_relations(&mut self, db: &MySqlPool) -> Result<(), Error> {
         self.author = User::get_by_id(db, self.author_id)
             .await?

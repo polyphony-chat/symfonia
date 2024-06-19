@@ -7,7 +7,7 @@ use chorus::types::{PublicUser, Rights, Snowflake, UserData};
 use chrono::{NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use sqlx::{FromRow, MySqlPool};
+use sqlx::{FromRow, MySqlPool, Row};
 
 use crate::{
     database::entities::{Config, Guild, GuildMember, UserSettings},
@@ -200,6 +200,14 @@ impl User {
         }
 
         GuildMember::create(db, self, &guild).await
+    }
+
+    pub async fn count(db: &MySqlPool) -> Result<i32, Error> {
+        sqlx::query("SELECT COUNT(*) FROM users")
+            .fetch_one(db)
+            .await
+            .map_err(Error::SQLX)
+            .map(|r| r.get::<i32, _>(0))
     }
 
     pub fn to_public_user(&self) -> PublicUser {
