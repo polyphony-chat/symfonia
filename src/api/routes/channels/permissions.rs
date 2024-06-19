@@ -19,7 +19,7 @@ pub async fn add_overwrite(
     Path((channel_id, overwrite_id)): Path<(Snowflake, Snowflake)>,
     Json(payload): Json<PermissionOverwrite>,
 ) -> poem::Result<impl IntoResponse> {
-    let channel = Channel::get_by_id(db, channel_id)
+    let mut channel = Channel::get_by_id(db, channel_id)
         .await?
         .ok_or(Error::Channel(ChannelError::InvalidChannel))?;
 
@@ -33,13 +33,12 @@ pub async fn add_overwrite(
         if Role::get_by_id(db, overwrite_id).await?.is_none() {
             return Err(Error::Guild(GuildError::InvalidRole).into());
         }
-    } else if payload.overwrite_type.eq(&PermissionOverwriteType::Member) {
-        if GuildMember::get_by_id(db, overwrite_id, guild_id)
+    } else if payload.overwrite_type.eq(&PermissionOverwriteType::Member)
+        && GuildMember::get_by_id(db, overwrite_id, guild_id)
             .await?
             .is_none()
-        {
-            return Err(Error::Guild(GuildError::MemberNotFound).into());
-        }
+    {
+        return Err(Error::Guild(GuildError::MemberNotFound).into());
     }
 
     if let Some(overwrite) = channel
@@ -50,10 +49,7 @@ pub async fn add_overwrite(
         overwrite.allow &= payload.allow;
         overwrite.deny &= payload.deny;
     } else {
-        channel
-            .permission_overwrites
-            .get_or_insert_with(Vec::new)
-            .push(payload);
+        channel.permission_overwrites = Some(sqlx::types::Json(vec![payload]));
     }
     channel.save(db).await?;
 
@@ -68,7 +64,7 @@ pub async fn remove_overwrite(
     Data(claims): Data<&Claims>,
     Path((channel_id, overwrite_id)): Path<(Snowflake, Snowflake)>,
 ) -> poem::Result<impl IntoResponse> {
-    let channel = Channel::get_by_id(db, channel_id)
+    let mut channel = Channel::get_by_id(db, channel_id)
         .await?
         .ok_or(Error::Channel(ChannelError::InvalidChannel))?;
 
