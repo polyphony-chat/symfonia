@@ -18,6 +18,10 @@ pub fn setup_routes() -> Route {
         .at("/", post(create_guild))
         .at("/:guild_id", get(id::get_guild))
         .at(
+            "/:guild_id/discovery-requirements",
+            get(id::discovery_requirements::discovery_requirements),
+        )
+        .at(
             "/:guild_id/channels",
             get(id::channels::get_channels)
                 .post(id::channels::create_channel)
