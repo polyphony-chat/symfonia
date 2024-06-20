@@ -254,6 +254,30 @@ impl Channel {
         }
     }
 
+    pub async fn reorder(
+        db: &MySqlPool,
+        guild_id: Snowflake,
+        channel_id: Snowflake,
+        position: u32,
+    ) -> Result<(), Error> {
+        /* TODO: Fix this, as this won't support reordering channels up a position (decreasing position) properly
+        sqlx::query(
+            "UPDATE channels SET position = position + 1 WHERE guild_id = ? AND position >= ?",
+        )
+        .bind(guild_id)
+        .bind(position)
+        .execute(db)
+        .await?;
+
+        sqlx::query("UPDATE channels SET position = ? WHERE id = ?")
+            .bind(position)
+            .bind(channel_id)
+            .execute(db)
+            .await?;*/
+
+        Ok(())
+    }
+
     pub async fn save(&self, db: &MySqlPool) -> Result<(), Error> {
         sqlx::query("UPDATE channels SET name = ?, topic = ?, nsfw = ?, position = ?, permission_overwrites = ?, rate_limit_per_user = ?, parent_id = ?, bitrate = ?, icon = ?, user_limit = ?, rtc_region = ?, default_auto_archive_duration = ?, default_reaction_emoji = ?, flags = ?, default_thread_rate_limit_per_user = ?, video_quality_mode = ?, channel_type = ?, last_message_id = ? WHERE id = ?")
             .bind(&self.name)

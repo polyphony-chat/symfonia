@@ -7,10 +7,6 @@ use poem::{
 use sqlx::MySqlPool;
 
 use crate::{
-    api::routes::guilds::id::{
-        channels::{create_channel, get_channels},
-        get_guild,
-    },
     database::entities::{Config, Guild, User},
     errors::{Error, UserError},
 };
@@ -20,10 +16,12 @@ mod id;
 pub fn setup_routes() -> Route {
     Route::new()
         .at("/", post(create_guild))
-        .at("/:guild_id", get(get_guild))
+        .at("/:guild_id", get(id::get_guild))
         .at(
             "/:guild_id/channels",
-            get(get_channels).post(create_channel),
+            get(id::channels::get_channels)
+                .post(id::channels::create_channel)
+                .patch(id::channels::reoder_channels),
         )
         .at("/:guild_id/invites", get(id::invites::get_invites))
         .at("/:guild_id/bans", get(id::bans::get_bans))

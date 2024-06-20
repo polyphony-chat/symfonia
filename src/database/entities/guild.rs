@@ -191,6 +191,15 @@ impl Guild {
             .map(|r| r.get::<i32, _>(0))
     }
 
+    pub async fn delete(self, db: &MySqlPool) -> Result<(), Error> {
+        sqlx::query("DELETE FROM guilds WHERE id =?")
+            .bind(self.id)
+            .execute(db)
+            .await
+            .map_err(Error::SQLX)
+            .map(|_| ())
+    }
+
     pub fn into_inner(self) -> chorus::types::Guild {
         self.inner
     }

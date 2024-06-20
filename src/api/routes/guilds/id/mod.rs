@@ -1,8 +1,9 @@
 use chorus::types::{jwt::Claims, Snowflake};
 use poem::{
     handler,
+    http::StatusCode,
     IntoResponse,
-    web::{Data, Json, Path},
+    Response, web::{Data, Json, Path},
 };
 use serde_json::Number;
 use sqlx::MySqlPool;
@@ -45,4 +46,23 @@ pub async fn get_guild(
     );
 
     Ok(Json(object))
+}
+
+#[handler]
+pub async fn delete_guild(
+    Data(db): Data<&MySqlPool>,
+    Data(claims): Data<&Claims>,
+    Path(guild_id): Path<Snowflake>,
+) -> poem::Result<impl IntoResponse> {
+    let guild = Guild::get_by_id(db, guild_id)
+        .await?
+        .ok_or(Error::Guild(GuildError::InvalidGuild))?;
+
+    // TODO: Check if the user is the owner of the guild
+
+    guild.delete(db).await?;
+
+    // TODO: Emit event 'GUILD_DELETE'
+
+    Ok(Response::builder().status(StatusCode::NO_CONTENT).finish())
 }
