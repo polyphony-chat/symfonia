@@ -37,6 +37,16 @@ pub fn setup_routes() -> Route {
                 .get(id::bans::get_banned_user)
                 .delete(id::bans::delete_ban),
         )
+        .at(
+            "/:guild_id/emojis",
+            get(id::emoji::get_emojis).post(id::emoji::create_emoji),
+        )
+        .at(
+            "/:guild_id/emojis/:emoji_id",
+            get(id::emoji::get_emoji)
+                .patch(id::emoji::modify_emoji)
+                .delete(id::emoji::delete_emoji),
+        )
 }
 
 #[handler]

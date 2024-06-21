@@ -16,6 +16,7 @@ use crate::{
 pub(crate) mod bans;
 pub mod channels;
 pub(crate) mod discovery_requirements;
+pub(crate) mod emoji;
 pub(crate) mod invites;
 
 #[handler]

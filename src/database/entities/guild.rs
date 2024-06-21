@@ -12,7 +12,7 @@ use sqlx::{FromRow, MySqlPool, QueryBuilder, Row};
 
 use crate::{
     database::{
-        entities::{Channel, Config, GuildMember, Invite, Role, User},
+        entities::{Channel, Config, Emoji, GuildMember, Invite, Role, User},
         Queryer,
     },
     errors::{Error, GuildError, UserError},
@@ -169,6 +169,15 @@ impl Guild {
             .map_err(Error::SQLX)
     }
 
+    // Helper functions start
+    pub async fn get_member(
+        &self,
+        db: &MySqlPool,
+        user_id: Snowflake,
+    ) -> Result<Option<GuildMember>, Error> {
+        GuildMember::get_by_id(db, user_id, self.id).await
+    }
+
     pub async fn has_member(&self, db: &MySqlPool, user_id: Snowflake) -> Result<bool, Error> {
         sqlx::query_as("SELECT * FROM guild_members WHERE guild_id = ? AND user_id =?")
             .bind(self.id)
@@ -181,6 +190,14 @@ impl Guild {
 
     pub async fn get_invites(&self, db: &MySqlPool) -> Result<Vec<Invite>, Error> {
         Invite::get_by_guild(db, self.id).await
+    }
+
+    pub async fn get_emoji(&self, db: &MySqlPool, id: Snowflake) -> Result<Option<Emoji>, Error> {
+        Emoji::get_by_id(db, self.id, id).await
+    }
+
+    pub async fn get_emojis(&self, db: &MySqlPool) -> Result<Vec<Emoji>, Error> {
+        Emoji::get_by_guild(db, self.id).await
     }
 
     pub async fn count(db: &MySqlPool) -> Result<i32, Error> {
