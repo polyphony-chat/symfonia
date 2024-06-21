@@ -81,6 +81,8 @@ pub enum GuildError {
     InsufficientPermissions, /*(PermissionFlags)*/
     #[error("FEATURE_IS_MUTABLE")]
     FeatureIsImmutable,
+    #[error("STICKER_NOT_FOUND")]
+    StickerNotFound,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -148,6 +150,7 @@ impl ResponseError for Error {
                 GuildError::MaxEmojisReached(_) => StatusCode::BAD_REQUEST,
                 GuildError::InsufficientPermissions => StatusCode::UNAUTHORIZED,
                 GuildError::FeatureIsImmutable => StatusCode::BAD_REQUEST,
+                GuildError::StickerNotFound => StatusCode::NOT_FOUND,
             },
             Error::Channel(err) => match err {
                 ChannelError::InvalidChannel => StatusCode::NOT_FOUND,

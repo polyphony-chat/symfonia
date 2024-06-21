@@ -24,6 +24,7 @@ pub(crate) mod discovery_requirements;
 pub(crate) mod emoji;
 pub(crate) mod invites;
 pub(crate) mod prune;
+pub(crate) mod stickers;
 
 #[handler]
 pub async fn get_guild(

@@ -56,6 +56,16 @@ pub fn setup_routes() -> Route {
             "/:guild_id/prune",
             get(id::prune::prune_members_dry_run).post(id::prune::prune_members),
         )
+        .at(
+            "/:guild_id/stickers",
+            get(id::stickers::get_stickers).post(id::stickers::create_sticker),
+        )
+        .at(
+            "/:guild_id/stickers/:sticker_id",
+            get(id::stickers::get_sticker)
+                .patch(id::stickers::modify_sticker)
+                .delete(id::stickers::delete),
+        )
 }
 
 #[handler]

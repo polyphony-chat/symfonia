@@ -75,8 +75,8 @@ pub async fn prune_members(
 
     let my_highest = async {
         let mut roles = vec![];
-        for role_id in me.roles {
-            let role = Role::get_by_id(db, role_id)
+        for role_id in &me.roles {
+            let role = Role::get_by_id(db, *role_id)
                 .await?
                 .ok_or(Error::Guild(GuildError::InvalidRole))?;
 
@@ -96,6 +96,7 @@ pub async fn prune_members(
         .calculate_inactive_members(db, query.days, query.include_roles, my_highest)
         .await?;
 
+    let total_count = members.len();
     for member in members {
         // TODO: Emit events?  Maybe write a special query for this?
         member.delete(db).await?;
@@ -103,7 +104,7 @@ pub async fn prune_members(
 
     Ok(Json(GuildPruneResult {
         pruned: if query.compute_prune_count.unwrap_or_default() {
-            Some(members.len())
+            Some(total_count)
         } else {
             None
         },
