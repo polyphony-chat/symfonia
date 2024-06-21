@@ -1,11 +1,15 @@
-use chorus::types::{GetInvitesSchema, Snowflake};
-use chorus::types::jwt::Claims;
-use poem::{handler, IntoResponse};
-use poem::web::{Data, Json, Path, Query};
+use chorus::types::{GetInvitesSchema, jwt::Claims, Snowflake};
+use poem::{
+    handler,
+    IntoResponse,
+    web::{Data, Json, Path, Query},
+};
 use sqlx::MySqlPool;
 
-use crate::database::entities::Guild;
-use crate::errors::{Error, GuildError};
+use crate::{
+    database::entities::Guild,
+    errors::{Error, GuildError},
+};
 
 #[handler]
 pub async fn get_invites(
@@ -26,7 +30,9 @@ pub async fn get_invites(
         // TODO: Get approximate member count
         // TODO: Get approximate online member count (presences)
 
-        invites.iter_mut().for_each(|invite| {});
+        for invite in invites.iter_mut() {
+            invite.populate_relations(db).await?;
+        }
     }
 
     Ok(Json(invites))

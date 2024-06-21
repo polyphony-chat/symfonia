@@ -205,6 +205,20 @@ impl Invite {
             .map_err(Error::SQLX)
     }
 
+    pub async fn populate_relations(&mut self, db: &MySqlPool) -> Result<(), Error> {
+        // if let Some(guild_id) = self.guild_id {
+        //     self.guild = Guild::get_by_id(db, guild_id).await?.map(|guild| GuildInvite::fr);
+        // }
+
+        if let Some(target_user_id) = self.target_user_id {
+            self.target_user = User::get_by_id(db, target_user_id)
+                .await?
+                .map(|user| user.to_inner());
+        }
+
+        Ok(())
+    }
+
     pub fn into_inner(self) -> chorus::types::Invite {
         self.inner
     }
