@@ -142,6 +142,7 @@ impl Guild {
                     false,
                     false,
                     false,
+                    vec![],
                 )
                 .await?,
             ]
@@ -201,6 +202,35 @@ impl Guild {
             .await
             .map_err(Error::SQLX)
             .map(|r| r.get::<i32, _>(0))
+    }
+
+    pub async fn save(&self, db: &MySqlPool) -> Result<(), Error> {
+        sqlx::query("UPDATE guilds SET afk_timeout =?, default_message_notifications =?, explicit_content_filter =?, features =?, icon =?, max_members =?, max_presences =?, max_video_channel_users =?, name =?, owner_id =?, region =?, system_channel_flags =?, preferred_locale =?, welcome_screen =?, large =?, premium_tier =?, unavailable =?, widget_enabled =?, nsfw =?, public_updates_channel_id =?, rules_channel_id =? WHERE id =?")
+            .bind(self.afk_timeout)
+            .bind(self.default_message_notifications)
+            .bind(self.explicit_content_filter)
+            .bind(&self.features)
+            .bind(&self.icon)
+            .bind(self.max_members)
+            .bind(self.max_presences)
+            .bind(self.max_video_channel_users)
+            .bind(&self.name)
+            .bind(self.owner_id)
+            .bind(&self.region)
+            .bind(self.system_channel_flags)
+            .bind(&self.preferred_locale)
+            .bind(&self.welcome_screen)
+            .bind(self.premium_tier)
+            .bind(self.unavailable)
+            .bind(self.widget_enabled)
+            .bind(self.nsfw)
+            .bind(self.public_updates_channel_id)
+            .bind(self.rules_channel_id)
+            .bind(self.id)
+            .execute(db)
+            .await
+            .map(|_| ())
+            .map_err(Error::SQLX)
     }
 
     pub async fn delete(self, db: &MySqlPool) -> Result<(), Error> {

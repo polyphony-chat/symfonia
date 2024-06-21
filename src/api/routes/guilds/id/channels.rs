@@ -48,6 +48,7 @@ pub async fn create_channel(
         false,
         false,
         false,
+        payload.permission_overwrites.unwrap_or_else(|| vec![]),
     )
     .await?;
 

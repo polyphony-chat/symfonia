@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use chorus::types::{
     ChannelMessagesAnchor, ChannelModifySchema, ChannelType, CreateChannelInviteSchema, InviteType,
-    MessageSendSchema, Snowflake,
+    MessageSendSchema, PermissionOverwrite, Snowflake,
 };
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -51,6 +51,7 @@ impl Channel {
         permission_check: bool,
         event_emit: bool,
         name_checks: bool,
+        permission_overwrites: Vec<PermissionOverwrite>,
     ) -> Result<Self, Error> {
         if permission_check {
             todo!()
@@ -88,7 +89,7 @@ impl Channel {
             },
         };
 
-        sqlx::query("INSERT INTO channels (id, type, name, nsfw, guild_id, parent_id, flags, default_thread_rate_limit_per_user, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())")
+        sqlx::query("INSERT INTO channels (id, type, name, nsfw, guild_id, parent_id, flags, permission_overwrites, default_thread_rate_limit_per_user, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())")
             .bind(channel.id)
             .bind(channel.channel_type)
             .bind(&channel.name)
@@ -96,6 +97,7 @@ impl Channel {
             .bind(channel.guild_id)
             .bind(channel.parent_id)
             .bind(0)
+            .bind(Json(permission_overwrites))
             .bind(0)
             .execute(db)
             .await?;
@@ -122,7 +124,17 @@ impl Channel {
         unique_recipients.push(creator_id);
 
         let channel = Channel::create(
-            db, dm_type, name, false, None, None, false, false, false, false,
+            db,
+            dm_type,
+            name,
+            false,
+            None,
+            None,
+            false,
+            false,
+            false,
+            false,
+            vec![],
         )
         .await?;
 

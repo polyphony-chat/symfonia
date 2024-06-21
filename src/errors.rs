@@ -77,8 +77,10 @@ pub enum GuildError {
     InvalidEmoji,
     #[error("MAXIMUM_EMOJIS_REACHED({0})")]
     MaxEmojisReached(i32),
-    #[error("INVALID_PERMISSIONS")]
-    InsufficientPermissions,
+    #[error("MISSING_PERMISSIONS")] // TODO: Make this display the missing permission(s)
+    InsufficientPermissions, /*(PermissionFlags)*/
+    #[error("FEATURE_IS_MUTABLE")]
+    FeatureIsImmutable,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -145,6 +147,7 @@ impl ResponseError for Error {
                 GuildError::InvalidEmoji => StatusCode::NOT_FOUND,
                 GuildError::MaxEmojisReached(_) => StatusCode::BAD_REQUEST,
                 GuildError::InsufficientPermissions => StatusCode::UNAUTHORIZED,
+                GuildError::FeatureIsImmutable => StatusCode::BAD_REQUEST,
             },
             Error::Channel(err) => match err {
                 ChannelError::InvalidChannel => StatusCode::NOT_FOUND,

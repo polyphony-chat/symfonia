@@ -16,7 +16,12 @@ mod id;
 pub fn setup_routes() -> Route {
     Route::new()
         .at("/", post(create_guild))
-        .at("/:guild_id", get(id::get_guild))
+        .at(
+            "/:guild_id",
+            get(id::get_guild)
+                .patch(id::modify_guild)
+                .delete(id::delete_guild),
+        )
         .at(
             "/:guild_id/discovery-requirements",
             get(id::discovery_requirements::discovery_requirements),

@@ -1,16 +1,21 @@
-use chorus::types::{jwt::Claims, Snowflake};
+use chorus::types::{
+    ChannelType,
+    GuildModifySchema,
+    jwt::Claims, PermissionFlags, PermissionOverwrite, PermissionOverwriteType, Rights,
+    Snowflake, types::guild_configuration::{GuildFeatures, GuildFeaturesList},
+};
+use itertools::Itertools;
 use poem::{
     handler,
     http::StatusCode,
     IntoResponse,
     Response, web::{Data, Json, Path},
 };
-use serde_json::Number;
 use sqlx::MySqlPool;
 
 use crate::{
-    database::entities::{Channel, Guild, GuildMember, Role},
-    errors::{Error, GuildError},
+    database::entities::{Channel, Guild, GuildMember, Role, User},
+    errors::{ChannelError, Error, GuildError},
 };
 
 pub(crate) mod bans;
@@ -41,13 +46,129 @@ pub async fn get_guild(
         .await?
         .ok_or(Error::Guild(GuildError::MemberNotFound))?;
 
-    let mut object = serde_json::to_value(&guild).unwrap();
-    object.as_object_mut().unwrap().insert(
-        String::from("joined_at"),
-        serde_json::Value::Number(Number::from(member.joined_at.timestamp())),
-    );
+    guild.joined_at = Some(member.joined_at);
 
-    Ok(Json(object))
+    Ok(Json(guild.into_inner()))
+}
+
+#[handler]
+pub async fn modify_guild(
+    Data(db): Data<&MySqlPool>,
+    Data(authed_user): Data<&User>,
+    Path(guild_id): Path<Snowflake>,
+    Json(payload): Json<GuildModifySchema>,
+) -> poem::Result<impl IntoResponse> {
+    let mut guild = Guild::get_by_id(db, guild_id)
+        .await?
+        .ok_or(Error::Guild(GuildError::InvalidGuild))?;
+
+    let member = guild
+        .get_member(db, authed_user.id)
+        .await?
+        .ok_or(Error::Guild(GuildError::MemberNotFound))?;
+
+    if authed_user.rights.has(Rights::MANAGE_GUILDS, true)
+        && !member
+            .permissions
+            .has_permission(PermissionFlags::MANAGE_GUILD)
+    {
+        return Err(Error::Guild(
+            GuildError::InsufficientPermissions, /*(
+                                                     PermissionFlags::MANAGE_GUILD,
+                                                 )*/
+        )
+        .into());
+    }
+
+    // TODO: Handle guild icon/banner/splash on CDN
+
+    if let Some(features) = payload.features {
+        let diff = guild
+            .features
+            .iter()
+            .filter(|f| !features.contains(&f))
+            .chain(&features)
+            .unique()
+            .cloned()
+            .collect::<Vec<_>>();
+
+        const MUTABLE_FEATURES: &[GuildFeatures] = &[
+            GuildFeatures::Community,
+            GuildFeatures::InvitesDisabled,
+            GuildFeatures::Discoverable,
+        ];
+
+        if diff.iter().any(|f| !MUTABLE_FEATURES.contains(&f)) {
+            return Err(Error::Guild(GuildError::FeatureIsImmutable).into());
+        }
+        guild.features = GuildFeaturesList::from(diff);
+    }
+
+    if let Some(pub_update_channel_id) = payload.public_updates_channel_id {
+        if pub_update_channel_id == Snowflake(1) {
+            let channel = Channel::create(
+                db,
+                ChannelType::GuildText,
+                Some(String::from("moderator-only")),
+                false,
+                Some(guild.id),
+                None,
+                false,
+                false,
+                true,
+                false,
+                vec![PermissionOverwrite {
+                    id: guild.id, // @everyone
+                    overwrite_type: PermissionOverwriteType::Role,
+                    allow: PermissionFlags::empty(),
+                    deny: PermissionFlags::VIEW_CHANNEL,
+                }],
+            )
+            .await?;
+
+            // TODO: Update guild channel ordering (position)
+
+            guild.public_updates_channel_id = Some(channel.id);
+        } else {
+            Channel::get_by_id(db, pub_update_channel_id)
+                .await?
+                .ok_or(Error::Channel(ChannelError::InvalidChannel))?;
+            guild.public_updates_channel_id = Some(pub_update_channel_id);
+        }
+    }
+
+    if let Some(rules_channel_id) = payload.rules_channel_id {
+        if rules_channel_id == Snowflake(1) {
+            let channel = Channel::create(
+                db,
+                ChannelType::GuildText,
+                Some(String::from("rules")),
+                false,
+                Some(guild.id),
+                None,
+                false,
+                false,
+                true,
+                false,
+                vec![PermissionOverwrite {
+                    id: guild.id, // @everyone
+                    overwrite_type: PermissionOverwriteType::Role,
+                    allow: PermissionFlags::empty(),
+                    deny: PermissionFlags::SEND_MESSAGES,
+                }],
+            )
+            .await?;
+        } else {
+            Channel::get_by_id(db, rules_channel_id)
+                .await?
+                .ok_or(Error::Channel(ChannelError::InvalidChannel))?;
+            guild.rules_channel_id = Some(rules_channel_id);
+        }
+    }
+
+    guild.save(db).await?;
+
+    Ok(Json(guild.into_inner()))
 }
 
 #[handler]
