@@ -105,4 +105,13 @@ impl GuildMember {
            .map_err(Error::from)
            .map(|row| row.get::<i32, _>(0))
     }
+    
+    pub async fn delete(self, db: &sqlx::MySqlPool) -> Result<(), Error> {
+        sqlx::query("DELETE FROM members WHERE id =?")
+           .bind(self.id)
+           .execute(db)
+           .await
+           .map_err(Error::from)
+           .map(|_| ())
+    }
 }

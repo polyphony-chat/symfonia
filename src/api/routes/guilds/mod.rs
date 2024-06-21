@@ -52,6 +52,10 @@ pub fn setup_routes() -> Route {
                 .patch(id::emoji::modify_emoji)
                 .delete(id::emoji::delete_emoji),
         )
+        .at(
+            "/:guild_id/prune",
+            get(id::prune::prune_members_dry_run).post(id::prune::prune_members),
+        )
 }
 
 #[handler]

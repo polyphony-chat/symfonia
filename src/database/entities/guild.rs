@@ -204,6 +204,48 @@ impl Guild {
             .map(|r| r.get::<i32, _>(0))
     }
 
+    pub async fn calculate_inactive_members(
+        &self,
+        db: &MySqlPool,
+        days: u8,
+        roles: Vec<Snowflake>,
+        highest_role: u16,
+    ) -> Result<Vec<GuildMember>, Error> {
+        let now = chrono::Utc::now().naive_utc();
+        let cutoff = now - chrono::Duration::days(days as i64);
+        let min_snowflake = Snowflake::from(cutoff.and_utc().timestamp() as u64);
+
+        if roles.is_empty() {
+            sqlx::query_as("SELECT gm.* FROM guild_members gm JOIN member_roles mr ON gm.`index` = mr.`index` JOIN roles r ON r.id = mr.role_id WHERE gm.guild_id = ? AND (gm.last_message_id < ? OR gm.last_message_id IS NULL) AND r.position < ?")
+                .bind(self.id)
+                .bind(min_snowflake)
+                .bind(highest_role)
+                .fetch_all(db)
+                .await
+                .map_err(Error::SQLX)
+        } else {
+            let mut builder = QueryBuilder::new("SELECT gm.* FROM members gm JOIN member_roles mr ON gm.`index` = mr.`index` JOIN roles r ON r.id = mr.role_id WHERE gm.guild_id = ? AND (gm.last_message_id < ? OR gm.last_message_id IS NULL) AND r.position < ? AND mr.role_id IN (");
+
+            let mut separated = builder.separated(", ");
+            for role in &roles {
+                separated.push_bind(role);
+            }
+            separated.push_unseparated(") ");
+
+            let query = builder.build();
+            Ok(query
+                .bind(self.id)
+                .bind(min_snowflake)
+                .bind(highest_role)
+                .fetch_all(db)
+                .await?
+                .iter_mut()
+                .map(|row| GuildMember::from_row(row))
+                .flatten()
+                .collect())
+        }
+    }
+
     pub async fn save(&self, db: &MySqlPool) -> Result<(), Error> {
         sqlx::query("UPDATE guilds SET afk_timeout =?, default_message_notifications =?, explicit_content_filter =?, features =?, icon =?, max_members =?, max_presences =?, max_video_channel_users =?, name =?, owner_id =?, region =?, system_channel_flags =?, preferred_locale =?, welcome_screen =?, large =?, premium_tier =?, unavailable =?, widget_enabled =?, nsfw =?, public_updates_channel_id =?, rules_channel_id =? WHERE id =?")
             .bind(self.afk_timeout)
