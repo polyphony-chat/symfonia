@@ -193,7 +193,9 @@ impl Guild {
     }
 
     pub async fn get_emoji(&self, db: &MySqlPool, id: Snowflake) -> Result<Option<Emoji>, Error> {
-        Emoji::get_by_id(db, self.id, id).await
+        Emoji::get_by_id(db, id)
+            .await // We only want emojis from this guild
+            .map(|x| x.filter(|y| y.guild_id == self.id))
     }
 
     pub async fn get_emojis(&self, db: &MySqlPool) -> Result<Vec<Emoji>, Error> {

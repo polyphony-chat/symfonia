@@ -77,14 +77,9 @@ impl Emoji {
         })
     }
 
-    pub async fn get_by_id(
-        db: &MySqlPool,
-        guild_id: Snowflake,
-        id: Snowflake,
-    ) -> Result<Option<Self>, Error> {
+    pub async fn get_by_id(db: &MySqlPool, id: Snowflake) -> Result<Option<Self>, Error> {
         sqlx::query_as("SELECT * FROM emojis WHERE id = ? AND guild_id = ?")
             .bind(id)
-            .bind(guild_id)
             .fetch_optional(db)
             .await
             .map_err(Error::SQLX)
