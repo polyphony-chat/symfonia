@@ -70,6 +70,11 @@ pub fn setup_routes() -> Route {
             "/:guild_id/vanity-url",
             get(id::vanity_url::get_vanity).patch(id::vanity_url::set_vanity),
         )
+        .at(
+            "/:guild_id/welcome-screen",
+            get(id::welcome_screen::get_welcome_screen)
+                .patch(id::welcome_screen::modify_welcome_screen),
+        )
 }
 
 #[handler]
