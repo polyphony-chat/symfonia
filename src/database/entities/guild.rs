@@ -84,34 +84,27 @@ impl Guild {
             ..Default::default()
         };
 
-        let features = guild
-            .features
-            .iter()
-            .map(|x| x.to_str())
-            .collect::<Vec<_>>()
-            .join(",");
-        println!("{:?}", features);
-        let res = sqlx::query("INSERT INTO guilds (id, afk_timeout, default_message_notifications, explicit_content_filter, features, icon, max_members, max_presences, max_video_channel_users, name, owner_id, region, system_channel_flags, preferred_locale, welcome_screen, large, premium_tier, unavailable, widget_enabled, nsfw) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,0,0,?)")
+        sqlx::query("INSERT INTO guilds (id, afk_timeout, default_message_notifications, explicit_content_filter, features, icon, max_members, max_presences, max_video_channel_users, name, owner_id, region, system_channel_flags, preferred_locale, welcome_screen, large, premium_tier, unavailable, widget_enabled, nsfw) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,0,0,?)")
             .bind(guild.id)
             .bind(guild.afk_timeout)
             .bind(guild.default_message_notifications)
             .bind(guild.explicit_content_filter)
-            .bind(""/*&guild.features*/)
-            .bind(""/*&guild.icon*/)
-            .bind(500/*guild.max_members*/)
-            .bind(500/*guild.max_presences*/)
-            .bind(0/*guild.max_video_channel_users*/)
+            .bind(&guild.features)
+            .bind(&guild.icon)
+            .bind(guild.max_members)
+            .bind(guild.max_presences)
+            .bind(guild.max_video_channel_users)
             .bind(&guild.name)
             .bind(guild.owner_id)
-            .bind(""/*&guild.region*/)
+            .bind(&guild.region)
             .bind(guild.system_channel_flags)
-            .bind("en-US"/*&guild.preferred_locale*/)
-            .bind("null"/*&guild.welcome_screen*/)
-            .bind(2/*guild.premium_tier*/)
+            .bind(&guild.preferred_locale)
+            .bind(&guild.welcome_screen)
+            .bind(guild.premium_tier)
             .bind(true) // TODO: Do this better guild.nsfw_level
             .execute(db)
-            .await.unwrap();
-        log::debug!(target: "symfonia::guilds", "Created guild with id {}", guild.id);
+            .await?;
+        log::debug!(target: "symfonia::guilds", "Created guild {:?} with id {}", name, guild.id);
 
         let everyone = Role::create(
             db,
