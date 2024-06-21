@@ -25,6 +25,7 @@ pub(crate) mod emoji;
 pub(crate) mod invites;
 pub(crate) mod prune;
 pub(crate) mod stickers;
+pub(crate) mod vanity_url;
 
 #[handler]
 pub async fn get_guild(

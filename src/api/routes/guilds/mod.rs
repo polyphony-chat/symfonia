@@ -66,6 +66,10 @@ pub fn setup_routes() -> Route {
                 .patch(id::stickers::modify_sticker)
                 .delete(id::stickers::delete),
         )
+        .at(
+            "/:guild_id/vanity-url",
+            get(id::vanity_url::get_vanity).patch(id::vanity_url::set_vanity),
+        )
 }
 
 #[handler]

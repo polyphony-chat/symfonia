@@ -111,7 +111,7 @@ impl Sticker {
             .bind(&self.name)
             .bind(&self.description)
             .bind(&self.tags)
-            .bind(&self.id)
+            .bind(self.id)
             .execute(db)
             .await?;
 
