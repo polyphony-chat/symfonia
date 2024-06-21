@@ -168,6 +168,8 @@ pub async fn modify_guild(
 
     guild.save(db).await?;
 
+    // TODO: Emit event 'GUILD_UPDATE'
+
     Ok(Json(guild.into_inner()))
 }
 
