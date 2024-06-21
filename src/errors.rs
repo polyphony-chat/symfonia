@@ -73,6 +73,12 @@ pub enum GuildError {
     BanNotFound,
     #[error("ALREADY_BANNED")]
     BanAlreadyExists,
+    #[error("EMOJI_NOT_FOUND")]
+    InvalidEmoji,
+    #[error("MAXIMUM_EMOJIS_REACHED({0})")]
+    MaxEmojisReached(i32),
+    #[error("INVALID_PERMISSIONS")]
+    InsufficientPermissions,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -136,6 +142,9 @@ impl ResponseError for Error {
                 GuildError::InvalidRole => StatusCode::NOT_FOUND,
                 GuildError::BanNotFound => StatusCode::NOT_FOUND,
                 GuildError::BanAlreadyExists => StatusCode::BAD_REQUEST,
+                GuildError::InvalidEmoji => StatusCode::NOT_FOUND,
+                GuildError::MaxEmojisReached(_) => StatusCode::BAD_REQUEST,
+                GuildError::InsufficientPermissions => StatusCode::UNAUTHORIZED,
             },
             Error::Channel(err) => match err {
                 ChannelError::InvalidChannel => StatusCode::NOT_FOUND,
