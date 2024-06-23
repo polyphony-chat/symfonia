@@ -12,10 +12,15 @@ use crate::{
 };
 
 mod id;
+mod templates;
 
 pub fn setup_routes() -> Route {
     Route::new()
         .at("/", post(create_guild))
+        .at(
+            "/templates/:code",
+            get(templates::get_template).post(templates::create_guild_from_template),
+        )
         .at(
             "/:guild_id",
             get(id::get_guild)

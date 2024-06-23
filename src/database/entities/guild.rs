@@ -4,15 +4,17 @@ use std::{
 };
 
 use chorus::types::{
-    ChannelType, NSFWLevel, PremiumTier, PublicUser, Snowflake,
-    SystemChannelFlags, types::guild_configuration::GuildFeaturesList, WelcomeScreenObject,
+    ChannelType, NSFWLevel, PermissionFlags, PremiumTier,
+    PublicUser, Snowflake, SystemChannelFlags, types::guild_configuration::GuildFeaturesList, WelcomeScreenObject,
 };
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, MySqlPool, QueryBuilder, Row};
 
 use crate::{
     database::{
-        entities::{Channel, Config, Emoji, GuildMember, Invite, Role, Sticker, User},
+        entities::{
+            Channel, Config, Emoji, GuildMember, GuildTemplate, Invite, Role, Sticker, User,
+        },
         Queryer,
     },
     errors::{Error, GuildError, UserError},
@@ -51,7 +53,7 @@ impl Guild {
         name: &str,
         icon: Option<String>,
         owner_id: Snowflake,
-        channels: Vec<Channel>,
+        channels: &[chorus::types::Channel],
     ) -> Result<Self, Error> {
         let mut guild = Self {
             inner: chorus::types::Guild {
@@ -115,7 +117,7 @@ impl Guild {
             false,
             true,
             false,
-            "2251804225", // 559623605571137?
+            PermissionFlags::from_bits(2251804225).unwrap(), // 559623605571137? make it load from config?
             0,
             None,
             None,
@@ -147,12 +149,45 @@ impl Guild {
                 .await?,
             ]
         } else {
-            channels
+            let mut new_channels = Vec::with_capacity(channels.len());
+            for channel in channels {
+                new_channels.push(
+                    Channel::create(
+                        db,
+                        channel.channel_type,
+                        channel.name.to_owned(),
+                        channel.nsfw.unwrap_or(false),
+                        Some(guild.id),
+                        channel.parent_id,
+                        false,
+                        false,
+                        false,
+                        false,
+                        channel.permission_overwrites.clone().unwrap_or_default().0,
+                    )
+                    .await?,
+                );
+            }
+            new_channels
         };
 
         guild.channels = channels.into_iter().map(|c| c.to_inner()).collect();
 
         Ok(guild)
+    }
+
+    pub async fn create_from_template(
+        db: &MySqlPool,
+        cfg: &Config,
+        owner_id: Snowflake,
+        template: &GuildTemplate,
+        name: &str,
+    ) -> Result<Self, Error> {
+        let Some(g) = template.serialized_source_guild.first() else {
+            return Err(Error::Guild(GuildError::NoSourceGuild));
+        };
+
+        Self::create(db, cfg, name, None, owner_id, &g.channels).await
     }
 
     pub async fn get_by_id(db: &MySqlPool, id: Snowflake) -> Result<Option<Self>, Error> {
@@ -177,7 +212,7 @@ impl Guild {
         db: &MySqlPool,
         role_id: Snowflake,
     ) -> Result<Vec<GuildMember>, Error> {
-        GuildMember::get_by_role(db, role_id, self.id).await
+        GuildMember::get_by_role_id(db, role_id, self.id).await
     }
 
     pub async fn has_member(&self, db: &MySqlPool, user_id: Snowflake) -> Result<bool, Error> {

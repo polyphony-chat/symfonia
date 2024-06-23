@@ -43,6 +43,9 @@ pub enum Error {
 
     #[error(transparent)]
     Utf8(#[from] std::string::FromUtf8Error),
+
+    #[error(transparent)]
+    Reqwest(#[from] reqwest::Error),
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -89,6 +92,10 @@ pub enum GuildError {
     RoleLimitReached(u16),
     #[error("ROLE_NOT_FOUND")]
     RoleNotFound,
+    #[error("TEMPLATE_NOT_FOUND")]
+    TemplateNotFound,
+    #[error("TEMPLATE_NO_SOURCE")]
+    NoSourceGuild,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -195,6 +202,7 @@ impl ResponseError for Error {
             },
             Error::Rand(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::Utf8(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::Reqwest(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 

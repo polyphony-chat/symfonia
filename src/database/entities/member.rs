@@ -123,6 +123,14 @@ impl GuildMember {
             .await
             .map_err(Error::from)
     }
+    
+    pub async fn get_by_user_id(db: &sqlx::MySqlPool, user_id: Snowflake) -> Result<Vec<Self>, Error> {
+        sqlx::query_as("SELECT * FROM members WHERE id = ?")
+           .bind(user_id)
+           .fetch_all(db)
+           .await
+           .map_err(Error::from)
+    }
 
     pub async fn search(db: &sqlx::MySqlPool, guild_id: Snowflake, query: &str, limit: u16) -> Result<Vec<Self>, Error> {
         let mut members: Vec<Self> = sqlx::query_as("SELECT * FROM members WHERE guild_id = ? AND name LIKE ? LIMIT ?")
@@ -164,6 +172,15 @@ impl GuildMember {
            .await
            .map_err(Error::from)
            .map(|row| row.get::<i32, _>(0))
+    }
+
+    pub async fn count_by_user_id(db: &sqlx::MySqlPool, user_id: Snowflake) -> Result<i32, Error> {
+        sqlx::query("SELECT COUNT(*) FROM members WHERE id = ?")
+            .bind(user_id)
+            .fetch_one(db)
+            .await
+            .map(|r| r.get::<i32, _>(0))
+            .map_err(Error::from)
     }
 
     pub async fn delete(self, db: &sqlx::MySqlPool) -> Result<(), Error> {
