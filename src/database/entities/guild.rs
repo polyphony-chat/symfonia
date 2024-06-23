@@ -182,6 +182,12 @@ impl Guild {
             .map(|r: Option<GuildMember>| r.is_some())
     }
 
+    pub async fn get_role(&self, db: &MySqlPool, id: Snowflake) -> Result<Option<Role>, Error> {
+        Role::get_by_id(db, id)
+            .await
+            .map(|x| x.filter(|y| y.guild_id == self.id))
+    }
+
     pub async fn get_invites(&self, db: &MySqlPool) -> Result<Vec<Invite>, Error> {
         Invite::get_by_guild(db, self.id).await
     }

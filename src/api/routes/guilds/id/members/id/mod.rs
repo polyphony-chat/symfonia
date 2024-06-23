@@ -13,6 +13,7 @@ use crate::{
 };
 
 pub(crate) mod nick;
+pub(crate) mod roles;
 
 #[handler]
 pub async fn get_member(

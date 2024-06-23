@@ -188,6 +188,36 @@ impl GuildMember {
     pub async fn get_user(&self, db: &sqlx::MySqlPool) -> Result<User, Error> {
         User::get_by_id(db, self.id).await.and_then(|r| r.ok_or(Error::User(UserError::InvalidUser)))
     }
+    
+    pub async fn add_role(&mut self, db: &sqlx::MySqlPool, role_id: Snowflake) -> Result<(), Error> {
+        if self.roles.contains(&role_id) {
+            return Ok(());
+        }
+        
+        self.roles.push(role_id);
+        sqlx::query("INSERT INTO member_roles (`index`, role_id) VALUES (?,?)")
+            .bind(self.index)
+            .bind(role_id)
+            .execute(db)
+            .await?;
+        
+        Ok(())
+    }
+    
+    pub async fn remove_role(&mut self, db: &sqlx::MySqlPool, role_id: Snowflake) -> Result<(), Error> {
+        if!self.roles.contains(&role_id) {
+            return Ok(());
+        }
+        
+        self.roles.retain(|r| r!= &role_id);
+        sqlx::query("DELETE FROM member_roles WHERE `index` =? AND role_id =?")
+            .bind(self.index)
+            .bind(role_id)
+            .execute(db)
+            .await?;
+        
+        Ok(())
+    }
 
     pub fn into_inner(self) -> chorus::types::GuildMember {
         self.inner

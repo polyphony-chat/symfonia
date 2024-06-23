@@ -91,6 +91,10 @@ pub fn setup_routes() -> Route {
             "/:guild_id/members/:member_id/nick",
             patch(id::members::id::nick::change_nickname),
         )
+        .at(
+            "/:guild_id/members/:member_id/roles/:role_id",
+            put(id::members::id::roles::add_role).delete(id::members::id::roles::remove_role),
+        )
 }
 
 #[handler]
