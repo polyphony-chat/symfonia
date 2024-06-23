@@ -115,6 +115,15 @@ impl GuildMember {
             .map_err(Error::from)
     }
 
+    pub async fn get_by_role_id(db: &sqlx::MySqlPool, guild_id: Snowflake, role_id: Snowflake) -> Result<Vec<Self>, Error> {
+        sqlx::query_as("SELECT gm.* FROM members gm JOIN member_roles mr ON mr.`index` = gm.`index` WHERE mr.role_id = ? AND gm.guild_id = ?")
+            .bind(role_id)
+            .bind(guild_id)
+            .fetch_all(db)
+            .await
+            .map_err(Error::from)
+    }
+
     pub async fn search(db: &sqlx::MySqlPool, guild_id: Snowflake, query: &str, limit: u16) -> Result<Vec<Self>, Error> {
         let mut members: Vec<Self> = sqlx::query_as("SELECT * FROM members WHERE guild_id = ? AND name LIKE ? LIMIT ?")
            .bind(guild_id)
@@ -142,6 +151,15 @@ impl GuildMember {
 
     pub async fn count(db: &sqlx::MySqlPool) -> Result<i32, Error> {
         sqlx::query("SELECT COUNT(*) FROM members")
+           .fetch_one(db)
+           .await
+           .map_err(Error::from)
+           .map(|row| row.get::<i32, _>(0))
+    }
+
+    pub async fn count_by_role(db: &sqlx::MySqlPool, role_id: Snowflake) -> Result<i32, Error> {
+        sqlx::query("SELECT COUNT(*) FROM member_roles WHERE role_id = ?")
+           .bind(role_id)
            .fetch_one(db)
            .await
            .map_err(Error::from)
@@ -188,34 +206,34 @@ impl GuildMember {
     pub async fn get_user(&self, db: &sqlx::MySqlPool) -> Result<User, Error> {
         User::get_by_id(db, self.id).await.and_then(|r| r.ok_or(Error::User(UserError::InvalidUser)))
     }
-    
+
     pub async fn add_role(&mut self, db: &sqlx::MySqlPool, role_id: Snowflake) -> Result<(), Error> {
         if self.roles.contains(&role_id) {
             return Ok(());
         }
-        
+
         self.roles.push(role_id);
         sqlx::query("INSERT INTO member_roles (`index`, role_id) VALUES (?,?)")
             .bind(self.index)
             .bind(role_id)
             .execute(db)
             .await?;
-        
+
         Ok(())
     }
-    
+
     pub async fn remove_role(&mut self, db: &sqlx::MySqlPool, role_id: Snowflake) -> Result<(), Error> {
         if!self.roles.contains(&role_id) {
             return Ok(());
         }
-        
+
         self.roles.retain(|r| r!= &role_id);
         sqlx::query("DELETE FROM member_roles WHERE `index` =? AND role_id =?")
             .bind(self.index)
             .bind(role_id)
             .execute(db)
             .await?;
-        
+
         Ok(())
     }
 

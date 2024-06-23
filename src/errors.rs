@@ -85,6 +85,10 @@ pub enum GuildError {
     FeatureIsImmutable,
     #[error("STICKER_NOT_FOUND")]
     StickerNotFound,
+    #[error("MAXIMUM_ROLES_REACHED")]
+    RoleLimitReached(u16),
+    #[error("ROLE_NOT_FOUND")]
+    RoleNotFound,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -154,6 +158,8 @@ impl ResponseError for Error {
                 GuildError::InsufficientPermissions => StatusCode::UNAUTHORIZED,
                 GuildError::FeatureIsImmutable => StatusCode::BAD_REQUEST,
                 GuildError::StickerNotFound => StatusCode::NOT_FOUND,
+                GuildError::RoleLimitReached(_) => StatusCode::BAD_REQUEST,
+                GuildError::RoleNotFound => StatusCode::NOT_FOUND,
             },
             Error::Channel(err) => match err {
                 ChannelError::InvalidChannel => StatusCode::NOT_FOUND,

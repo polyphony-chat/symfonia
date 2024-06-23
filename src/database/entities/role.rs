@@ -1,8 +1,8 @@
 use std::ops::{Deref, DerefMut};
 
-use chorus::types::Snowflake;
+use chorus::types::{PermissionFlags, Snowflake};
 use serde::{Deserialize, Serialize};
-use sqlx::MySqlPool;
+use sqlx::{MySqlPool, Row};
 
 use crate::errors::Error;
 
@@ -41,7 +41,7 @@ impl Role {
         hoist: bool,
         managed: bool,
         mentionable: bool,
-        permissions: &str,
+        permissions: PermissionFlags,
         position: u16,
         icon: Option<String>,
         unicode_emoji: Option<String>,
@@ -58,7 +58,7 @@ impl Role {
                 managed,
                 mentionable,
                 name: name.to_string(),
-                permissions: permissions.to_string(),
+                permissions,
                 position,
                 icon: icon.to_owned(),
                 unicode_emoji: unicode_emoji.to_owned(),
@@ -98,6 +98,33 @@ impl Role {
             .bind(guild_id)
             .fetch_all(db)
             .await
+            .map_err(Error::SQLX)
+    }
+
+    pub async fn count_by_guild(db: &MySqlPool, guild_id: Snowflake) -> Result<i32, Error> {
+        sqlx::query("SELECT COUNT(*) FROM roles WHERE guild_id = ?")
+            .bind(guild_id)
+            .fetch_one(db)
+            .await
+            .map(|res| res.get::<i32, _>(0))
+            .map_err(Error::SQLX)
+    }
+
+    pub async fn save(&self, db: &MySqlPool) -> Result<(), Error> {
+        sqlx::query("UPDATE roles SET name = ?, color = ?, hoist = ?, managed = ?, mentionable = ?, permissions = ?, position = ?, icon = ?, unicode_emoji = ? WHERE id = ?")
+            .bind(&self.name)
+            .bind(self.color)
+            .bind(self.hoist)
+            .bind(self.managed)
+            .bind(self.mentionable)
+            .bind(&self.permissions)
+            .bind(self.position)
+            .bind(&self.icon)
+            .bind(&self.unicode_emoji)
+            .bind(self.id)
+            .execute(db)
+            .await
+            .map(|_| ())
             .map_err(Error::SQLX)
     }
 

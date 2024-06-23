@@ -172,6 +172,14 @@ impl Guild {
         GuildMember::get_by_id(db, user_id, self.id).await
     }
 
+    pub async fn get_members_by_role(
+        &self,
+        db: &MySqlPool,
+        role_id: Snowflake,
+    ) -> Result<Vec<GuildMember>, Error> {
+        GuildMember::get_by_role(db, role_id, self.id).await
+    }
+
     pub async fn has_member(&self, db: &MySqlPool, user_id: Snowflake) -> Result<bool, Error> {
         sqlx::query_as("SELECT * FROM guild_members WHERE guild_id = ? AND user_id =?")
             .bind(self.id)
@@ -208,6 +216,10 @@ impl Guild {
 
     pub async fn get_roles(&self, db: &MySqlPool) -> Result<Vec<Role>, Error> {
         Role::get_by_guild(db, self.id).await
+    }
+
+    pub async fn count_roles(&self, db: &MySqlPool) -> Result<i32, Error> {
+        Role::count_by_guild(db, self.id).await
     }
 
     pub async fn count(db: &MySqlPool) -> Result<i32, Error> {

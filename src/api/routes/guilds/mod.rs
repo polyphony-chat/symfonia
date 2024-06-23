@@ -95,6 +95,30 @@ pub fn setup_routes() -> Route {
             "/:guild_id/members/:member_id/roles/:role_id",
             put(id::members::id::roles::add_role).delete(id::members::id::roles::remove_role),
         )
+        .at(
+            "/:guild_id/roles",
+            get(id::roles::get_roles)
+                .post(id::roles::create_role)
+                .patch(id::roles::update_position),
+        )
+        .at(
+            "/:guild_id/roles/member-counts",
+            get(id::roles::member_counts::count_by_members),
+        )
+        .at(
+            "/:guild_id/roles/:role_id",
+            get(id::roles::id::get_role)
+                .delete(id::roles::id::delete_role)
+                .patch(id::roles::id::modify_role),
+        )
+        .at(
+            "/:guild_id/roles/:role_id/member-ids",
+            get(id::roles::id::member_ids::get_member_ids),
+        )
+        .at(
+            "/:guild_id/roles/:role_id/members",
+            patch(id::roles::id::members::bulk_assign_roles),
+        )
 }
 
 #[handler]
