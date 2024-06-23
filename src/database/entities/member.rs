@@ -18,6 +18,7 @@ pub struct GuildMember {
     pub settings: sqlx::types::Json<UserGuildSettingsUpdate>,
     #[sqlx(skip)]
     pub user_data: User,
+    pub last_message_id: Option<Snowflake>,
 }
 
 impl Deref for GuildMember {
@@ -50,6 +51,7 @@ impl GuildMember {
                 joined_at: chrono::Utc::now(),
                 ..Default::default()
             },
+            last_message_id: None,
         };
 
         let res = sqlx::query("INSERT INTO members (id, guild_id, joined_at, deaf, mute, pending, settings, bio) VALUES (?, ?, NOW(), 0, 0, 0, ?, ?)")
@@ -98,6 +100,46 @@ impl GuildMember {
         Ok(Some(member))
     }
 
+    pub async fn get_by_guild_id(
+        db: &sqlx::MySqlPool,
+        guild_id: Snowflake,
+        limit: u16,
+        after: Option<Snowflake>
+    ) -> Result<Vec<Self>, Error> {
+        sqlx::query_as("SELECT * FROM members WHERE guild_id = ? WHERE id > IFNULL(?, 0) LIMIT ?")
+            .bind(guild_id)
+            .bind(limit)
+            .bind(after)
+            .fetch_all(db)
+            .await
+            .map_err(Error::from)
+    }
+
+    pub async fn search(db: &sqlx::MySqlPool, guild_id: Snowflake, query: &str, limit: u16) -> Result<Vec<Self>, Error> {
+        let mut members: Vec<Self> = sqlx::query_as("SELECT * FROM members WHERE guild_id = ? AND name LIKE ? LIMIT ?")
+           .bind(guild_id)
+           .bind(format!("%{}%", query))
+           .bind(limit)
+           .fetch_all(db)
+           .await
+           .map_err(Error::from)?;
+
+        for member in members.iter_mut() {
+            member.populate_relations(db).await?;
+        }
+
+        Ok(members)
+    }
+
+    pub async fn populate_relations(&mut self, db: &sqlx::MySqlPool) -> Result<(), Error> {
+        // let guild = self.get_guild(db).await?;
+
+        self.user_data = self.get_user(db).await?;
+        self.user = Some(self.user_data.to_public_user());
+
+        Ok(())
+    }
+
     pub async fn count(db: &sqlx::MySqlPool) -> Result<i32, Error> {
         sqlx::query("SELECT COUNT(*) FROM members")
            .fetch_one(db)
@@ -105,7 +147,7 @@ impl GuildMember {
            .map_err(Error::from)
            .map(|row| row.get::<i32, _>(0))
     }
-    
+
     pub async fn delete(self, db: &sqlx::MySqlPool) -> Result<(), Error> {
         sqlx::query("DELETE FROM members WHERE id =?")
            .bind(self.id)
@@ -113,5 +155,41 @@ impl GuildMember {
            .await
            .map_err(Error::from)
            .map(|_| ())
+    }
+
+    pub async fn save(&self, db: &sqlx::MySqlPool) -> Result<(), Error> {
+        sqlx::query("UPDATE members SET settings = ?, nick = ?, deaf = ?, mute = ?, pending = ?, last_message_id = ?, avatar = ?, flags = ?, permissions = ? WHERE id = ?") //banner = ?, bio = ?, theme_colors = ?,
+            .bind(&self.settings)
+            .bind(&self.nick)
+            .bind(self.deaf)
+            .bind(self.mute)
+            .bind(self.pending)
+            .bind(self.last_message_id)
+            .bind(&self.avatar)
+            // .bind(self.banner)
+            // .bind(self.bio)
+            // .bind(self.theme_colors)
+            .bind(self.flags)
+            .bind(&self.permissions)
+            .bind(self.id)
+            .execute(db)
+            .await
+            .map(|_| ())
+            .map_err(Error::from)
+    }
+
+
+    // Start helper functions
+
+    pub async fn get_guild(&self, db: &sqlx::MySqlPool) -> Result<Guild, Error> {
+        Guild::get_by_id(db, self.guild_id).await.and_then(|r| r.ok_or(Error::Guild(GuildError::InvalidGuild)))
+    }
+
+    pub async fn get_user(&self, db: &sqlx::MySqlPool) -> Result<User, Error> {
+        User::get_by_id(db, self.id).await.and_then(|r| r.ok_or(Error::User(UserError::InvalidUser)))
+    }
+
+    pub fn into_inner(self) -> chorus::types::GuildMember {
+        self.inner
     }
 }

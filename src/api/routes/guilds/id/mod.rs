@@ -23,6 +23,7 @@ pub mod channels;
 pub(crate) mod discovery_requirements;
 pub(crate) mod emoji;
 pub(crate) mod invites;
+pub(crate) mod members;
 pub(crate) mod prune;
 pub(crate) mod stickers;
 pub(crate) mod vanity_url;
@@ -40,17 +41,18 @@ pub async fn get_guild(
 
     let channels = Channel::get_by_guild_id(db, guild_id).await?;
 
-    guild.channels = Some(channels.into_iter().map(|c| c.to_inner()).collect());
+    guild.channels = channels.into_iter().map(|c| c.to_inner()).collect();
 
-    let roles = Role::get_by_guild_id(db, guild_id).await?;
+    let roles = Role::get_by_guild(db, guild_id).await?;
 
-    guild.roles = Some(roles.into_iter().map(|r| r.to_inner()).collect());
+    guild.roles = roles.into_iter().map(|r| r.to_inner()).collect();
 
     let member = GuildMember::get_by_id(db, claims.id, guild_id)
         .await?
         .ok_or(Error::Guild(GuildError::MemberNotFound))?;
 
     guild.joined_at = Some(member.joined_at);
+    guild.owner = guild.owner_id.map(|id| id == claims.id);
 
     Ok(Json(guild.into_inner()))
 }

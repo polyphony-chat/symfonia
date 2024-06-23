@@ -126,4 +126,8 @@ impl Sticker {
             .map_err(Error::SQLX)
             .map(|_| ())
     }
+
+    pub fn into_inner(self) -> chorus::types::Sticker {
+        self.inner
+    }
 }

@@ -1,6 +1,6 @@
 use std::error::Error as StdError;
 
-use chorus::types::{APIError, AuthError};
+use chorus::types::{APIError, AuthError, Rights};
 use poem::{error::ResponseError, http::StatusCode, Response};
 
 #[derive(Debug, thiserror::Error)]
@@ -57,6 +57,8 @@ pub enum UserError {
     InvalidToken,
     #[error("ALREADY_EXISTS")]
     AlreadyExists,
+    #[error("MISSING_RIGHTS")]
+    MissingRights(Rights),
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -138,6 +140,7 @@ impl ResponseError for Error {
                 UserError::InvalidUser => StatusCode::NOT_FOUND,
                 UserError::InvalidToken => StatusCode::UNAUTHORIZED,
                 UserError::AlreadyExists => StatusCode::BAD_REQUEST,
+                UserError::MissingRights(_) => StatusCode::UNAUTHORIZED,
             },
             Error::Guild(err) => match err {
                 GuildError::InvalidGuild => StatusCode::NOT_FOUND,

@@ -12,7 +12,7 @@ use sqlx::{FromRow, MySqlPool, QueryBuilder, Row};
 
 use crate::{
     database::{
-        entities::{Channel, Config, Emoji, GuildMember, Invite, Role, User},
+        entities::{Channel, Config, Emoji, GuildMember, Invite, Role, Sticker, User},
         Queryer,
     },
     errors::{Error, GuildError, UserError},
@@ -127,7 +127,7 @@ impl Guild {
         user.add_to_guild(db, guild.id).await?;
         guild.owner = Some(true);
 
-        guild.roles = Some(vec![everyone.to_inner()]);
+        guild.roles = vec![everyone.to_inner()];
 
         let channels = if channels.is_empty() {
             vec![
@@ -150,7 +150,7 @@ impl Guild {
             channels
         };
 
-        guild.channels = Some(channels.into_iter().map(|c| c.to_inner()).collect());
+        guild.channels = channels.into_iter().map(|c| c.to_inner()).collect();
 
         Ok(guild)
     }
@@ -196,12 +196,54 @@ impl Guild {
         Emoji::get_by_guild(db, self.id).await
     }
 
+    pub async fn get_stickers(&self, db: &MySqlPool) -> Result<Vec<Sticker>, Error> {
+        Sticker::get_by_guild(db, self.id).await
+    }
+
+    pub async fn get_roles(&self, db: &MySqlPool) -> Result<Vec<Role>, Error> {
+        Role::get_by_guild(db, self.id).await
+    }
+
     pub async fn count(db: &MySqlPool) -> Result<i32, Error> {
         sqlx::query("SELECT COUNT(*) FROM guilds")
             .fetch_one(db)
             .await
             .map_err(Error::SQLX)
             .map(|r| r.get::<i32, _>(0))
+    }
+
+    pub async fn populate_relations(&mut self, db: &MySqlPool) -> Result<(), Error> {
+        self.emojis = self
+            .get_emojis(db)
+            .await?
+            .into_iter()
+            .map(|e| e.into_inner())
+            .collect();
+
+        self.roles = self
+            .get_roles(db)
+            .await?
+            .into_iter()
+            .map(|r| r.into_inner())
+            .collect();
+
+        self.stickers = self
+            .get_stickers(db)
+            .await?
+            .into_iter()
+            .map(|s| s.into_inner())
+            .collect();
+        Ok(())
+    }
+
+    pub async fn add_member(&self, db: &MySqlPool, user_id: Snowflake) -> Result<(), Error> {
+        let user = User::get_by_id(db, user_id)
+            .await?
+            .ok_or(Error::User(UserError::InvalidUser))?;
+
+        let member = GuildMember::create(db, &user, self).await?;
+
+        Ok(())
     }
 
     pub async fn calculate_inactive_members(
@@ -282,6 +324,15 @@ impl Guild {
             .await
             .map_err(Error::SQLX)
             .map(|_| ())
+    }
+
+    pub async fn search_members(
+        &self,
+        db: &sqlx::MySqlPool,
+        query: &str,
+        limit: u16,
+    ) -> Result<Vec<GuildMember>, Error> {
+        GuildMember::search(db, self.id, query, limit).await
     }
 
     pub fn into_inner(self) -> chorus::types::Guild {
@@ -458,19 +509,13 @@ impl GuildBan {
         search_term: &str,
         limit: u16,
     ) -> Result<Vec<Self>, Error> {
-        let mut query = QueryBuilder::new("SELECT b.* FROM bans b JOIN members m ON b.user_id = m.id AND b.guild_id = m.guild_id JOIN users u ON b.user_id = u.id WHERE u.username LIKE '%");
-        query.push_bind(search_term);
-        query.push("%' AND b.guild_id = ");
-        query.push_bind(guild_id);
-        query.push(" LIMIT ");
-        query.push_bind(limit);
-        let query = query.build();
-        let res = query.fetch_all(db).await?;
-        let results = res
-            .into_iter()
-            .map(|r| GuildBan::from_row(&r).unwrap())
-            .collect::<Vec<_>>();
-        Ok(results)
+        sqlx::query_as("SELECT b.* FROM bans b JOIN members m ON b.user_id = m.id AND b.guild_id = m.guild_id JOIN users u ON b.user_id = u.id WHERE u.username LIKE ? AND b.guild_id = ? LIMIT ?")
+            .bind(format!("%{}%", search_term))
+            .bind(guild_id)
+            .bind(limit)
+            .fetch_all(db)
+            .await
+            .map_err(Error::SQLX)
     }
 
     pub async fn delete(self, db: &MySqlPool) -> Result<(), Error> {
@@ -481,6 +526,8 @@ impl GuildBan {
             .map_err(Error::SQLX)?;
         Ok(())
     }
+
+    // Start helper functions
 
     pub fn into_inner(self) -> chorus::types::GuildBan {
         self.inner

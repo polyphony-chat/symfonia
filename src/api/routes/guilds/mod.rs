@@ -1,6 +1,6 @@
 use chorus::types::{GuildCreateSchema, jwt::Claims};
 use poem::{
-    get, handler, IntoResponse, post,
+    get, handler, IntoResponse, patch, post,
     put,
     Route, web::{Data, Json},
 };
@@ -74,6 +74,22 @@ pub fn setup_routes() -> Route {
             "/:guild_id/welcome-screen",
             get(id::welcome_screen::get_welcome_screen)
                 .patch(id::welcome_screen::modify_welcome_screen),
+        )
+        .at("/:guild_id/members", get(id::members::get_members))
+        .at(
+            "/:guild_id/members/search",
+            post(id::members::search_members),
+        )
+        .at(
+            "/:guild_id/members/:member_id",
+            get(id::members::id::get_member)
+                .patch(id::members::id::modify_member)
+                .put(id::members::id::join_guild)
+                .delete(id::members::id::remove_member),
+        )
+        .at(
+            "/:guild_id/members/:member_id/nick",
+            patch(id::members::id::nick::change_nickname),
         )
 }
 

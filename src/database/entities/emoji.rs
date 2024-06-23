@@ -126,4 +126,8 @@ impl Emoji {
             .map_err(Error::SQLX)
             .map(|_| ())
     }
+
+    pub fn into_inner(self) -> chorus::types::Emoji {
+        self.inner
+    }
 }
