@@ -128,6 +128,15 @@ impl Role {
             .map_err(Error::SQLX)
     }
 
+    pub async fn delete(&self, db: &MySqlPool) -> Result<(), Error> {
+        sqlx::query("DELETE FROM roles WHERE id = ?")
+            .bind(self.id)
+            .execute(db)
+            .await
+            .map(|_| ())
+            .map_err(Error::SQLX)
+    }
+
     pub fn into_inner(self) -> chorus::types::RoleObject {
         self.inner
     }

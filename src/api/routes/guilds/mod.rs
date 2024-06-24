@@ -150,7 +150,7 @@ pub async fn create_guild(
         &guild_name,
         payload.icon,
         claims.id,
-        vec![], // TODO: payload.channels.unwrap_or_default(),
+        &payload.channels.unwrap_or_default(),
     )
     .await?;
 

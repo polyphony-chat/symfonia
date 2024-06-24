@@ -4,6 +4,7 @@ use poem::{
     IntoResponse,
     web::{Data, Json, Path, Query},
 };
+use serde_json::json;
 use sqlx::MySqlPool;
 
 use crate::{
@@ -45,9 +46,9 @@ pub async fn search(
         .permissions
         .has_permission(PermissionFlags::READ_MESSAGE_HISTORY)
     {
-        return Ok(Json(MessageSearchResponse::default()));
+        return Ok(Json(MessageSearchResponse::default()).into_response());
     }
 
     todo!("unfinished search implementation");
-    Ok("")
+    Ok(Json(json!({})).into_response())
 }

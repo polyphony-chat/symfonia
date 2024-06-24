@@ -167,6 +167,8 @@ impl ResponseError for Error {
                 GuildError::StickerNotFound => StatusCode::NOT_FOUND,
                 GuildError::RoleLimitReached(_) => StatusCode::BAD_REQUEST,
                 GuildError::RoleNotFound => StatusCode::NOT_FOUND,
+                GuildError::TemplateNotFound => StatusCode::NOT_FOUND,
+                GuildError::NoSourceGuild => StatusCode::INTERNAL_SERVER_ERROR,
             },
             Error::Channel(err) => match err {
                 ChannelError::InvalidChannel => StatusCode::NOT_FOUND,

@@ -211,7 +211,7 @@ impl User {
     }
 
     pub async fn count_guilds(&self, db: &MySqlPool) -> Result<i32, Error> {
-        GuildMember::get_by_user_id(db, self.id).await
+        GuildMember::count_by_user_id(db, self.id).await
     }
 
     pub fn to_public_user(&self) -> PublicUser {
