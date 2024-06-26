@@ -1,3 +1,4 @@
+pub use audit_log::*;
 pub use channel::*;
 pub use config::*;
 pub use emoji::*;
@@ -17,6 +18,7 @@ pub use webhook::*;
 
 mod application;
 mod attachment;
+mod audit_log;
 mod channel;
 mod config;
 mod emoji;

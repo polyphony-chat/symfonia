@@ -18,6 +18,7 @@ use crate::{
     errors::{ChannelError, Error, GuildError},
 };
 
+mod audit_log;
 pub(crate) mod bans;
 pub mod channels;
 pub(crate) mod discovery_requirements;
