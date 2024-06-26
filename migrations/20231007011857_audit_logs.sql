@@ -3,6 +3,7 @@ create table if not exists audit_logs
     id          varchar(255) not null
         primary key,
     user_id     varchar(255) null,
+    guild_id    varchar(255) not null,
     action_type int          not null,
     options     text         null,
     changes     text         not null,
