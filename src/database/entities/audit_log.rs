@@ -87,7 +87,8 @@ impl AuditLogEntry {
             .map_err(Error::SQLX)?;
 
         Ok(r.into_iter()
-            .map(|r| AuditLogEntry::from_row(&r)?)
+            .map(|r| AuditLogEntry::from_row(&r))
+            .flatten()
             .collect::<Vec<_>>())
     }
 
