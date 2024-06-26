@@ -96,6 +96,8 @@ pub enum GuildError {
     TemplateNotFound,
     #[error("TEMPLATE_NO_SOURCE")]
     NoSourceGuild,
+    #[error("UNKNOWN_VOICE_STATE")]
+    VoiceStateNotFound,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -169,6 +171,7 @@ impl ResponseError for Error {
                 GuildError::RoleNotFound => StatusCode::NOT_FOUND,
                 GuildError::TemplateNotFound => StatusCode::NOT_FOUND,
                 GuildError::NoSourceGuild => StatusCode::INTERNAL_SERVER_ERROR,
+                GuildError::VoiceStateNotFound => StatusCode::NOT_FOUND,
             },
             Error::Channel(err) => match err {
                 ChannelError::InvalidChannel => StatusCode::NOT_FOUND,

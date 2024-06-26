@@ -29,6 +29,7 @@ pub(crate) mod prune;
 pub(crate) mod roles;
 pub(crate) mod stickers;
 pub(crate) mod vanity_url;
+pub(crate) mod voice_states;
 pub(crate) mod welcome_screen;
 
 #[handler]

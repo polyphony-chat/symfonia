@@ -124,6 +124,10 @@ pub fn setup_routes() -> Route {
             "/:guild_id/roles/:role_id/members",
             patch(id::roles::id::members::bulk_assign_roles),
         )
+        .at(
+            "/:guild_id/voice-states/:user_id",
+            patch(id::voice_states::update_voice_state),
+        )
 }
 
 #[handler]

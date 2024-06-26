@@ -12,6 +12,7 @@ pub use role::*;
 pub use sticker::*;
 pub use user::*;
 pub use user_settings::*;
+pub use voice_state::*;
 pub use webhook::*;
 
 mod application;
