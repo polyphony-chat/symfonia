@@ -121,6 +121,47 @@ impl Invite {
         Ok(invite)
     }
 
+    pub async fn create_vanity(
+        db: &MySqlPool,
+        guild_id: Snowflake,
+        code: &str,
+    ) -> Result<Self, Error> {
+        let invite = Self {
+            inner: chorus::types::Invite {
+                code: code.to_string(),
+                created_at: Some(Utc::now()),
+                guild_id: Some(guild_id),
+                invite_type: Some(InviteType::Guild),
+                ..Default::default()
+            },
+            channel_id: None,
+            inviter_id: None,
+            target_user_id: None,
+            vanity_url: Some(true),
+        };
+
+        sqlx::query("INSERT INTO invites (code, type, temporary, uses, max_uses, max_age, created_at, expires_at, guild_id, channel_id, inviter_id, target_user_id, target_user_type, vanity_url, flags) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+            .bind(code)
+            .bind(invite.invite_type)
+            .bind(invite.temporary)
+            .bind(invite.uses.unwrap_or(0))
+            .bind(invite.max_uses)
+            .bind(invite.max_age)
+            .bind(invite.created_at)
+            .bind(invite.expires_at)
+            .bind(invite.guild_id)
+            .bind(invite.channel_id)
+            .bind(invite.inviter_id)
+            .bind(invite.target_user_id)
+            .bind(invite.target_type)
+            .bind(invite.vanity_url)
+            .bind(invite.flags)
+            .execute(db)
+            .await?;
+
+        Ok(invite)
+    }
+
     pub async fn get_by_code(db: &MySqlPool, code: &str) -> Result<Option<Self>, Error> {
         let invite: Option<Self> = sqlx::query_as("SELECT * FROM invites WHERE code = ?")
             .bind(code)
@@ -147,6 +188,17 @@ impl Invite {
             .for_each(|invite: &mut Invite| invite.guild = Some(guild.clone().into_inner().into()));
 
         Ok(invites)
+    }
+
+    pub async fn get_by_guild_vanity(
+        db: &MySqlPool,
+        guild_id: Snowflake,
+    ) -> Result<Option<Self>, Error> {
+        sqlx::query_as("SELECT * FROM invites WHERE guild_id = ? AND vanity_url = 1")
+            .bind(guild_id)
+            .fetch_optional(db)
+            .await
+            .map_err(Error::SQLX)
     }
 
     pub async fn get_by_channel(db: &MySqlPool, channel_id: Snowflake) -> Result<Vec<Self>, Error> {
@@ -198,6 +250,51 @@ impl Invite {
         self.uses = self.uses.map(|uses| uses + 1);
         sqlx::query("UPDATE invites SET uses = ? WHERE code = ?")
             .bind(self.uses)
+            .bind(&self.code)
+            .execute(db)
+            .await
+            .map(|_| ())
+            .map_err(Error::SQLX)
+    }
+
+    pub async fn populate_relations(&mut self, db: &MySqlPool) -> Result<(), Error> {
+        // if let Some(guild_id) = self.guild_id {
+        //     self.guild = Guild::get_by_id(db, guild_id).await?.map(|guild| GuildInvite::fr);
+        // }
+
+        if let Some(target_user_id) = self.target_user_id {
+            self.target_user = User::get_by_id(db, target_user_id)
+                .await?
+                .map(|user| user.to_inner());
+        }
+
+        Ok(())
+    }
+
+    pub async fn set_code(&mut self, db: &MySqlPool, code: &str) -> Result<(), Error> {
+        sqlx::query("UPDATE invites SET code = ? WHERE code = ?")
+            .bind(&code)
+            .bind(&self.code)
+            .execute(db)
+            .await?;
+
+        self.code = code.to_string();
+        Ok(())
+    }
+
+    pub async fn save(&self, db: &MySqlPool) -> Result<(), Error> {
+        sqlx::query("UPDATE invites SET type = ?, temporary = ?, uses = ?, max_uses = ?, max_age = ?, created_at = ?, expires_at = ?, guild_id = ?, channel_id = ?, inviter_id = ?, target_user_id = ?, target_user_type = ?, vanity_url = ?, flags = ? WHERE code = ?")
+            .bind(&self.code)
+            .bind(self.invite_type)
+            .bind(self.temporary)
+            .bind(self.uses.unwrap_or(0))
+            .bind(self.max_uses)
+            .bind(self.max_age)
+            .bind(self.created_at)
+            .bind(self.expires_at)
+            .bind(self.guild_id)
+            .bind(self.channel_id)
+            .bind(self.inviter_id)
             .bind(&self.code)
             .execute(db)
             .await

@@ -1,12 +1,12 @@
 use std::ops::{Deref, DerefMut};
 
 use chorus::types::{
-    ChannelMessagesAnchor, MessageFlags, MessageModifySchema, MessageSendSchema, MessageType,
-    PartialEmoji, Reaction, Snowflake,
+    ChannelMessagesAnchor, MessageFlags, MessageModifySchema, MessageSearchQuery,
+    MessageSendSchema, MessageType, PartialEmoji, Reaction, Snowflake,
 };
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use sqlx::{MySqlPool, QueryBuilder, Row};
+use sqlx::{FromRow, MySqlPool, QueryBuilder, Row};
 
 use crate::{
     database::entities::User,
@@ -389,5 +389,82 @@ impl Message {
         } else {
             None
         }
+    }
+
+    pub async fn search(
+        db: &MySqlPool,
+        guild_id: impl Into<Option<Snowflake>>,
+        channel_id: impl Into<Option<Snowflake>>,
+        search_payload: &MessageSearchQuery,
+    ) -> Result<Vec<Self>, Error> {
+        let guild_id = guild_id.into();
+        let channel_id = channel_id.into();
+
+        let mut query_builder = QueryBuilder::new("SELECT * FROM `messages` WHERE ");
+        let mut where_separated = query_builder.separated(" AND ");
+
+        // if let Some(guild_id) = guild_id {
+        //     where_separated.push("guild_id = ").push_bind(guild_id);
+        // }
+        //
+        // if let Some(channel_id) = channel_id {
+        //     where_separated.push("channel_id = ").push_bind(channel_id);
+        // }
+        //
+        // if let Some(author_ids) = &search_payload.author_id {
+        //     where_separated.push(" author_id IN (");
+        //     let mut separated = query_builder.separated(", ");
+        //     for author_id in author_ids {
+        //         separated.push_bind(author_id);
+        //     }
+        //     separated.push_unseparated(") ");
+        // }
+        //
+        // // if let Some(author_types) = &search_payload.author_type {
+        // //     where_separated.push(" author_type IN (")
+        // //     for author_type in author_types {
+        // //
+        // //     }
+        // // }
+        //
+        // if let Some(channel_ids) = &search_payload.channel_id {
+        //     where_separated.push(" channel_id IN (");
+        //     let mut separated = query_builder.separated(", ");
+        //     for channel_id in channel_ids {
+        //         separated.push_bind(channel_id);
+        //     }
+        //     separated.push_unseparated(") ");
+        // }
+        //
+        // if let Some(command_ids) = &search_payload.command_id {
+        //     // TODO:
+        // }
+        //
+        // if let Some(content) = &search_payload.content {
+        //     where_separated
+        //         .push(" content LIKE ")
+        //         .push_bind(format!("%{}%", content));
+        // }
+        //
+        // if let Some(embed_providers) = &search_payload.embed_provider {
+        //     // TODO:
+        // }
+        //
+        // if let Some(embed_types) = &search_payload.embed_type {
+        //     // TODO:
+        // }
+        //
+        // if let Some(has) = &search_payload.has {
+        //     // TODO: Might need a search index table?
+        // }
+
+        let query = query_builder.build();
+
+        let res = query.fetch_all(db).await.map_err(Error::SQLX)?;
+
+        Ok(res
+            .into_iter()
+            .flat_map(|r| Message::from_row(&r))
+            .collect::<Vec<_>>())
     }
 }
