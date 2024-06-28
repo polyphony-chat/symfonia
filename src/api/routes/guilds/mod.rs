@@ -25,7 +25,8 @@ pub fn setup_routes() -> Route {
             "/:guild_id",
             get(id::get_guild)
                 .patch(id::modify_guild)
-                .delete(id::delete_guild),
+                .delete(id::delete_guild)
+                .post(id::delete_guild)git,
         )
         .at(
             "/:guild_id/discovery-requirements",
