@@ -1,20 +1,20 @@
 use clap::Parser;
+use log::LevelFilter;
 use log4rs::{
     append::{
         console::{ConsoleAppender, Target},
         rolling_file::{
             policy::compound::{
-                CompoundPolicy, roll::delete::DeleteRoller, trigger::size::SizeTrigger,
+                roll::delete::DeleteRoller, trigger::size::SizeTrigger, CompoundPolicy,
             },
             RollingFileAppender,
         },
     },
     config::{Appender, Logger, Root},
-    Config,
     encode::pattern::PatternEncoder,
     filter::Filter,
+    Config,
 };
-use log::LevelFilter;
 
 mod api;
 mod cdn;
@@ -124,7 +124,7 @@ async fn main() {
         .logger(
             Logger::builder()
                 .appender("gateway")
-                .build("symfonia::gateway", LevelFilter::Info),
+                .build("symfonia::gateway", LevelFilter::Debug),
         )
         .build(Root::builder().appender("stdout").build({
             let mode = std::env::var("MODE").unwrap_or("DEBUG".to_string());
@@ -141,6 +141,7 @@ async fn main() {
 
     log::info!(target: "symfonia", "Starting up Symfonia");
 
+    gateway::start_gateway().await.unwrap(); // TODO: This should be near api::start...
     log::info!(target: "symfonia::db", "Establishing database connection");
     let db = database::establish_connection()
         .await
