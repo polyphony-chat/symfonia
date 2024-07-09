@@ -10,6 +10,7 @@ use poem::web::Data;
 use poem::{get, handler, EndpointExt, IntoResponse, Route, Server};
 
 use crate::errors::Error;
+use crate::PathRouteTuple;
 
 #[handler]
 fn ws(ws: WebSocket, sender: Data<&tokio::sync::broadcast::Sender<Message>>) -> impl IntoResponse {
@@ -38,17 +39,10 @@ fn ws(ws: WebSocket, sender: Data<&tokio::sync::broadcast::Sender<Message>>) -> 
     })
 }
 
-pub async fn start_gateway() -> Result<(), Error> {
-    info!(target: "symfonia::gateway", "Starting gateway server");
-    let ws_app = Route::new().at(
+pub fn setup_gateway() -> PathRouteTuple {
+    let ws_route = Route::new().at(
         "/",
         get(ws.data(tokio::sync::mpsc::channel::<Message>(32).0)),
     );
-    let bind = std::env::var("API_BIND").unwrap_or_else(|_| String::from("localhost:3001"));
-    debug!(target: "symfonia::gateway", "Binding to {}", bind);
-    Server::new(TcpListener::bind("0.0.0.0:3000"))
-        .run(ws_app)
-        .await?;
-    debug!(target: "symfonia::gateway", "Gateway server started");
-    Ok(())
+    ("/".to_string(), ws_route)
 }
