@@ -15,12 +15,6 @@ use log4rs::{
     filter::Filter,
     Config,
 };
-use poem::listener::TcpListener;
-use poem::middleware::{NormalizePath, TrailingSlash};
-use poem::web::Json;
-use poem::{EndpointExt, IntoResponse, Route, Server};
-use serde_json::json;
-use sqlx::MySqlPool;
 
 mod api;
 mod cdn;
@@ -28,8 +22,6 @@ mod database;
 mod errors;
 mod gateway;
 mod util;
-
-pub type PathRouteTuple = (String, Route);
 
 #[derive(Debug)]
 struct LogFilter;
@@ -149,6 +141,7 @@ async fn main() {
 
     log::info!(target: "symfonia", "Starting up Symfonia");
 
+    gateway::start_gateway().await.unwrap(); // TODO: This should be near api::start...
     log::info!(target: "symfonia::db", "Establishing database connection");
     let db = database::establish_connection()
         .await
@@ -188,50 +181,6 @@ async fn main() {
             .await
             .expect("Failed to seed config");
     }
-    let bind = std::env::var("API_BIND").unwrap_or_else(|_| String::from("localhost:3001"));
-    let api_route = api::setup_api();
-    let gateway_route = gateway::setup_gateway();
-    start_server(vec![api_route, gateway_route], &bind, db)
-        .await
-        .expect("Failed to start server")
-}
 
-async fn start_server(
-    routes: Vec<(impl AsRef<str>, Route)>,
-    addr: &impl ToString,
-    db: MySqlPool,
-) -> Result<(), crate::errors::Error> {
-    let mut app_routes = Route::new();
-    let config = crate::database::entities::Config::init(&db).await?;
-    if config.sentry.enabled {
-        let _guard = sentry::init((
-            "https://241c6fb08adb469da1bb82522b25c99f@sentry.quartzinc.space/3",
-            sentry::ClientOptions {
-                release: sentry::release_name!(),
-                traces_sample_rate: config.sentry.trace_sample_rate as f32,
-                ..Default::default()
-            },
-        ));
-    }
-    for (path, route) in routes.into_iter() {
-        app_routes = app_routes.nest(path, route);
-    }
-    let app = app_routes
-        .data(db)
-        .data(config)
-        .with(NormalizePath::new(TrailingSlash::Trim))
-        .catch_all_error(custom_error);
-    log::info!(target: "symfonia::api", "Starting HTTP Server");
-    Server::new(TcpListener::bind(addr.to_string()))
-        .run(app)
-        .await?;
-    Ok(())
-}
-
-async fn custom_error(err: poem::Error) -> impl IntoResponse {
-    Json(json! ({
-        "success": false,
-        "message": err.to_string(),
-    }))
-    .with_status(err.status())
+    api::start_api(db).await.unwrap();
 }
