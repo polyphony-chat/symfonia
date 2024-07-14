@@ -1,4 +1,5 @@
 use std::ops::{Deref, DerefMut};
+use std::sync::{Arc, Mutex};
 
 use chorus::types::{
     ChannelDelete, ChannelMessagesAnchor, ChannelModifySchema, ChannelType, ChannelUpdate,
@@ -26,10 +27,16 @@ pub struct Channel {
     pub publisher: ChannelEventPublisher,
 }
 
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Debug, Default, Clone)]
 pub struct ChannelEventPublisher {
-    pub update: Publisher<ChannelUpdate>,
-    pub delete: Publisher<ChannelDelete>,
+    pub update: Arc<Mutex<Publisher<ChannelUpdate>>>,
+    pub delete: Arc<Mutex<Publisher<ChannelDelete>>>,
+}
+
+impl PartialEq for ChannelEventPublisher {
+    fn eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.delete, &other.delete) && Arc::ptr_eq(&self.update, &other.update)
+    }
 }
 
 impl Deref for Channel {

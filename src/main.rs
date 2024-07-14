@@ -1,9 +1,5 @@
-use std::collections::HashMap;
-use std::rc::Rc;
-
 use clap::Parser;
 
-use gateway::{EventEmitter, Events};
 use log::LevelFilter;
 use log4rs::{
     append::{
@@ -20,7 +16,6 @@ use log4rs::{
     filter::Filter,
     Config,
 };
-use pubserve::Publisher;
 
 mod api;
 mod cdn;
@@ -187,6 +182,5 @@ async fn main() {
             .expect("Failed to seed config");
     }
 
-    let mut emitters: HashMap<EventEmitter, Rc<Publisher<Events>>> = HashMap::new();
     api::start_api(db).await.unwrap();
 }

@@ -1,12 +1,17 @@
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+
 use poem::{
-    EndpointExt,
-    IntoResponse,
     listener::TcpListener,
-    middleware::{NormalizePath, TrailingSlash}, Route, Server, web::Json,
+    middleware::{NormalizePath, TrailingSlash},
+    web::Json,
+    EndpointExt, IntoResponse, Route, Server,
 };
+use pubserve::Publisher;
 use serde_json::json;
 use sqlx::MySqlPool;
 
+use crate::gateway::{EventEmitter, Events};
 use crate::{
     api::{
         middleware::{
@@ -23,6 +28,11 @@ mod routes;
 
 pub async fn start_api(db: MySqlPool) -> Result<(), Error> {
     log::info!(target: "symfonia::api::cfg", "Loading configuration");
+
+    // To avoid having to load all entities from disk every time we want to subscribe a newly
+    // connected user to their events, we store the emitters in a HashMap.
+    let emitters: HashMap<EventEmitter, Arc<Mutex<Publisher<Events>>>> = HashMap::new();
+
     let config = Config::init(&db).await?;
 
     if config.sentry.enabled {
@@ -69,6 +79,7 @@ pub async fn start_api(db: MySqlPool) -> Result<(), Error> {
         .nest("/api/v9", routes)
         .data(db)
         .data(config)
+        .data(emitters)
         .with(NormalizePath::new(TrailingSlash::Trim))
         .catch_all_error(custom_error);
 
