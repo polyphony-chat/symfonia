@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use sqlx::{FromRow, MySqlPool, Row};
 
+use crate::gateway::EventEmitter;
 use crate::{
     database::entities::{Config, Guild, GuildMember, UserSettings},
     errors::{Error, GuildError},
@@ -28,6 +29,9 @@ pub struct User {
     #[sqlx(skip)]
     pub settings: UserSettings,
     pub extended_settings: sqlx::types::Json<Value>,
+    #[sqlx(rename = "subscribedEvents")]
+    /// A list of [EventEmitter]s that the server has determined the user should be subscribed to.
+    pub subscribed_events: sqlx::types::Json<Vec<EventEmitter>>,
 }
 
 impl Deref for User {
