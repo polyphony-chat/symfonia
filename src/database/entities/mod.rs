@@ -1,3 +1,4 @@
+pub use application::*;
 pub use audit_log::*;
 pub use channel::*;
 pub use config::*;
