@@ -69,3 +69,4 @@ itertools = "0.13.0"
 tokio-tungstenite = { version = "0.23.1", features = [
     "rustls-tls-webpki-roots",
 ] }
+pubserve = { version = "1.1.0", features = ["async", "send"] }
