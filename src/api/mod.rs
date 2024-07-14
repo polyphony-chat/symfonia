@@ -1,8 +1,9 @@
 use poem::{
     EndpointExt,
+    http::Method,
     IntoResponse,
     listener::TcpListener,
-    middleware::{NormalizePath, TrailingSlash}, Route, Server, web::Json,
+    middleware::{Cors, NormalizePath, TrailingSlash}, Route, Server, web::Json,
 };
 use serde_json::json;
 use sqlx::MySqlPool;
@@ -66,10 +67,19 @@ pub async fn start_api(db: MySqlPool) -> Result<(), Error> {
         .nest("/-", routes::health::setup_routes());
 
     let v9_api = Route::new()
-        .nest("/api/v9", routes)
+        // .nest("/api/v9", &routes)
+        .nest("/api", routes)
         .data(db)
         .data(config)
         .with(NormalizePath::new(TrailingSlash::Trim))
+        .with(Cors::new().allow_methods(&[
+            Method::GET,
+            Method::POST,
+            Method::PATCH,
+            Method::PUT,
+            Method::DELETE,
+            Method::OPTIONS,
+        ]))
         .catch_all_error(custom_error);
 
     let bind = std::env::var("API_BIND").unwrap_or_else(|_| String::from("localhost:3001"));
