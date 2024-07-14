@@ -1,25 +1,35 @@
 use std::ops::{Deref, DerefMut};
 
 use chorus::types::{
-    ChannelMessagesAnchor, ChannelModifySchema, ChannelType, CreateChannelInviteSchema, InviteType,
-    MessageSendSchema, PermissionOverwrite, Snowflake,
+    ChannelDelete, ChannelMessagesAnchor, ChannelModifySchema, ChannelType, ChannelUpdate,
+    CreateChannelInviteSchema, InviteType, MessageSendSchema, PermissionOverwrite, Snowflake,
 };
 use itertools::Itertools;
+use pubserve::Publisher;
 use serde::{Deserialize, Serialize};
-use sqlx::{MySqlPool, types::Json};
+use sqlx::{types::Json, MySqlPool};
 
 use crate::{
     database::entities::{
-        GuildMember, invite::Invite, message::Message, read_state::ReadState, recipient::Recipient,
+        invite::Invite, message::Message, read_state::ReadState, recipient::Recipient, GuildMember,
         User, Webhook,
     },
     errors::{ChannelError, Error, GuildError, UserError},
 };
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, sqlx::FromRow, Default)]
 pub struct Channel {
     #[sqlx(flatten)]
     pub(crate) inner: chorus::types::Channel,
+    #[sqlx(skip)]
+    #[serde(skip)]
+    pub publisher: ChannelEventPublisher,
+}
+
+#[derive(Debug, Default, Clone, PartialEq)]
+pub struct ChannelEventPublisher {
+    pub update: Publisher<ChannelUpdate>,
+    pub delete: Publisher<ChannelDelete>,
 }
 
 impl Deref for Channel {
@@ -87,6 +97,7 @@ impl Channel {
                 guild_id,
                 ..Default::default()
             },
+            ..Default::default()
         };
 
         sqlx::query("INSERT INTO channels (id, type, name, nsfw, guild_id, parent_id, flags, permission_overwrites, default_thread_rate_limit_per_user, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())")
