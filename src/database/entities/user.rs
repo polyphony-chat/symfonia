@@ -10,7 +10,7 @@ use serde_json::{Map, Value};
 use sqlx::{FromRow, MySqlPool, Row};
 
 use crate::{
-    database::entities::{Config, Guild, GuildMember, UserSettings},
+    database::entities::{Config, Guild, GuildMember, TeamMember, UserSettings},
     errors::{Error, GuildError},
 };
 
@@ -200,6 +200,10 @@ impl User {
         }
 
         GuildMember::create(db, self, &guild).await
+    }
+
+    pub async fn get_team_member(&self, db: &MySqlPool) -> Result<Vec<TeamMember>, Error> {
+        TeamMember::get_by_user(db, self.id).await
     }
 
     pub async fn count(db: &MySqlPool) -> Result<i32, Error> {
