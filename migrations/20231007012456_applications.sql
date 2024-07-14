@@ -6,7 +6,7 @@ create table if not exists applications
     icon                           varchar(255) null,
     description                    varchar(255) null,
     summary                        varchar(255) null,
-    type                           text         null,
+    type                           tinyint      null,
     hook                           tinyint      not null,
     bot_public                     tinyint      not null,
     bot_require_code_grant         tinyint      not null,

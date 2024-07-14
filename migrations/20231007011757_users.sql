@@ -32,7 +32,7 @@ create table if not exists users
     public_flags        int unsigned      not null,
     purchased_flags     int               not null,
     premium_usage_flags int               not null,
-    rights              bigint            not null,
+    rights              bigint unsigned   not null,
     data                text              not null,
     fingerprints        text              not null,
     extended_settings   text              not null,
