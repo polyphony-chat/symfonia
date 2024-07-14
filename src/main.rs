@@ -1,20 +1,26 @@
+use std::collections::HashMap;
+use std::rc::Rc;
+
 use clap::Parser;
+
+use gateway::{EventEmitter, Events};
+use log::LevelFilter;
 use log4rs::{
     append::{
         console::{ConsoleAppender, Target},
         rolling_file::{
             policy::compound::{
-                CompoundPolicy, roll::delete::DeleteRoller, trigger::size::SizeTrigger,
+                roll::delete::DeleteRoller, trigger::size::SizeTrigger, CompoundPolicy,
             },
             RollingFileAppender,
         },
     },
     config::{Appender, Logger, Root},
-    Config,
     encode::pattern::PatternEncoder,
     filter::Filter,
+    Config,
 };
-use log::LevelFilter;
+use pubserve::Publisher;
 
 mod api;
 mod cdn;
@@ -181,5 +187,6 @@ async fn main() {
             .expect("Failed to seed config");
     }
 
+    let mut emitters: HashMap<EventEmitter, Rc<Publisher<Events>>> = HashMap::new();
     api::start_api(db).await.unwrap();
 }
