@@ -23,6 +23,9 @@ pub enum Error {
     #[error(transparent)]
     Reaction(#[from] ReactionError),
 
+    #[error(transparent)]
+    Application(#[from] ApplicationError),
+
     #[error("SQLX error: {0}")]
     SQLX(#[from] sqlx::Error),
 
@@ -144,6 +147,16 @@ pub enum ReactionError {
     NotFound,
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum ApplicationError {
+    #[error("APPLICATION_NOT_FOUND")]
+    NotFound,
+    #[error("APPLICATION_NOT_VERIFIED")]
+    Unverified,
+    #[error("ACTION_NOT_AUTHORIZED_ON_APPLICATION")]
+    UnauthorizedAction,
+}
+
 impl ResponseError for Error {
     fn status(&self) -> StatusCode {
         match self {
@@ -194,6 +207,11 @@ impl ResponseError for Error {
                 ReactionError::Invalid => StatusCode::NOT_FOUND,
                 ReactionError::AlreadyExists => StatusCode::BAD_REQUEST,
                 ReactionError::NotFound => StatusCode::NOT_FOUND,
+            },
+            Error::Application(err) => match err {
+                ApplicationError::NotFound => StatusCode::NOT_FOUND,
+                ApplicationError::Unverified => StatusCode::BAD_REQUEST,
+                ApplicationError::UnauthorizedAction => StatusCode::FORBIDDEN,
             },
             Error::SQLX(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::SQLXMigration(_) => StatusCode::INTERNAL_SERVER_ERROR,
