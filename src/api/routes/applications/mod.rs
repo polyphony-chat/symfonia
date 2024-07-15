@@ -8,6 +8,8 @@ use sqlx::MySqlPool;
 
 use crate::database::entities::{Application, Config, User};
 
+mod id;
+
 pub fn setup_routes() -> Route {
     Route::new().at("/", get(get_applications))
 }
