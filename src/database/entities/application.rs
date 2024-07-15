@@ -141,7 +141,40 @@ impl Application {
         Ok(())
     }
 
+    pub async fn save(&self, db: &MySqlPool) -> Result<(), Error> {
+        sqlx::query(
+            "UPDATE applications SET name = ?, description = ?, icon = ?, interactions_endpoint_url = ?, privacy_policy_url = ?, tags = ?, terms_of_service_url = ?, bot_public = ?, bot_require_code_grant = ?, flags = ? WHERE id = ?",
+        ).bind(&self.name)
+            .bind(&self.description)
+            .bind(&self.icon)
+            .bind(&self.interactions_endpoint_url)
+            .bind(&self.privacy_policy_url)
+            .bind(&self.tags)
+            .bind(&self.terms_of_service_url)
+            .bind(self.bot_public)
+            .bind(self.bot_require_code_grant)
+            .bind(self.flags)
+            .bind(self.id)
+            .execute(db)
+            .await
+            .map(|_| ())
+            .map_err(Error::SQLX)
+    }
+
+    pub async fn delete(self, db: &MySqlPool) -> Result<(), Error> {
+        sqlx::query("DELETE FROM applications WHERE id = ?")
+            .bind(self.id)
+            .execute(db)
+            .await
+            .map(|_| ())
+            .map_err(Error::SQLX)
+    }
+
     pub fn public_json(&self) -> String {
         serde_json::to_string(&self.inner).unwrap()
+    }
+
+    pub fn into_inner(self) -> chorus::types::Application {
+        self.inner
     }
 }
