@@ -1,17 +1,17 @@
 mod types;
 
 use log::info;
-use pubserve::Publisher;
+use sqlx::MySqlPool;
 pub use types::*;
 
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 use crate::errors::Error;
+use crate::SharedPublisherMap;
 
-pub type EventPublisher = Publisher<Event>;
-
-pub async fn start_gateway() -> Result<(), Error> {
+pub async fn start_gateway(db: MySqlPool, publisher_map: SharedPublisherMap) -> Result<(), Error> {
     info!(target: "symfonia::gateway", "Starting gateway server");
+    // `publishers` will live for the lifetime of the gateway server, in the main gateway thread
     Ok(())
 }
