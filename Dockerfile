@@ -34,7 +34,7 @@ COPY --from=build /etc/passwd /etc/passwd
 # Required to get "symfonia" group
 COPY --from=build /etc/group /etc/group 
 
-COPY --from=build --chown=symfonia:symfonia /usr/symfonia/target/release/symfonia /app/symfonia/symfonia
+COPY --from=build --chown=symfonia:symfonia /usr/symfonia/target/x86_64-unknown-linux-gnu/release/symfonia /app/symfonia/symfonia
 
 USER symfonia:symfonia
 WORKDIR /app/symfonia
