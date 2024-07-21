@@ -7,6 +7,7 @@ use poem::{
 use serde_json::json;
 use sqlx::MySqlPool;
 
+use crate::SharedPublisherMap;
 use crate::{
     api::{
         middleware::{
@@ -21,11 +22,8 @@ use crate::{
 mod middleware;
 mod routes;
 
-pub async fn start_api(db: MySqlPool) -> Result<(), Error> {
+pub async fn start_api(db: MySqlPool, publisher_map: SharedPublisherMap) -> Result<(), Error> {
     log::info!(target: "symfonia::api::cfg", "Loading configuration");
-
-    // To avoid having to load all entities from disk every time we want to subscribe a newly
-    // connected user to their events, we store the emitters in a HashMap.
 
     let config = Config::init(&db).await?;
 
@@ -69,11 +67,11 @@ pub async fn start_api(db: MySqlPool) -> Result<(), Error> {
         .nest("/policies", routes::policies::setup_routes())
         .nest("/-", routes::health::setup_routes());
 
-    // TODO: Add emitters here
     let v9_api = Route::new()
         .nest("/api/v9", routes)
         .data(db)
         .data(config)
+        .data(publisher_map)
         .with(NormalizePath::new(TrailingSlash::Trim))
         .catch_all_error(custom_error);
 
