@@ -1,3 +1,4 @@
+use sqlx::mysql::MySqlConnectOptions;
 use sqlx::{AnyPool, Database, Executor, MySqlPool, Row, SqlitePool};
 
 use crate::errors::Error;
@@ -14,11 +15,24 @@ impl<'c> Queryer<'c, sqlx::Any> for &AnyPool {}
 
 pub async fn establish_connection() -> Result<sqlx::MySqlPool, Error> {
     let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
-        log::warn!(target: "symfonia::db", "You did not specify `DATABASE_URL` environment variable, defaulting to in-memory SQLlite.");
-        "sqlite::memory:".to_string()
+        log::warn!(target: "symfonia::db", "You did not specify `DATABASE_URL` environment variable, defaulting to 'mariadb://localhost:3306'.");
+        "mariadb://localhost:3306".to_string()
     });
-
-    let pool = MySqlPool::connect(&db_url).await?;
+    let mysql_connect_options = MySqlConnectOptions::new()
+        .host(&db_url)
+        .username(&std::env::var("DATABASE_USERNAME").unwrap_or_else(|_| {
+            log::warn!(target: "symfonia::db", "You did not specify `DATABASE_USERNAME` environment variable. Defaulting to 'symfonia'.");
+            "symfonia".to_string()
+        }))
+        .password(&std::env::var("DATABASE_PASSWORD").unwrap_or_else(|_| {
+            log::warn!(target: "symfonia::db", "You did not specify `DATABASE_PASSWORD` environment variable. Defaulting to an empty string.");
+            "".to_string()
+        }))
+        .database(&std::env::var("DATABASE_NAME").unwrap_or_else(|_| {
+            log::warn!(target: "symfonia::db", "You did not specify `DATABASE_NAME` environment variable. Defaulting to 'symfonia'.");
+            "symfonia".to_string()
+        }));
+    let pool = MySqlPool::connect_with(mysql_connect_options).await?;
     //install_default_drivers();
 
     Ok(pool)
