@@ -1,17 +1,12 @@
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-
 use poem::{
     listener::TcpListener,
     middleware::{NormalizePath, TrailingSlash},
     web::Json,
     EndpointExt, IntoResponse, Route, Server,
 };
-use pubserve::Publisher;
 use serde_json::json;
 use sqlx::MySqlPool;
 
-use crate::gateway::{EventEmitter, Events};
 use crate::{
     api::{
         middleware::{
@@ -31,7 +26,6 @@ pub async fn start_api(db: MySqlPool) -> Result<(), Error> {
 
     // To avoid having to load all entities from disk every time we want to subscribe a newly
     // connected user to their events, we store the emitters in a HashMap.
-    let emitters: HashMap<EventEmitter, Arc<Mutex<Publisher<Events>>>> = HashMap::new();
 
     let config = Config::init(&db).await?;
 
@@ -75,11 +69,11 @@ pub async fn start_api(db: MySqlPool) -> Result<(), Error> {
         .nest("/policies", routes::policies::setup_routes())
         .nest("/-", routes::health::setup_routes());
 
+    // TODO: Add emitters here
     let v9_api = Route::new()
         .nest("/api/v9", routes)
         .data(db)
         .data(config)
-        .data(emitters)
         .with(NormalizePath::new(TrailingSlash::Trim))
         .catch_all_error(custom_error);
 
