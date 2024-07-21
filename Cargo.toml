@@ -70,3 +70,4 @@ tokio-tungstenite = { version = "0.23.1", features = [
     "rustls-tls-webpki-roots",
 ] }
 pubserve = { version = "1.1.0", features = ["async", "send"] }
+parking_lot = { version = "0.12.3", features = ["deadlock_detection"] }
