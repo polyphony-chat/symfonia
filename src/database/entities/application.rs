@@ -1,12 +1,13 @@
 use std::ops::{Deref, DerefMut};
+use std::sync::{Arc, RwLock};
 
-use bitflags::Flags;
 use chorus::types::{ApplicationFlags, Snowflake};
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, MySqlPool};
+use sqlx::MySqlPool;
 
+use crate::gateway::Event;
 use crate::{
-    database::entities::{Config, user::User},
+    database::entities::{user::User, Config},
     errors::Error,
 };
 
@@ -17,6 +18,9 @@ pub struct Application {
     pub owner_id: Snowflake,
     pub bot_user_id: Option<Snowflake>,
     pub team_id: Option<Snowflake>,
+    #[sqlx(skip)]
+    #[serde(skip)]
+    pub publisher: Arc<RwLock<pubserve::Publisher<Event>>>,
 }
 
 impl Deref for Application {
@@ -62,6 +66,7 @@ impl Application {
             owner_id: owner_id.to_owned(),
             bot_user_id,
             team_id: None,
+            publisher: Arc::new(RwLock::new(pubserve::Publisher::new())),
         };
 
         let _res = sqlx::query("INSERT INTO applications (id, name, summary, hook, bot_public, verify_key, owner_id, flags, integration_public, discoverability_state, discovery_eligibility_flags) VALUES (?, ?, ?, true, true, ?, ?, ?, true, 1, 2240)")
