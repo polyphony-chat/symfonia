@@ -1,11 +1,8 @@
-use std::{
-    ops::{Deref, DerefMut},
-    sync::{Arc, RwLock},
-};
+use std::ops::{Deref, DerefMut};
 
 use chorus::types::{
-    ChannelType, NSFWLevel, PermissionFlags, PremiumTier,
-    PublicUser, Snowflake, SystemChannelFlags, types::guild_configuration::GuildFeaturesList, WelcomeScreenObject,
+    types::guild_configuration::GuildFeaturesList, ChannelType, NSFWLevel, PermissionFlags,
+    PremiumTier, PublicUser, Snowflake, SystemChannelFlags, WelcomeScreenObject,
 };
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, MySqlPool, QueryBuilder, Row};
