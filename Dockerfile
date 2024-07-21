@@ -1,23 +1,20 @@
-# Build stage
-
-FROM rust:1-bookworm AS build
+FROM rust:1-bookworm AS chef
+RUN cargo install cargo-chef
 RUN rustup target add x86_64-unknown-linux-gnu && \
-update-ca-certificates
-WORKDIR /usr/symfonia/
+    update-ca-certificates
+WORKDIR /app
+
+FROM chef as planner
 COPY . .
-RUN adduser \
-    --disabled-password \
-    --gecos "" \
-    --home "/nonexistent" \
-    --shell "/sbin/nologin" \
-    --no-create-home \
-    --uid 10001 \
-    "symfonia"
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM chef as builder
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --target x86_64-unknown-linux-gnu --recipe-path recipe.json
+COPY . .
 RUN cargo build --target x86_64-unknown-linux-gnu --release
 
-# symfonia image
-
-FROM debian:latest
+FROM debian:latest as runtime
 
 # API
 EXPOSE 3001
@@ -29,13 +26,17 @@ EXPOSE 3003/udp
 
 RUN apt update && apt install -y libssl-dev pkg-config
 
-# Required to get "symfonia" user
-COPY --from=build /etc/passwd /etc/passwd
-# Required to get "symfonia" group
-COPY --from=build /etc/group /etc/group 
+RUN adduser \
+    --disabled-password \
+    --gecos "" \
+    --home "/nonexistent" \
+    --shell "/sbin/nologin" \
+    --no-create-home \
+    --uid 10001 \
+    "symfonia"
 
-COPY --from=build --chown=symfonia:symfonia /usr/symfonia/target/x86_64-unknown-linux-gnu/release/symfonia /app/symfonia/symfonia
+COPY --from=builder --chown=symfonia:symfonia /app/target/x86_64-unknown-linux-gnu/release/symfonia /app/symfonia
 
 USER symfonia:symfonia
-WORKDIR /app/symfonia
-ENTRYPOINT ["/app/symfonia/symfonia"]
+WORKDIR /app/
+ENTRYPOINT ["/app/symfonia"]
