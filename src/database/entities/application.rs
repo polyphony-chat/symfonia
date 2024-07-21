@@ -1,7 +1,8 @@
 use std::ops::{Deref, DerefMut};
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 use chorus::types::{ApplicationFlags, Snowflake};
+use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use sqlx::MySqlPool;
 
