@@ -1,29 +1,39 @@
 services:
   db:
-    env_file: ".env"
+    env_file: .env
     image: mariadb
     environment:
       MARIADB_RANDOM_ROOT_PASSWORD: 1
     volumes:
       - "mariadb:/var/lib/mysql"
     healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      test:
+        [
+          "CMD",
+          "healthcheck.sh",
+          "--connect",
+          "--innodb_initialized"
+        ]
       start_period: 10s
       interval: 10s
       timeout: 5s
       retries: 3
   app:
-    env_file: ".env"
-    image: symfonia
+    env_file: .env
+    build: .
     environment:
-      - DATABASE_URL=mariadb://db
-      - DATABASE_USERNAME=symfonia
+      - DATABASE_URL=db
+      - DATABASE_USERNAME=${MARIADB_USER}
       - DATABASE_PASSWORD=${MARIADB_PASSWORD}
       - DATABASE_NAME=${MARIADB_DATABASE}
     depends_on:
       db:
         condition: service_healthy
+    ports:
+      - 3001:3001
+      - 3002:3002
+      - 3003:3003/tcp
+      - 3003:3003/udp
 
 volumes:
   mariadb:
-  log:
