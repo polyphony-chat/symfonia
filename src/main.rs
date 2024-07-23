@@ -198,11 +198,18 @@ async fn main() {
             .await
             .expect("Failed to seed config");
     }
+
     let shared_publisher_map = Arc::new(RwLock::new(HashMap::new()));
-    api::start_api(db.clone(), shared_publisher_map.clone())
-        .await
-        .unwrap();
-    gateway::start_gateway(db.clone(), shared_publisher_map.clone())
-        .await
-        .unwrap();
+    let mut tasks = [
+        tokio::spawn(api::start_api(db.clone(), shared_publisher_map.clone())),
+        tokio::spawn(gateway::start_gateway(
+            db.clone(),
+            shared_publisher_map.clone(),
+        )),
+    ];
+    for task in tasks.iter_mut() {
+        task.await
+            .expect("Failed to start server")
+            .expect("Failed to start server");
+    }
 }
