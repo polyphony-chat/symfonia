@@ -4,11 +4,11 @@ use chorus::types::{
     CreateChannelInviteSchema, InviteType, MessageSendSchema, PermissionOverwrite, Snowflake,
 };
 use itertools::Itertools;
-use pubserve::Publisher;
 use serde::{Deserialize, Serialize};
 use sqlx::{types::Json, MySqlPool};
 use std::ops::{Deref, DerefMut};
 
+use crate::eq_shared_event_publisher;
 use crate::{
     database::entities::{
         invite::Invite, message::Message, read_state::ReadState, recipient::Recipient, GuildMember,
@@ -17,13 +17,19 @@ use crate::{
     errors::{ChannelError, Error, GuildError, UserError},
 };
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, sqlx::FromRow, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, Default)]
 pub struct Channel {
     #[sqlx(flatten)]
     pub(crate) inner: chorus::types::Channel,
     #[sqlx(skip)]
     #[serde(skip)]
     pub publisher: SharedEventPublisher,
+}
+
+impl PartialEq for Channel {
+    fn eq(&self, other: &Self) -> bool {
+        self.inner == other.inner && eq_shared_event_publisher(&self.publisher, &other.publisher)
+    }
 }
 
 impl Deref for Channel {

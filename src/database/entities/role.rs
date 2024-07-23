@@ -6,9 +6,10 @@ use chorus::types::{PermissionFlags, Snowflake};
 use serde::{Deserialize, Serialize};
 use sqlx::{MySqlPool, Row};
 
+use crate::eq_shared_event_publisher;
 use crate::errors::Error;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Role {
     #[sqlx(flatten)]
     inner: chorus::types::RoleObject,
@@ -16,6 +17,14 @@ pub struct Role {
     #[sqlx(skip)]
     #[serde(skip)]
     pub publisher: SharedEventPublisher,
+}
+
+impl PartialEq for Role {
+    fn eq(&self, other: &Self) -> bool {
+        self.inner == other.inner
+            && self.guild_id == other.guild_id
+            && eq_shared_event_publisher(&self.publisher, &other.publisher)
+    }
 }
 
 impl Deref for Role {
@@ -53,11 +62,7 @@ impl Role {
     ) -> Result<Self, Error> {
         let role = Self {
             inner: chorus::types::RoleObject {
-                id: if let Some(sf) = id {
-                    sf
-                } else {
-                    Snowflake::default()
-                },
+                id: id.unwrap_or_default(),
                 color,
                 hoist,
                 managed,
@@ -70,6 +75,7 @@ impl Role {
                 ..Default::default()
             },
             guild_id: guild_id.to_owned(),
+            publisher: SharedEventPublisher::default(),
         };
 
         sqlx::query("INSERT INTO roles (id, guild_id, name, color, hoist, managed, mentionable, permissions, position, icon, unicode_emoji) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")

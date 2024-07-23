@@ -35,6 +35,12 @@ pub type SharedEventPublisher = Arc<RwLock<Publisher<Event>>>;
 pub type EventPublisherMap = HashMap<Snowflake, SharedEventPublisher>;
 pub type SharedEventPublisherMap = Arc<RwLock<EventPublisherMap>>;
 
+pub fn eq_shared_event_publisher(a: &SharedEventPublisher, b: &SharedEventPublisher) -> bool {
+    let a = a.read();
+    let b = b.read();
+    *a == *b
+}
+
 #[derive(Debug)]
 struct LogFilter;
 
