@@ -9,6 +9,7 @@ use chorus::types::{
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, MySqlPool, QueryBuilder, Row};
 
+use crate::SharedEventPublisherMap;
 use crate::{
     database::{
         entities::{
@@ -51,6 +52,7 @@ impl DerefMut for Guild {
 impl Guild {
     pub async fn create(
         db: &MySqlPool,
+        shared_event_publisher_map: SharedEventPublisherMap,
         cfg: &Config,
         name: &str,
         icon: Option<String>,
@@ -87,6 +89,9 @@ impl Guild {
             },
             ..Default::default()
         };
+        shared_event_publisher_map
+            .write()
+            .insert(guild.id, guild.publisher.clone());
 
         sqlx::query("INSERT INTO guilds (id, afk_timeout, default_message_notifications, explicit_content_filter, features, icon, max_members, max_presences, max_video_channel_users, name, owner_id, region, system_channel_flags, preferred_locale, welcome_screen, large, premium_tier, unavailable, widget_enabled, nsfw) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,0,0,?)")
             .bind(guild.id)
@@ -112,6 +117,7 @@ impl Guild {
 
         let everyone = Role::create(
             db,
+            shared_event_publisher_map,
             Some(guild.id),
             guild.id,
             "@everyone",
@@ -181,6 +187,7 @@ impl Guild {
     pub async fn create_from_template(
         db: &MySqlPool,
         cfg: &Config,
+        shared_event_publisher_map: SharedEventPublisherMap,
         owner_id: Snowflake,
         template: &GuildTemplate,
         name: &str,
@@ -189,7 +196,16 @@ impl Guild {
             return Err(Error::Guild(GuildError::NoSourceGuild));
         };
 
-        Self::create(db, cfg, name, None, owner_id, &g.channels).await
+        Self::create(
+            db,
+            shared_event_publisher_map,
+            cfg,
+            name,
+            None,
+            owner_id,
+            &g.channels,
+        )
+        .await
     }
 
     pub async fn get_by_id(db: &MySqlPool, id: Snowflake) -> Result<Option<Self>, Error> {

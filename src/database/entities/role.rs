@@ -6,8 +6,8 @@ use chorus::types::{PermissionFlags, Snowflake};
 use serde::{Deserialize, Serialize};
 use sqlx::{MySqlPool, Row};
 
-use crate::eq_shared_event_publisher;
 use crate::errors::Error;
+use crate::{eq_shared_event_publisher, SharedEventPublisherMap};
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Role {
@@ -48,6 +48,7 @@ impl Role {
 
     pub async fn create(
         db: &MySqlPool,
+        shared_event_publisher_map: SharedEventPublisherMap,
         id: Option<Snowflake>,
         guild_id: Snowflake,
         name: &str,
@@ -77,7 +78,9 @@ impl Role {
             guild_id: guild_id.to_owned(),
             publisher: SharedEventPublisher::default(),
         };
-
+        shared_event_publisher_map
+            .write()
+            .insert(role.id, role.publisher.clone());
         sqlx::query("INSERT INTO roles (id, guild_id, name, color, hoist, managed, mentionable, permissions, position, icon, unicode_emoji) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
             .bind(role.id)
             .bind(role.guild_id)

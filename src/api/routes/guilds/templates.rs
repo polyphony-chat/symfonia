@@ -1,13 +1,14 @@
-use chorus::types::{GuildTemplateCreateSchema, jwt::Claims, Snowflake};
+use chorus::types::{jwt::Claims, GuildTemplateCreateSchema, Snowflake};
 use poem::{
     handler,
-    IntoResponse,
     web::{Data, Json, Path},
+    IntoResponse,
 };
 use reqwest::StatusCode;
 use serde_json::json;
 use sqlx::MySqlPool;
 
+use crate::SharedEventPublisherMap;
 use crate::{
     database::entities::{Config, Guild, GuildTemplate, User},
     errors::{Error, GuildError},
@@ -79,6 +80,7 @@ pub async fn get_template(
 #[handler]
 pub async fn create_guild_from_template(
     Data(db): Data<&MySqlPool>,
+    Data(publisher_map): Data<&SharedEventPublisherMap>,
     Data(authed_user): Data<&User>,
     Data(config): Data<&Config>,
     Path(code): Path<String>,
@@ -112,8 +114,15 @@ pub async fn create_guild_from_template(
         .await?
         .ok_or(Error::Guild(GuildError::TemplateNotFound))?;
 
-    let guild =
-        Guild::create_from_template(db, config, authed_user.id, &template, &payload.name).await?;
+    let guild = Guild::create_from_template(
+        db,
+        config,
+        publisher_map.clone(),
+        authed_user.id,
+        &template,
+        &payload.name,
+    )
+    .await?;
 
     guild.add_member(db, authed_user.id).await?;
 
