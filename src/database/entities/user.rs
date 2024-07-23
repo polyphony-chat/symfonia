@@ -1,3 +1,5 @@
+use super::*;
+
 use std::{
     default::Default,
     ops::{Deref, DerefMut},
@@ -28,6 +30,9 @@ pub struct User {
     #[sqlx(skip)]
     pub settings: UserSettings,
     pub extended_settings: sqlx::types::Json<Value>,
+    #[sqlx(skip)]
+    #[serde(skip)]
+    pub publisher: SharedEventPublisher,
 }
 
 impl Deref for User {

@@ -1,12 +1,13 @@
 use poem::{
-    EndpointExt,
-    IntoResponse,
     listener::TcpListener,
-    middleware::{NormalizePath, TrailingSlash}, Route, Server, web::Json,
+    middleware::{NormalizePath, TrailingSlash},
+    web::Json,
+    EndpointExt, IntoResponse, Route, Server,
 };
 use serde_json::json;
 use sqlx::MySqlPool;
 
+use crate::SharedEventPublisherMap;
 use crate::{
     api::{
         middleware::{
@@ -21,8 +22,9 @@ use crate::{
 mod middleware;
 mod routes;
 
-pub async fn start_api(db: MySqlPool) -> Result<(), Error> {
+pub async fn start_api(db: MySqlPool, publisher_map: SharedEventPublisherMap) -> Result<(), Error> {
     log::info!(target: "symfonia::api::cfg", "Loading configuration");
+
     let config = Config::init(&db).await?;
 
     if config.sentry.enabled {
@@ -69,6 +71,7 @@ pub async fn start_api(db: MySqlPool) -> Result<(), Error> {
         .nest("/api/v9", routes)
         .data(db)
         .data(config)
+        .data(publisher_map)
         .with(NormalizePath::new(TrailingSlash::Trim))
         .catch_all_error(custom_error);
 

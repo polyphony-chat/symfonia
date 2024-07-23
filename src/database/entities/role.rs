@@ -1,3 +1,5 @@
+use super::*;
+
 use std::ops::{Deref, DerefMut};
 
 use chorus::types::{PermissionFlags, Snowflake};
@@ -11,6 +13,9 @@ pub struct Role {
     #[sqlx(flatten)]
     inner: chorus::types::RoleObject,
     pub guild_id: Snowflake,
+    #[sqlx(skip)]
+    #[serde(skip)]
+    pub publisher: SharedEventPublisher,
 }
 
 impl Deref for Role {

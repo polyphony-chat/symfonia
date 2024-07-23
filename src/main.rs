@@ -1,20 +1,28 @@
+use std::collections::HashMap;
+use std::sync::Arc;
+
+use chorus::types::Snowflake;
 use clap::Parser;
+
+use gateway::Event;
+use log::LevelFilter;
 use log4rs::{
     append::{
         console::{ConsoleAppender, Target},
         rolling_file::{
             policy::compound::{
-                CompoundPolicy, roll::delete::DeleteRoller, trigger::size::SizeTrigger,
+                roll::delete::DeleteRoller, trigger::size::SizeTrigger, CompoundPolicy,
             },
             RollingFileAppender,
         },
     },
     config::{Appender, Logger, Root},
-    Config,
     encode::pattern::PatternEncoder,
     filter::Filter,
+    Config,
 };
-use log::LevelFilter;
+use parking_lot::RwLock;
+use pubserve::Publisher;
 
 mod api;
 mod cdn;
@@ -22,6 +30,10 @@ mod database;
 mod errors;
 mod gateway;
 mod util;
+
+pub type SharedEventPublisher = Arc<RwLock<Publisher<Event>>>;
+pub type EventPublisherMap = HashMap<Snowflake, SharedEventPublisher>;
+pub type SharedEventPublisherMap = Arc<RwLock<EventPublisherMap>>;
 
 #[derive(Debug)]
 struct LogFilter;
@@ -180,6 +192,11 @@ async fn main() {
             .await
             .expect("Failed to seed config");
     }
-
-    api::start_api(db).await.unwrap();
+    let shared_publisher_map = Arc::new(RwLock::new(HashMap::new()));
+    api::start_api(db.clone(), shared_publisher_map.clone())
+        .await
+        .unwrap();
+    gateway::start_gateway(db.clone(), shared_publisher_map.clone())
+        .await
+        .unwrap();
 }

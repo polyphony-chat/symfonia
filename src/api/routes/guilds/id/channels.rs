@@ -1,10 +1,10 @@
 use chorus::types::{
-    ChannelModifySchema, ChannelType, jwt::Claims, ModifyChannelPositionsSchema, Snowflake,
+    jwt::Claims, ChannelModifySchema, ChannelType, ModifyChannelPositionsSchema, Snowflake,
 };
 use poem::{
     handler,
-    IntoResponse,
-    Response, web::{Data, Json, Path},
+    web::{Data, Json, Path},
+    IntoResponse, Response,
 };
 use reqwest::StatusCode;
 use sqlx::MySqlPool;
@@ -139,6 +139,7 @@ mod tests {
                     position: Some(0),
                     ..Default::default()
                 },
+                ..Default::default()
             },
             Channel {
                 inner: chorus::types::Channel {
@@ -146,6 +147,7 @@ mod tests {
                     position: Some(1),
                     ..Default::default()
                 },
+                ..Default::default()
             },
             Channel {
                 inner: chorus::types::Channel {
@@ -153,6 +155,7 @@ mod tests {
                     position: Some(2),
                     ..Default::default()
                 },
+                ..Default::default()
             },
             Channel {
                 inner: chorus::types::Channel {
@@ -160,6 +163,7 @@ mod tests {
                     position: Some(3),
                     ..Default::default()
                 },
+                ..Default::default()
             },
             Channel {
                 inner: chorus::types::Channel {
@@ -167,6 +171,7 @@ mod tests {
                     position: Some(4),
                     ..Default::default()
                 },
+                ..Default::default()
             },
             Channel {
                 inner: chorus::types::Channel {
@@ -174,6 +179,7 @@ mod tests {
                     position: Some(5),
                     ..Default::default()
                 },
+                ..Default::default()
             },
         ];
 

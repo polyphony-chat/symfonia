@@ -1,11 +1,10 @@
-use std::{
-    ops::{Deref, DerefMut},
-    sync::{Arc, RwLock},
-};
+use super::*;
+
+use std::ops::{Deref, DerefMut};
 
 use chorus::types::{
-    ChannelType, NSFWLevel, PermissionFlags, PremiumTier,
-    PublicUser, Snowflake, SystemChannelFlags, types::guild_configuration::GuildFeaturesList, WelcomeScreenObject,
+    types::guild_configuration::GuildFeaturesList, ChannelType, NSFWLevel, PermissionFlags,
+    PremiumTier, PublicUser, Snowflake, SystemChannelFlags, WelcomeScreenObject,
 };
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, MySqlPool, QueryBuilder, Row};
@@ -31,6 +30,9 @@ pub struct Guild {
     pub parent: Option<String>,
     pub template_id: Option<Snowflake>,
     pub nsfw: bool,
+    #[sqlx(skip)]
+    #[serde(skip)]
+    pub publisher: SharedEventPublisher,
 }
 
 impl Deref for Guild {
