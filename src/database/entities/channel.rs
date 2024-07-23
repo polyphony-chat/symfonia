@@ -1,6 +1,4 @@
-use std::ops::{Deref, DerefMut};
-use std::sync::{Arc, Mutex};
-
+use super::*;
 use chorus::types::{
     ChannelDelete, ChannelMessagesAnchor, ChannelModifySchema, ChannelType, ChannelUpdate,
     CreateChannelInviteSchema, InviteType, MessageSendSchema, PermissionOverwrite, Snowflake,
@@ -9,6 +7,7 @@ use itertools::Itertools;
 use pubserve::Publisher;
 use serde::{Deserialize, Serialize};
 use sqlx::{types::Json, MySqlPool};
+use std::ops::{Deref, DerefMut};
 
 use crate::{
     database::entities::{
@@ -24,19 +23,7 @@ pub struct Channel {
     pub(crate) inner: chorus::types::Channel,
     #[sqlx(skip)]
     #[serde(skip)]
-    pub publisher: ChannelEventPublisher,
-}
-
-#[derive(Debug, Default, Clone)]
-pub struct ChannelEventPublisher {
-    pub update: Arc<Mutex<Publisher<ChannelUpdate>>>,
-    pub delete: Arc<Mutex<Publisher<ChannelDelete>>>,
-}
-
-impl PartialEq for ChannelEventPublisher {
-    fn eq(&self, other: &Self) -> bool {
-        Arc::ptr_eq(&self.delete, &other.delete) && Arc::ptr_eq(&self.update, &other.update)
-    }
+    pub publisher: SharedEventPublisher,
 }
 
 impl Deref for Channel {

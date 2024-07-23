@@ -1,3 +1,5 @@
+use super::*;
+
 use std::ops::{Deref, DerefMut};
 
 use chorus::types::{
@@ -28,6 +30,9 @@ pub struct Guild {
     pub parent: Option<String>,
     pub template_id: Option<Snowflake>,
     pub nsfw: bool,
+    #[sqlx(skip)]
+    #[serde(skip)]
+    pub publisher: SharedEventPublisher,
 }
 
 impl Deref for Guild {

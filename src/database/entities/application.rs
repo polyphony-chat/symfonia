@@ -1,3 +1,5 @@
+use super::*;
+
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 
@@ -6,7 +8,6 @@ use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use sqlx::MySqlPool;
 
-use crate::gateway::Event;
 use crate::{
     database::entities::{user::User, Config},
     errors::Error,
@@ -21,7 +22,7 @@ pub struct Application {
     pub team_id: Option<Snowflake>,
     #[sqlx(skip)]
     #[serde(skip)]
-    pub publisher: Arc<RwLock<pubserve::Publisher<Event>>>,
+    pub publisher: SharedEventPublisher,
 }
 
 impl Deref for Application {
