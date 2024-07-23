@@ -7,7 +7,7 @@ use poem::{
 use serde_json::json;
 use sqlx::MySqlPool;
 
-use crate::SharedPublisherMap;
+use crate::SharedEventPublisherMap;
 use crate::{
     api::{
         middleware::{
@@ -22,7 +22,7 @@ use crate::{
 mod middleware;
 mod routes;
 
-pub async fn start_api(db: MySqlPool, publisher_map: SharedPublisherMap) -> Result<(), Error> {
+pub async fn start_api(db: MySqlPool, publisher_map: SharedEventPublisherMap) -> Result<(), Error> {
     log::info!(target: "symfonia::api::cfg", "Loading configuration");
 
     let config = Config::init(&db).await?;

@@ -22,6 +22,7 @@ use log4rs::{
     Config,
 };
 use parking_lot::RwLock;
+use pubserve::Publisher;
 
 mod api;
 mod cdn;
@@ -30,9 +31,9 @@ mod errors;
 mod gateway;
 mod util;
 
-pub type SharedPublisher = Arc<RwLock<pubserve::Publisher<Event>>>;
-pub type PublisherMap = HashMap<Snowflake, SharedPublisher>;
-pub type SharedPublisherMap = Arc<RwLock<PublisherMap>>;
+pub type SharedEventPublisher = Arc<RwLock<Publisher<Event>>>;
+pub type EventPublisherMap = HashMap<Snowflake, SharedEventPublisher>;
+pub type SharedEventPublisherMap = Arc<RwLock<EventPublisherMap>>;
 
 #[derive(Debug)]
 struct LogFilter;
