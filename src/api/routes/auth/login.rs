@@ -1,4 +1,4 @@
-use chorus::types::{jwt, APIError, AuthError, ConfigValue, LoginSchema};
+use chorus::types::{jwt, APIError, AuthError, LoginSchema};
 use poem::{
     handler,
     web::{Data, Json},

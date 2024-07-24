@@ -5,7 +5,6 @@ use poem::{handler, IntoResponse, Request};
 use serde_json::json;
 
 use crate::database::entities::{Config, User};
-use crate::util;
 
 #[handler]
 pub async fn register(

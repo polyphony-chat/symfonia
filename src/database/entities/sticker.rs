@@ -45,7 +45,7 @@ impl Sticker {
             .bind(guild_id)
             .bind(pack_id)
             .bind(user_id)
-            .bind(&name)
+            .bind(name)
             .bind(&description)
             .bind(&tags)
             .bind(sticker_type)

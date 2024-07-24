@@ -1,11 +1,11 @@
 use chorus::types::{
-    GetChannelMessagesSchema, jwt::Claims, MessageSendSchema,
-    MessageType, Rights, Snowflake, types::guild_configuration::GuildFeatures,
+    jwt::Claims, types::guild_configuration::GuildFeatures, GetChannelMessagesSchema,
+    MessageSendSchema, MessageType, Rights, Snowflake,
 };
 use poem::{
     handler,
-    IntoResponse,
     web::{Data, Json, Path, Query},
+    IntoResponse,
 };
 use sqlx::MySqlPool;
 

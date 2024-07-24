@@ -1,8 +1,8 @@
-use chorus::types::{ChannelModifySchema, jwt::Claims, Snowflake};
+use chorus::types::{jwt::Claims, ChannelModifySchema, Snowflake};
 use poem::{
-    delete, get, handler, IntoResponse, post,
-    put,
-    Route, web::{Data, Json, Path},
+    delete, get, handler, post, put,
+    web::{Data, Json, Path},
+    IntoResponse, Route,
 };
 use sqlx::MySqlPool;
 

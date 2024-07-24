@@ -7,7 +7,7 @@ use serde_json::{Map, Value};
 use sqlx::MySqlPool;
 use tokio::io::AsyncReadExt;
 
-use crate::{database::Queryer, errors::Error};
+use crate::errors::Error;
 
 #[derive(Debug, Clone, Default)]
 pub struct Config(chorus::types::ConfigValue);

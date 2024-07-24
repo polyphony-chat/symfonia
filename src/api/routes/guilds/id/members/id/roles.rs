@@ -2,8 +2,8 @@ use chorus::types::{PermissionFlags, Snowflake};
 use poem::{
     handler,
     http::StatusCode,
-    IntoResponse,
-    Response, web::{Data, Path},
+    web::{Data, Path},
+    IntoResponse, Response,
 };
 use sqlx::MySqlPool;
 

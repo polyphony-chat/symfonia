@@ -1,8 +1,8 @@
-use chorus::types::{GuildGetMembersQuery, GuildMembersSearchQuery, jwt::Claims, Snowflake};
+use chorus::types::{jwt::Claims, GuildGetMembersQuery, GuildMembersSearchQuery, Snowflake};
 use poem::{
     handler,
-    IntoResponse,
     web::{Data, Json, Path, Query},
+    IntoResponse,
 };
 use sqlx::MySqlPool;
 

@@ -1,8 +1,8 @@
-use chorus::types::{EmojiCreateSchema, EmojiModifySchema, jwt::Claims, Snowflake};
+use chorus::types::{jwt::Claims, EmojiCreateSchema, EmojiModifySchema, Snowflake};
 use poem::{
     handler,
-    IntoResponse,
-    Response, web::{Data, Json, Path},
+    web::{Data, Json, Path},
+    IntoResponse, Response,
 };
 use reqwest::StatusCode;
 use sqlx::MySqlPool;
@@ -127,7 +127,7 @@ pub async fn modify_emoji(
         emoji.name = payload.name;
     }
     if payload.roles.is_some() {
-        emoji.roles = payload.roles.map(|v| sqlx::types::Json(v));
+        emoji.roles = payload.roles.map(sqlx::types::Json);
     }
 
     emoji.save(db).await?;

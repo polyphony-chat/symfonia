@@ -2,8 +2,8 @@ use chorus::types::{Rights, Snowflake};
 use poem::{
     handler,
     http::StatusCode,
-    IntoResponse,
-    Response, web::{Data, Json, Path},
+    web::{Data, Json, Path},
+    IntoResponse, Response,
 };
 use sqlx::MySqlPool;
 
@@ -21,11 +21,11 @@ pub async fn bulk_delete(
     Json(ids): Json<Vec<Snowflake>>,
 ) -> poem::Result<impl IntoResponse> {
     // TODO: Make this bot only
-    let channel = Channel::get_by_id(&db, channel_id)
+    let channel = Channel::get_by_id(db, channel_id)
         .await?
         .ok_or(Error::Channel(ChannelError::InvalidChannel))?;
 
-    if !channel.guild_id.is_some() {
+    if channel.guild_id.is_none() {
         // No bulk delete for DM channels
         return Err(Error::Channel(ChannelError::InvalidChannelType).into());
     }
@@ -37,7 +37,7 @@ pub async fn bulk_delete(
     }
 
     // TODO: Check if the user has permission to delete the messages
-    Message::bulk_delete(&db, ids).await?;
+    Message::bulk_delete(db, ids).await?;
 
     // TODO: Emit event 'MESSAGE_DELETE_BULK'
 

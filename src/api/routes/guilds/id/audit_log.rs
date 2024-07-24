@@ -1,8 +1,8 @@
 use chorus::types::{AuditLogObject, GetAuditLogsQuery, PermissionFlags, Snowflake};
 use poem::{
     handler,
-    IntoResponse,
     web::{Data, Json, Path, Query},
+    IntoResponse,
 };
 use sqlx::MySqlPool;
 

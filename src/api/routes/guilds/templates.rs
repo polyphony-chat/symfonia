@@ -1,4 +1,4 @@
-use chorus::types::{jwt::Claims, GuildTemplateCreateSchema, Snowflake};
+use chorus::types::GuildTemplateCreateSchema;
 use poem::{
     handler,
     web::{Data, Json, Path},

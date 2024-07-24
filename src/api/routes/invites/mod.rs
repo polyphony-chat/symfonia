@@ -1,6 +1,6 @@
 use chorus::types::jwt::Claims;
-use poem::{get, handler, IntoResponse, Route};
 use poem::web::{Data, Json, Path};
+use poem::{get, handler, IntoResponse, Route};
 use sqlx::MySqlPool;
 
 use crate::database::entities::{Channel, Invite, User};

@@ -1,12 +1,12 @@
 use chorus::types::{
-    GuildCreateVanitySchema, GuildVanityInviteResponse, jwt::Claims,
-    Snowflake, types::guild_configuration::GuildFeatures,
+    jwt::Claims, types::guild_configuration::GuildFeatures, GuildCreateVanitySchema,
+    GuildVanityInviteResponse, Snowflake,
 };
 use poem::{
     handler,
     http::StatusCode,
-    IntoResponse,
     web::{Data, Json, Path},
+    IntoResponse,
 };
 use sqlx::MySqlPool;
 

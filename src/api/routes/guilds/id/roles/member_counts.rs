@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use chorus::types::{jwt::Claims, Snowflake};
 use poem::{
     handler,
-    IntoResponse,
     web::{Data, Json, Path},
+    IntoResponse,
 };
 use sqlx::MySqlPool;
 

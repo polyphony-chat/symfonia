@@ -2,8 +2,8 @@ use chorus::types::{jwt::Claims, ModifyGuildMemberSchema, PermissionFlags, Right
 use poem::{
     handler,
     http::StatusCode,
-    IntoResponse,
-    Response, web::{Data, Json, Path},
+    web::{Data, Json, Path},
+    IntoResponse, Response,
 };
 use sqlx::MySqlPool;
 

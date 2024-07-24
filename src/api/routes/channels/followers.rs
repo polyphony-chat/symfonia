@@ -1,10 +1,10 @@
 use chorus::types::{
-    AddFollowingChannelSchema, FollowedChannel, jwt::Claims, Snowflake, WebhookType,
+    jwt::Claims, AddFollowingChannelSchema, FollowedChannel, Snowflake, WebhookType,
 };
 use poem::{
     handler,
-    IntoResponse,
     web::{Data, Json, Path},
+    IntoResponse,
 };
 use sqlx::MySqlPool;
 

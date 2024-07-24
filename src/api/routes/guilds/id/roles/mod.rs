@@ -65,7 +65,7 @@ pub async fn create_role(
         None,
         guild.id,
         &name,
-        payload.color.unwrap_or_else(|| 0.),
+        payload.color.unwrap_or(0.),
         payload.hoist.unwrap_or_default(),
         false,
         true,

@@ -1,8 +1,8 @@
 use chorus::types::{jwt::Claims, MessageSendSchema, Snowflake};
 use poem::{
     handler,
-    IntoResponse,
     web::{Data, Json, Path},
+    IntoResponse,
 };
 use sqlx::MySqlPool;
 

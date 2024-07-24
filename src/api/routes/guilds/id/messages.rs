@@ -1,8 +1,8 @@
 use chorus::types::{MessageSearchQuery, MessageSearchResponse, PermissionFlags, Snowflake};
 use poem::{
     handler,
-    IntoResponse,
     web::{Data, Json, Path, Query},
+    IntoResponse,
 };
 use serde_json::json;
 use sqlx::MySqlPool;

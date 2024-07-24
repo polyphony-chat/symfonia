@@ -1,4 +1,4 @@
-use poem::{Endpoint, http::StatusCode, Middleware, Request};
+use poem::{http::StatusCode, Endpoint, Middleware, Request};
 use sqlx::MySqlPool;
 
 use crate::{

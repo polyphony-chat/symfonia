@@ -58,7 +58,7 @@ impl Message {
         }
         // TODO: Calculate other flags
         // TODO: Calculate mentions
-        let mut mention_everyone = false;
+        let mention_everyone = false;
 
         let ts = Utc::now();
         let new_message_id = Snowflake::generate();
@@ -69,7 +69,7 @@ impl Message {
             .bind(author_id)
             .bind(&payload.content)
             .bind(ts)
-            .bind(&payload.tts)
+            .bind(payload.tts)
             .bind(mention_everyone)
             .bind(sqlx::types::Json(&payload.embeds))
             .bind(sqlx::types::Json(&payload.attachments))
@@ -328,7 +328,7 @@ impl Message {
             .bind(&self.content)
             .bind(&self.embeds)
             .bind(&self.components)
-            .bind(&self.flags)
+            .bind(self.flags)
             .execute(db)
             .await
             .map(|_| ())
@@ -401,7 +401,7 @@ impl Message {
         let channel_id = channel_id.into();
 
         let mut query_builder = QueryBuilder::new("SELECT * FROM `messages` WHERE ");
-        let mut where_separated = query_builder.separated(" AND ");
+        let where_separated = query_builder.separated(" AND ");
 
         // if let Some(guild_id) = guild_id {
         //     where_separated.push("guild_id = ").push_bind(guild_id);

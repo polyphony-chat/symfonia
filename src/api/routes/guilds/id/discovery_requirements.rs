@@ -1,10 +1,10 @@
 use chorus::types::{
-    GuildDiscoveryHealthScore, GuildDiscoveryRequirements, jwt::Claims, Snowflake,
+    jwt::Claims, GuildDiscoveryHealthScore, GuildDiscoveryRequirements, Snowflake,
 };
 use poem::{
     handler,
-    IntoResponse,
     web::{Data, Json, Path},
+    IntoResponse,
 };
 use sqlx::MySqlPool;
 

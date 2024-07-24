@@ -1,8 +1,8 @@
-use chorus::types::{GetInvitesSchema, jwt::Claims, Snowflake};
+use chorus::types::{jwt::Claims, GetInvitesSchema, Snowflake};
 use poem::{
     handler,
-    IntoResponse,
     web::{Data, Json, Path, Query},
+    IntoResponse,
 };
 use sqlx::MySqlPool;
 

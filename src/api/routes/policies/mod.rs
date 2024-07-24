@@ -1,7 +1,6 @@
 mod instance;
 mod stats;
 
-pub use instance::*;
 use poem::{get, Route};
 pub use stats::*;
 

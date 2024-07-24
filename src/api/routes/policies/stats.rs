@@ -1,8 +1,7 @@
-use chorus::types::APIError;
 use poem::{
     handler,
-    IntoResponse,
     web::{Data, Json},
+    IntoResponse,
 };
 use serde_json::json;
 

@@ -1,7 +1,7 @@
-use chorus::types::{CreateChannelInviteSchema, Snowflake};
 use chorus::types::jwt::Claims;
-use poem::{handler, IntoResponse};
+use chorus::types::{CreateChannelInviteSchema, Snowflake};
 use poem::web::{Data, Json, Path};
+use poem::{handler, IntoResponse};
 use sqlx::MySqlPool;
 
 use crate::database::entities::Channel;

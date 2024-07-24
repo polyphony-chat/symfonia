@@ -3,19 +3,16 @@ use super::*;
 use std::ops::{Deref, DerefMut};
 
 use chorus::types::{
-    types::guild_configuration::GuildFeaturesList, ChannelType, NSFWLevel, PermissionFlags,
-    PremiumTier, PublicUser, Snowflake, SystemChannelFlags, WelcomeScreenObject,
+    ChannelType, NSFWLevel, PermissionFlags, PremiumTier, Snowflake, SystemChannelFlags,
+    WelcomeScreenObject,
 };
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, MySqlPool, QueryBuilder, Row};
 
 use crate::SharedEventPublisherMap;
 use crate::{
-    database::{
-        entities::{
-            Channel, Config, Emoji, GuildMember, GuildTemplate, Invite, Role, Sticker, User,
-        },
-        Queryer,
+    database::entities::{
+        Channel, Config, Emoji, GuildMember, GuildTemplate, Invite, Role, Sticker, User,
     },
     errors::{Error, GuildError, UserError},
 };
@@ -353,8 +350,7 @@ impl Guild {
                 .fetch_all(db)
                 .await?
                 .iter_mut()
-                .map(|row| GuildMember::from_row(row))
-                .flatten()
+                .flat_map(|row| GuildMember::from_row(row))
                 .collect())
         }
     }

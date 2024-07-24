@@ -1,9 +1,9 @@
-use chorus::types::{ChannelType, jwt::Claims, Snowflake};
+use chorus::types::{jwt::Claims, ChannelType, Snowflake};
 use poem::{
     handler,
     http::StatusCode,
-    IntoResponse,
-    Response, web::{Data, Json, Path},
+    web::{Data, Json, Path},
+    IntoResponse, Response,
 };
 use sqlx::MySqlPool;
 

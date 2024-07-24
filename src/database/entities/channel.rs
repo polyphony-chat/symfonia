@@ -1,7 +1,7 @@
 use super::*;
 use chorus::types::{
-    ChannelDelete, ChannelMessagesAnchor, ChannelModifySchema, ChannelType, ChannelUpdate,
-    CreateChannelInviteSchema, InviteType, MessageSendSchema, PermissionOverwrite, Snowflake,
+    ChannelMessagesAnchor, ChannelModifySchema, ChannelType, CreateChannelInviteSchema, InviteType,
+    MessageSendSchema, PermissionOverwrite, Snowflake,
 };
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -214,7 +214,7 @@ impl Channel {
         }
 
         if let Some(guild_id) = self.guild_id {
-            let mut member = GuildMember::get_by_id(db, author_id, guild_id)
+            let member = GuildMember::get_by_id(db, author_id, guild_id)
                 .await?
                 .ok_or(Error::Guild(GuildError::MemberNotFound))?;
 
@@ -305,23 +305,23 @@ impl Channel {
         sqlx::query("UPDATE channels SET name = ?, topic = ?, nsfw = ?, position = ?, permission_overwrites = ?, rate_limit_per_user = ?, parent_id = ?, bitrate = ?, icon = ?, user_limit = ?, rtc_region = ?, default_auto_archive_duration = ?, default_reaction_emoji = ?, flags = ?, default_thread_rate_limit_per_user = ?, video_quality_mode = ?, channel_type = ?, last_message_id = ? WHERE id = ?")
             .bind(&self.name)
             .bind(&self.topic)
-            .bind(&self.nsfw)
-            .bind(&self.position)
+            .bind(self.nsfw)
+            .bind(self.position)
             .bind(&self.permission_overwrites)
-            .bind(&self.rate_limit_per_user)
-            .bind(&self.parent_id)
-            .bind(&self.bitrate)
+            .bind(self.rate_limit_per_user)
+            .bind(self.parent_id)
+            .bind(self.bitrate)
             .bind(&self.icon)
-            .bind(&self.user_limit)
+            .bind(self.user_limit)
             .bind(&self.rtc_region)
-            .bind(&self.default_auto_archive_duration)
+            .bind(self.default_auto_archive_duration)
             .bind(&self.default_reaction_emoji)
-            .bind(&self.flags)
-            .bind(&self.default_thread_rate_limit_per_user)
-            .bind(&self.video_quality_mode)
-            .bind(&self.channel_type)
-            .bind(&self.last_message_id)
-            .bind(&self.id)
+            .bind(self.flags)
+            .bind(self.default_thread_rate_limit_per_user)
+            .bind(self.video_quality_mode)
+            .bind(self.channel_type)
+            .bind(self.last_message_id)
+            .bind(self.id)
             .execute(db)
             .await?;
 
