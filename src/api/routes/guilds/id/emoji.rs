@@ -127,7 +127,7 @@ pub async fn modify_emoji(
         emoji.name = payload.name;
     }
     if payload.roles.is_some() {
-        emoji.roles = payload.roles.map(|v| sqlx::types::Json(v));
+        emoji.roles = payload.roles.map(sqlx::types::Json);
     }
 
     emoji.save(db).await?;

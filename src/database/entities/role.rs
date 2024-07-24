@@ -48,11 +48,7 @@ impl Role {
     ) -> Result<Self, Error> {
         let role = Self {
             inner: chorus::types::RoleObject {
-                id: if let Some(sf) = id {
-                    sf
-                } else {
-                    Snowflake::default()
-                },
+                id: id.unwrap_or_default(),
                 color,
                 hoist,
                 managed,

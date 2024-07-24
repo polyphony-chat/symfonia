@@ -1,4 +1,3 @@
-use chorus::types::APIError;
 use poem::{
     handler,
     IntoResponse,

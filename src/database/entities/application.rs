@@ -3,7 +3,7 @@ use std::ops::{Deref, DerefMut};
 use bitflags::Flags;
 use chorus::types::{ApplicationFlags, Snowflake};
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, MySqlPool};
+use sqlx::{MySqlPool};
 
 use crate::{
     database::entities::{Config, user::User},
@@ -65,7 +65,7 @@ impl Application {
         };
 
         let _res = sqlx::query("INSERT INTO applications (id, name, summary, hook, bot_public, verify_key, owner_id, flags, integration_public, discoverability_state, discovery_eligibility_flags) VALUES (?, ?, ?, true, true, ?, ?, ?, true, 1, 2240)")
-            .bind(&application.id)
+            .bind(application.id)
             .bind(name)
             .bind(summary)
             .bind(verify_key)

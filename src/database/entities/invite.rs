@@ -273,7 +273,7 @@ impl Invite {
 
     pub async fn set_code(&mut self, db: &MySqlPool, code: &str) -> Result<(), Error> {
         sqlx::query("UPDATE invites SET code = ? WHERE code = ?")
-            .bind(&code)
+            .bind(code)
             .bind(&self.code)
             .execute(db)
             .await?;

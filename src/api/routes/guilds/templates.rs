@@ -1,4 +1,4 @@
-use chorus::types::{GuildTemplateCreateSchema, jwt::Claims, Snowflake};
+use chorus::types::{GuildTemplateCreateSchema};
 use poem::{
     handler,
     IntoResponse,

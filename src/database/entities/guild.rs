@@ -1,11 +1,9 @@
 use std::{
     ops::{Deref, DerefMut},
-    sync::{Arc, RwLock},
 };
 
 use chorus::types::{
-    ChannelType, NSFWLevel, PermissionFlags, PremiumTier,
-    PublicUser, Snowflake, SystemChannelFlags, types::guild_configuration::GuildFeaturesList, WelcomeScreenObject,
+    ChannelType, NSFWLevel, PermissionFlags, PremiumTier, Snowflake, SystemChannelFlags, WelcomeScreenObject,
 };
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, MySqlPool, QueryBuilder, Row};
@@ -15,7 +13,6 @@ use crate::{
         entities::{
             Channel, Config, Emoji, GuildMember, GuildTemplate, Invite, Role, Sticker, User,
         },
-        Queryer,
     },
     errors::{Error, GuildError, UserError},
 };
@@ -335,8 +332,7 @@ impl Guild {
                 .fetch_all(db)
                 .await?
                 .iter_mut()
-                .map(|row| GuildMember::from_row(row))
-                .flatten()
+                .flat_map(|row| GuildMember::from_row(row))
                 .collect())
         }
     }

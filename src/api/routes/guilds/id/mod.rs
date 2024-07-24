@@ -96,7 +96,7 @@ pub async fn modify_guild(
         let diff = guild
             .features
             .iter()
-            .filter(|f| !features.contains(&f))
+            .filter(|f| !features.contains(f))
             .chain(&features)
             .unique()
             .cloned()
@@ -108,7 +108,7 @@ pub async fn modify_guild(
             GuildFeatures::Discoverable,
         ];
 
-        if diff.iter().any(|f| !MUTABLE_FEATURES.contains(&f)) {
+        if diff.iter().any(|f| !MUTABLE_FEATURES.contains(f)) {
             return Err(Error::Guild(GuildError::FeatureIsImmutable).into());
         }
         guild.features = GuildFeaturesList::from(diff);

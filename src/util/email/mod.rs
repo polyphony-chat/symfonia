@@ -18,5 +18,5 @@ pub fn adjust_email(email: &str) -> Result<String, Error> {
 
     // TODO: check accounts with uncommon email domains
     // TODO: replace .dots and +alternatives -> Gmail Dot Trick https://support.google.com/mail/answer/7436150 and https://generator.email/blog/gmail-generator
-    return Ok(email.to_string());
+    Ok(email.to_string())
 }
