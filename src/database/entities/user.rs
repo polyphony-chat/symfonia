@@ -16,7 +16,7 @@ use crate::{
     errors::{Error, GuildError},
 };
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, FromRow)]
 pub struct User {
     #[sqlx(flatten)]
     #[serde(flatten)]
@@ -33,7 +33,7 @@ pub struct User {
     #[sqlx(skip)]
     #[serde(skip)]
     pub publisher: SharedEventPublisher,
-    pub subscribed_events: Vec<Snowflake>,
+    pub subscribed_events: sqlx::types::Json<Vec<Snowflake>>,
 }
 
 impl Deref for User {
