@@ -33,6 +33,7 @@ pub struct User {
     #[sqlx(skip)]
     #[serde(skip)]
     pub publisher: SharedEventPublisher,
+    pub subscribed_events: Vec<Snowflake>,
 }
 
 impl Deref for User {
