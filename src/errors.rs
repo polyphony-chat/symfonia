@@ -46,6 +46,9 @@ pub enum Error {
 
     #[error(transparent)]
     Reqwest(#[from] reqwest::Error),
+
+    #[error(transparent)]
+    Tungstenite(#[from] tokio_tungstenite::tungstenite::Error),
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -208,6 +211,7 @@ impl ResponseError for Error {
             Error::Rand(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::Utf8(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::Reqwest(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::Tungstenite(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 
