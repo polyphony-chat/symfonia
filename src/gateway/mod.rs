@@ -3,11 +3,12 @@ mod types;
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, Weak};
 
-use chorus::types::{GatewayIdentifyPayload, Snowflake};
+use chorus::types::{GatewayHeartbeat, GatewayIdentifyPayload, Snowflake};
 use futures::stream::{SplitSink, SplitStream};
 use futures::StreamExt;
 use log::info;
 use pubserve::Subscriber;
+use serde_json::from_str;
 use sqlx::MySqlPool;
 use tokio::net::{TcpListener, TcpStream};
 
@@ -18,7 +19,7 @@ pub use types::*;
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
-use crate::errors::Error;
+use crate::errors::{Error, GatewayError};
 use crate::SharedEventPublisherMap;
 
 /* NOTES (bitfl0wer) [These will be removed]
@@ -96,7 +97,7 @@ pub async fn start_gateway(
         };
         match connection_result {
             Ok(new_connection) => checked_add_new_connection(gateway_users.clone(), new_connection),
-            Err(_) => todo!(),
+            Err(_) => continue,
         }
     }
     Ok(())
@@ -110,22 +111,21 @@ pub async fn start_gateway(
 /// [GatewayClient], whose `.parent` field contains a [Weak] reference to the new [GatewayUser].
 async fn establish_connection(stream: TcpStream) -> Result<NewConnection, Error> {
     let ws_stream = accept_async(stream).await?;
-    let (write, read) = ws_stream.split();
-
-    // TODO: Everything below this is just an example and absolutely unfinished.
-    let user = Arc::new(Mutex::new(GatewayUser {
-        clients: Vec::new(),
-        id: Snowflake(1),
-        subscriptions: Vec::new(),
-    }));
-    Ok(NewConnection {
-        user: user.clone(),
-        client: GatewayClient {
-            parent: Arc::downgrade(&user),
-            connection: (write, read),
-            identify: GatewayIdentifyPayload::common(),
-        },
-    })
+    let (write, mut read) = ws_stream.split();
+    if let Some(maybe_heartbeat) = read.next().await {
+        let maybe_heartbeat = maybe_heartbeat?;
+        let maybe_heartbeat_text = match maybe_heartbeat.is_text() {
+            true => maybe_heartbeat.to_text()?,
+            false => return Err(GatewayError::UnexpectedMessage.into()),
+        };
+        let heartbeat = match from_str::<GatewayHeartbeat>(maybe_heartbeat_text) {
+            Ok(msg) => msg,
+            Err(_) => return Err(GatewayError::UnexpectedMessage.into()),
+        };
+        // TODO(bitfl0wer) Do something with the heartbeat, respond to the heartbeat, wait for
+        // identify payload, construct [NewConnection]
+    }
+    todo!()
 }
 
 /// Adds the contents of a [NewConnection] struct to a `gateway_users` map in a "checked" manner.
