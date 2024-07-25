@@ -4,11 +4,15 @@ use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, Weak};
 
 use chorus::types::{GatewayIdentifyPayload, Snowflake};
+use futures::stream::{SplitSink, SplitStream};
+use futures::StreamExt;
 use log::info;
 use pubserve::Subscriber;
 use sqlx::MySqlPool;
 use tokio::net::{TcpListener, TcpStream};
 
+use tokio_tungstenite::tungstenite::Message;
+use tokio_tungstenite::{accept_async, WebSocketStream};
 pub use types::*;
 
 // This Source Code Form is subject to the terms of the Mozilla Public
@@ -55,8 +59,11 @@ struct GatewayUser {
 struct GatewayClient {
     /// A [Weak] reference to the [GatewayUser] this client belongs to.
     pub parent: Weak<Mutex<GatewayUser>>,
-    /// The [TcpStream] for this WebSocket session
-    pub connection: TcpStream,
+    /// The [SplitSink] and [SplitStream] for this clients' WebSocket session
+    pub connection: (
+        SplitSink<WebSocketStream<TcpStream>, Message>,
+        SplitStream<WebSocketStream<TcpStream>>,
+    ),
     /// [GatewayIdentifyPayload] the client has sent when connecting (or re-connecting) with this client.
     pub identify: GatewayIdentifyPayload,
 }
@@ -71,6 +78,7 @@ pub async fn start_gateway(
     publisher_map: SharedEventPublisherMap,
 ) -> Result<(), Error> {
     info!(target: "symfonia::gateway", "Starting gateway server");
+
     let bind = std::env::var("GATEWAY_BIND").unwrap_or_else(|_| String::from("localhost:3003"));
     let try_socket = TcpListener::bind(&bind).await;
     let listener = try_socket.expect("Failed to bind to address");
@@ -78,10 +86,11 @@ pub async fn start_gateway(
     let gateway_users: Arc<Mutex<BTreeMap<Snowflake, Arc<Mutex<GatewayUser>>>>> =
         Arc::new(Mutex::new(BTreeMap::new()));
     while let Ok((stream, _)) = listener.accept().await {
-        match tokio::task::spawn(establish_connection(stream))
-            .await
-            .expect("The establish_connection task died") // QUESTION(bitfl0wer) Is it ok to .expect() here?
-        {
+        let connection_result = match tokio::task::spawn(establish_connection(stream)).await {
+            Ok(result) => result,
+            Err(_) => continue,
+        };
+        match connection_result {
             Ok(new_connection) => checked_add_new_connection(gateway_users.clone(), new_connection),
             Err(_) => todo!(),
         }
@@ -96,7 +105,23 @@ pub async fn start_gateway(
 /// If successful, returns a [NewConnection] with a new [Arc<Mutex<GatewayUser>>] and a
 /// [GatewayClient], whose `.parent` field contains a [Weak] reference to the new [GatewayUser].
 async fn establish_connection(stream: TcpStream) -> Result<NewConnection, Error> {
-    todo!()
+    let ws_stream = accept_async(stream).await?;
+    let (write, read) = ws_stream.split();
+
+    // TODO: Everything below this is just an example and absolutely unfinished.
+    let user = Arc::new(Mutex::new(GatewayUser {
+        clients: Vec::new(),
+        id: Snowflake(1),
+        subscriptions: Vec::new(),
+    }));
+    Ok(NewConnection {
+        user: user.clone(),
+        client: GatewayClient {
+            parent: Arc::downgrade(&user),
+            connection: (write, read),
+            identify: GatewayIdentifyPayload::common(),
+        },
+    })
 }
 
 /// Adds the contents of a [NewConnection] struct to a `gateway_users` map in a "checked" manner.
