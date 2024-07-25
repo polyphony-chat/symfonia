@@ -38,7 +38,11 @@ Handling a connection involves the following steps:
 5. Receiving an Identify payload <- "GatewayUser" and/or "GatewayClient" are instantiated here.
 6. Responding with a Ready event
 
-Handling disconnects and session resumes is for later, I think.
+Handling disconnects and session resumes is for later and not considered at this exact moment.
+
+From there on, run a task that takes ownership of the GatewayClient struct. This task will be what
+is sending the events that the (to be implemented) Subscribers receive from the Publishers that the
+GatewayUser is subscribed to
 */
 
 /// A single identifiable User connected to the Gateway - possibly using many clients at the same
