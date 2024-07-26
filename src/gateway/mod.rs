@@ -3,12 +3,12 @@ mod types;
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, Weak};
 
-use chorus::types::{GatewayHeartbeat, GatewayIdentifyPayload, Snowflake};
+use chorus::types::{GatewayHeartbeat, GatewayHello, GatewayIdentifyPayload, Snowflake};
 use futures::stream::{SplitSink, SplitStream};
-use futures::StreamExt;
+use futures::{SinkExt, StreamExt};
 use log::info;
 use pubserve::Subscriber;
-use serde_json::from_str;
+use serde_json::{from_str, json};
 use sqlx::MySqlPool;
 use tokio::net::{TcpListener, TcpStream};
 
@@ -111,8 +111,11 @@ pub async fn start_gateway(
 /// [GatewayClient], whose `.parent` field contains a [Weak] reference to the new [GatewayUser].
 async fn establish_connection(stream: TcpStream) -> Result<NewConnection, Error> {
     let ws_stream = accept_async(stream).await?;
-    let (write, mut read) = ws_stream.split();
-    if let Some(maybe_heartbeat) = read.next().await {
+    let (mut sender, mut receiver) = ws_stream.split();
+    sender
+        .send(Message::Text(json!(GatewayHello::default()).to_string()))
+        .await?;
+    if let Some(maybe_heartbeat) = receiver.next().await {
         let maybe_heartbeat = maybe_heartbeat?;
         let maybe_heartbeat_text = match maybe_heartbeat.is_text() {
             true => maybe_heartbeat.to_text()?,
