@@ -1,18 +1,21 @@
-use std::{
-    ops::{Deref, DerefMut},
-};
+/*
+ *  This Source Code Form is subject to the terms of the Mozilla Public
+ *  License, v. 2.0. If a copy of the MPL was not distributed with this
+ *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
+use std::ops::{Deref, DerefMut};
 
 use chorus::types::{
-    ChannelType, NSFWLevel, PermissionFlags, PremiumTier, Snowflake, SystemChannelFlags, WelcomeScreenObject,
+    ChannelType, NSFWLevel, PermissionFlags, PremiumTier, Snowflake, SystemChannelFlags,
+    WelcomeScreenObject,
 };
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, MySqlPool, QueryBuilder, Row};
 
 use crate::{
-    database::{
-        entities::{
-            Channel, Config, Emoji, GuildMember, GuildTemplate, Invite, Role, Sticker, User,
-        },
+    database::entities::{
+        Channel, Config, Emoji, GuildMember, GuildTemplate, Invite, Role, Sticker, User,
     },
     errors::{Error, GuildError, UserError},
 };
