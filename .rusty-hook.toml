@@ -1,0 +1,5 @@
+[hooks]
+pre-push = "cargo fmt --all -- --check --color always"
+
+[logging]
+verbose = true

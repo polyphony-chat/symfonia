@@ -4,6 +4,8 @@
  *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use std::ops::{Deref, DerefMut};
+
 use super::*;
 use chorus::types::{
     ChannelMessagesAnchor, ChannelModifySchema, ChannelType, CreateChannelInviteSchema, InviteType,
@@ -12,7 +14,6 @@ use chorus::types::{
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use sqlx::{types::Json, MySqlPool};
-use std::ops::{Deref, DerefMut};
 
 use crate::eq_shared_event_publisher;
 use crate::{
