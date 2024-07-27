@@ -1,26 +1,26 @@
-/* 
+/*
  *  This Source Code Form is subject to the terms of the Mozilla Public
  *  License, v. 2.0. If a copy of the MPL was not distributed with this
  *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
 use clap::Parser;
+use log::LevelFilter;
 use log4rs::{
     append::{
         console::{ConsoleAppender, Target},
         rolling_file::{
             policy::compound::{
-                CompoundPolicy, roll::delete::DeleteRoller, trigger::size::SizeTrigger,
+                roll::delete::DeleteRoller, trigger::size::SizeTrigger, CompoundPolicy,
             },
             RollingFileAppender,
         },
     },
     config::{Appender, Logger, Root},
-    Config,
     encode::pattern::PatternEncoder,
     filter::Filter,
+    Config,
 };
-use log::LevelFilter;
 
 mod api;
 mod cdn;

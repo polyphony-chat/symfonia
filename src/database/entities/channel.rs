@@ -1,4 +1,4 @@
-/* 
+/*
  *  This Source Code Form is subject to the terms of the Mozilla Public
  *  License, v. 2.0. If a copy of the MPL was not distributed with this
  *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -12,11 +12,11 @@ use chorus::types::{
 };
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use sqlx::{MySqlPool, types::Json};
+use sqlx::{types::Json, MySqlPool};
 
 use crate::{
     database::entities::{
-        GuildMember, invite::Invite, message::Message, read_state::ReadState, recipient::Recipient,
+        invite::Invite, message::Message, read_state::ReadState, recipient::Recipient, GuildMember,
         User, Webhook,
     },
     errors::{ChannelError, Error, GuildError, UserError},
