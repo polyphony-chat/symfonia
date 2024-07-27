@@ -58,8 +58,7 @@ sentry = { version = "0.34.0", default-features = false, features = [
     "rustls",
 ] }
 clap = { version = "4.5.4", features = ["derive"] }
-
-chorus = { git = "http://github.com/polyphony-chat/chorus", rev = "537b025", features = [
+chorus = { git = "http://github.com/polyphony-chat/chorus", branch = "dev", features = [
     "backend",
 ], default-features = false } # git = "ssh://git@github.com/Quat3rnion/chorus" # path = "../chorus" git = "ssh://git@github.com/polyphony-chat/chorus" 
 serde_path_to_error = "0.1.16"
