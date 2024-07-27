@@ -64,6 +64,8 @@ pub enum Error {
 pub enum GatewayError {
     #[error("UNEXPECTED_MESSAGE")]
     UnexpectedMessage,
+    #[error("TIMEOUT")]
+    Timeout,
 }
 
 #[derive(Debug, thiserror::Error)]
