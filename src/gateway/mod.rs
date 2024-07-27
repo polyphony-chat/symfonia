@@ -8,8 +8,11 @@ mod types;
 
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, Weak};
+use std::time::SystemTime;
 
-use chorus::types::{GatewayHeartbeat, GatewayHello, GatewayIdentifyPayload, Snowflake};
+use chorus::types::{
+    GatewayHeartbeat, GatewayHeartbeatAck, GatewayHello, GatewayIdentifyPayload, Snowflake,
+};
 use futures::stream::{SplitSink, SplitStream};
 use futures::{SinkExt, StreamExt};
 use log::info;
@@ -56,7 +59,7 @@ GatewayUser is subscribed to
 /// time.
 struct GatewayUser {
     /// Sessions a User is connected with.
-    pub clients: Vec<GatewayClient>,
+    pub clients: Vec<Arc<Mutex<GatewayClient>>>,
     /// The Snowflake ID of the User.
     pub id: Snowflake,
     /// A collection of [Subscribers](Subscriber) to [Event] [Publishers](pubserve::Publisher).
@@ -75,8 +78,8 @@ struct GatewayClient {
         SplitSink<WebSocketStream<TcpStream>, Message>,
         SplitStream<WebSocketStream<TcpStream>>,
     ),
-    /// [GatewayIdentifyPayload] the client has sent when connecting (or re-connecting) with this client.
-    pub identify: GatewayIdentifyPayload,
+    pub session_id: String,
+    pub last_sequence: u64,
 }
 
 struct NewConnection {
@@ -127,6 +130,11 @@ async fn establish_connection(stream: TcpStream) -> Result<NewConnection, Error>
     sender
         .send(Message::Text(json!(GatewayHello::default()).to_string()))
         .await?;
+    let next = match receiver.next().await {
+        Some(next) => next,
+        None => return Err(GatewayError::Timeout.into()),
+    }?;
+    // TODO: Check whether `next` is a Resume message or a Heartbeat
     if let Some(maybe_heartbeat) = receiver.next().await {
         let maybe_heartbeat = maybe_heartbeat?;
         let maybe_heartbeat_text = match maybe_heartbeat.is_text() {
@@ -137,9 +145,21 @@ async fn establish_connection(stream: TcpStream) -> Result<NewConnection, Error>
             Ok(msg) => msg,
             Err(_) => return Err(GatewayError::UnexpectedMessage.into()),
         };
+        let last_heartbeat = LastHeartbeat {
+            timestamp: SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .expect("Please check the system time of the host machine")
+                .as_secs(),
+            heartbeat,
+        };
+        sender.send(Message::Text(GatewayHeartbeatAck { op: todo!() }))
         // TODO(bitfl0wer) Do something with the heartbeat, respond to the heartbeat, wait for
         // identify payload, construct [NewConnection]
     }
+    todo!()
+}
+
+async fn resume_connection() {
     todo!()
 }
 
@@ -171,7 +191,7 @@ fn checked_add_new_connection(
             .lock()
             .unwrap()
             .clients
-            .push(new_connection.client);
+            .push(Arc::new(Mutex::new(new_connection.client)));
     } else {
         // We cannot do `locked_map.insert(id, new_connection.user)` if new_connection is still
         // locked. Just bind the id we need to a new variable, then drop the lock.
