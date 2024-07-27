@@ -1,16 +1,16 @@
-/* 
+/*
  *  This Source Code Form is subject to the terms of the Mozilla Public
  *  License, v. 2.0. If a copy of the MPL was not distributed with this
  *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
 use chorus::types::{
-    ChannelModifySchema, ChannelType, jwt::Claims, ModifyChannelPositionsSchema, Snowflake,
+    jwt::Claims, ChannelModifySchema, ChannelType, ModifyChannelPositionsSchema, Snowflake,
 };
 use poem::{
     handler,
-    IntoResponse,
-    Response, web::{Data, Json, Path},
+    web::{Data, Json, Path},
+    IntoResponse, Response,
 };
 use reqwest::StatusCode;
 use sqlx::MySqlPool;
@@ -54,7 +54,9 @@ pub async fn create_channel(
         false,
         false,
         false,
-        payload.permission_overwrites.unwrap_or_else(std::vec::Vec::new),
+        payload
+            .permission_overwrites
+            .unwrap_or_else(std::vec::Vec::new),
     )
     .await?;
 

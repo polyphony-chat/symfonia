@@ -1,4 +1,4 @@
-/* 
+/*
  *  This Source Code Form is subject to the terms of the Mozilla Public
  *  License, v. 2.0. If a copy of the MPL was not distributed with this
  *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -9,10 +9,10 @@ use std::ops::{Deref, DerefMut};
 use bitflags::Flags;
 use chorus::types::{ApplicationFlags, Snowflake};
 use serde::{Deserialize, Serialize};
-use sqlx::{MySqlPool};
+use sqlx::MySqlPool;
 
 use crate::{
-    database::entities::{Config, user::User},
+    database::entities::{user::User, Config},
     errors::Error,
 };
 

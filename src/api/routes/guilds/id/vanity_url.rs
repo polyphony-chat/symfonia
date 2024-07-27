@@ -1,18 +1,18 @@
-/* 
+/*
  *  This Source Code Form is subject to the terms of the Mozilla Public
  *  License, v. 2.0. If a copy of the MPL was not distributed with this
  *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
 use chorus::types::{
-    GuildCreateVanitySchema, GuildVanityInviteResponse, jwt::Claims,
-    Snowflake, types::guild_configuration::GuildFeatures,
+    jwt::Claims, types::guild_configuration::GuildFeatures, GuildCreateVanitySchema,
+    GuildVanityInviteResponse, Snowflake,
 };
 use poem::{
     handler,
     http::StatusCode,
-    IntoResponse,
     web::{Data, Json, Path},
+    IntoResponse,
 };
 use sqlx::MySqlPool;
 

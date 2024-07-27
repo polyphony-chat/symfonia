@@ -1,21 +1,21 @@
-/* 
+/*
  *  This Source Code Form is subject to the terms of the Mozilla Public
  *  License, v. 2.0. If a copy of the MPL was not distributed with this
  *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
 use chorus::types::{
-    ChannelType,
-    GuildModifySchema,
-    jwt::Claims, PermissionFlags, PermissionOverwrite, PermissionOverwriteType, Rights,
-    Snowflake, types::guild_configuration::{GuildFeatures, GuildFeaturesList},
+    jwt::Claims,
+    types::guild_configuration::{GuildFeatures, GuildFeaturesList},
+    ChannelType, GuildModifySchema, PermissionFlags, PermissionOverwrite, PermissionOverwriteType,
+    Rights, Snowflake,
 };
 use itertools::Itertools;
 use poem::{
     handler,
     http::StatusCode,
-    IntoResponse,
-    Response, web::{Data, Json, Path},
+    web::{Data, Json, Path},
+    IntoResponse, Response,
 };
 use sqlx::MySqlPool;
 

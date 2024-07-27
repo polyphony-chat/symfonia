@@ -1,12 +1,12 @@
-/* 
+/*
  *  This Source Code Form is subject to the terms of the Mozilla Public
  *  License, v. 2.0. If a copy of the MPL was not distributed with this
  *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
 use chorus::types::jwt::Claims;
-use poem::{get, handler, IntoResponse, Route};
 use poem::web::{Data, Json, Path};
+use poem::{get, handler, IntoResponse, Route};
 use sqlx::MySqlPool;
 
 use crate::database::entities::{Channel, Invite, User};

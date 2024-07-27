@@ -1,14 +1,14 @@
-/* 
+/*
  *  This Source Code Form is subject to the terms of the Mozilla Public
  *  License, v. 2.0. If a copy of the MPL was not distributed with this
  *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use chorus::types::{GuildCreateSchema, jwt::Claims};
+use chorus::types::{jwt::Claims, GuildCreateSchema};
 use poem::{
-    get, handler, IntoResponse, patch, post,
-    put,
-    Route, web::{Data, Json},
+    get, handler, patch, post, put,
+    web::{Data, Json},
+    IntoResponse, Route,
 };
 use sqlx::MySqlPool;
 
