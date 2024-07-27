@@ -99,11 +99,17 @@ pub async fn start_gateway(
     while let Ok((stream, _)) = listener.accept().await {
         let connection_result = match tokio::task::spawn(establish_connection(stream)).await {
             Ok(result) => result,
-            Err(_) => continue,
+            Err(e) => {
+                log::warn!(target: "symfonia::db::establish_connection", "User gateway task died. Is the host healthy?: {e}");
+                continue;
+            }
         };
         match connection_result {
             Ok(new_connection) => checked_add_new_connection(gateway_users.clone(), new_connection),
-            Err(_) => continue,
+            Err(e) => {
+                log::debug!(target: "symfonia::db::establish_connection", "User gateway connection could not be established: {e}");
+                continue;
+            }
         }
     }
     Ok(())
