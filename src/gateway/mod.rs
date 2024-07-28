@@ -11,7 +11,8 @@ use std::sync::{Arc, Mutex, Weak};
 use std::time::SystemTime;
 
 use chorus::types::{
-    GatewayHeartbeat, GatewayHeartbeatAck, GatewayHello, GatewayIdentifyPayload, Snowflake,
+    GatewayHeartbeat, GatewayHeartbeatAck, GatewayHello, GatewayIdentifyPayload, GatewayResume,
+    Snowflake,
 };
 use futures::stream::{SplitSink, SplitStream};
 use futures::{SinkExt, StreamExt};
@@ -29,7 +30,7 @@ pub use types::*;
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 use crate::errors::{Error, GatewayError};
-use crate::SharedEventPublisherMap;
+use crate::{SharedEventPublisherMap, WebSocketReceive, WebSocketSend};
 
 /* NOTES (bitfl0wer) [These will be removed]
 The gateway is supposed to be highly concurrent. It will be handling a lot of connections at once.
@@ -74,10 +75,7 @@ struct GatewayClient {
     /// A [Weak] reference to the [GatewayUser] this client belongs to.
     pub parent: Weak<Mutex<GatewayUser>>,
     /// The [SplitSink] and [SplitStream] for this clients' WebSocket session
-    pub connection: (
-        SplitSink<WebSocketStream<TcpStream>, Message>,
-        SplitStream<WebSocketStream<TcpStream>>,
-    ),
+    pub connection: (WebSocketReceive, WebSocketSend),
     pub session_id: String,
     pub last_sequence: u64,
 }
@@ -130,32 +128,18 @@ async fn establish_connection(stream: TcpStream) -> Result<NewConnection, Error>
     sender
         .send(Message::Text(json!(GatewayHello::default()).to_string()))
         .await?;
-    let next = match receiver.next().await {
+    let message = match receiver.next().await {
         Some(next) => next,
         None => return Err(GatewayError::Timeout.into()),
     }?;
-    // TODO: Check whether `next` is a Resume message or a Heartbeat
-    if let Some(maybe_heartbeat) = receiver.next().await {
-        let maybe_heartbeat = maybe_heartbeat?;
-        let maybe_heartbeat_text = match maybe_heartbeat.is_text() {
-            true => maybe_heartbeat.to_text()?,
-            false => return Err(GatewayError::UnexpectedMessage.into()),
-        };
-        let heartbeat = match from_str::<GatewayHeartbeat>(maybe_heartbeat_text) {
-            Ok(msg) => msg,
-            Err(_) => return Err(GatewayError::UnexpectedMessage.into()),
-        };
-        let last_heartbeat = LastHeartbeat {
-            timestamp: SystemTime::now()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .expect("Please check the system time of the host machine")
-                .as_secs(),
-            heartbeat,
-        };
-        sender.send(Message::Text(GatewayHeartbeatAck { op: todo!() }))
-        // TODO(bitfl0wer) Do something with the heartbeat, respond to the heartbeat, wait for
-        // identify payload, construct [NewConnection]
+    if let Ok(resume_message) = from_str::<GatewayResume>(&message.to_string()) {
+        // Resume procedure
+    } else if let Ok(heartbeat_message) = from_str::<GatewayHeartbeat>(&message.to_string()) {
+        // Continue setting up fresh/new Gateway connection
+    } else {
+        return Err(GatewayError::UnexpectedMessage.into());
     }
+
     todo!()
 }
 
