@@ -40,9 +40,9 @@ mod util;
 pub type SharedEventPublisher = Arc<RwLock<Publisher<Event>>>;
 pub type EventPublisherMap = HashMap<Snowflake, SharedEventPublisher>;
 pub type SharedEventPublisherMap = Arc<RwLock<EventPublisherMap>>;
-pub type WebSocketSend =
+pub type WebSocketReceive =
     futures::stream::SplitStream<tokio_tungstenite::WebSocketStream<tokio::net::TcpStream>>;
-pub type WebSocketReceive = futures::stream::SplitSink<
+pub type WebSocketSend = futures::stream::SplitSink<
     tokio_tungstenite::WebSocketStream<tokio::net::TcpStream>,
     tokio_tungstenite::tungstenite::Message,
 >;
@@ -154,7 +154,7 @@ async fn main() {
         .logger(
             Logger::builder()
                 .appender("gateway")
-                .build("symfonia::gateway", LevelFilter::Info),
+                .build("symfonia::gateway", LevelFilter::Trace),
         )
         .build(Root::builder().appender("stdout").build({
             let mode = std::env::var("MODE").unwrap_or("DEBUG".to_string());
