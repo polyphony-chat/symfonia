@@ -230,7 +230,9 @@ impl ResponseError for Error {
             Error::Reqwest(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::Tungstenite(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::Gateway(err) => match err {
+                // TODO: Check if the associated statuscodes are okay
                 GatewayError::UnexpectedMessage => StatusCode::BAD_REQUEST,
+                GatewayError::Timeout => StatusCode::BAD_REQUEST,
             },
         }
     }
