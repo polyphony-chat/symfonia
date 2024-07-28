@@ -118,6 +118,14 @@ async fn main() {
         )
         .unwrap();
 
+    let env_mode = std::env::var("MODE").unwrap_or("DEBUG".to_string());
+    let loglevel = match env_mode.to_uppercase().as_str() {
+        "DEBUG" => LevelFilter::Debug,
+        "PRODUCTION" => LevelFilter::Warn,
+        "VERBOSE" => LevelFilter::Trace,
+        _ => LevelFilter::Debug,
+    };
+
     let config = Config::builder()
         .appender(
             Appender::builder()
@@ -144,27 +152,19 @@ async fn main() {
         .logger(
             Logger::builder()
                 .appender("api")
-                .build("symfonia::api", LevelFilter::Info),
+                .build("symfonia::api", loglevel),
         )
         .logger(
             Logger::builder()
                 .appender("cdn")
-                .build("symfonia::cdn", LevelFilter::Info),
+                .build("symfonia::cdn", loglevel),
         )
         .logger(
             Logger::builder()
                 .appender("gateway")
-                .build("symfonia::gateway", LevelFilter::Trace),
+                .build("symfonia::gateway", loglevel),
         )
-        .build(Root::builder().appender("stdout").build({
-            let mode = std::env::var("MODE").unwrap_or("DEBUG".to_string());
-            match mode.as_str() {
-                "DEBUG" => LevelFilter::Debug,
-                "PRODUCTION" => LevelFilter::Warn,
-                "VERBOSE" => LevelFilter::Trace,
-                _ => LevelFilter::Debug,
-            }
-        }))
+        .build(Root::builder().appender("stdout").build(loglevel))
         .unwrap();
 
     let _handle = log4rs::init_config(config).unwrap();
