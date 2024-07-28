@@ -4,11 +4,14 @@
  *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+static RESUME_RECONNECT_WINDOW_SECONDS: u8 = 90;
+
 mod types;
 
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, Weak};
-use std::time::SystemTime;
+use std::thread::sleep;
+use std::time::{Duration, SystemTime};
 
 use chorus::types::{
     GatewayHeartbeat, GatewayHeartbeatAck, GatewayHello, GatewayIdentifyPayload, GatewayResume,
@@ -75,9 +78,39 @@ struct GatewayClient {
     /// A [Weak] reference to the [GatewayUser] this client belongs to.
     pub parent: Weak<Mutex<GatewayUser>>,
     /// The [SplitSink] and [SplitStream] for this clients' WebSocket session
-    pub connection: (WebSocketReceive, WebSocketSend),
+    pub connection: Connection,
     pub session_id: String,
     pub last_sequence: u64,
+}
+
+struct Connection {
+    pub sender: WebSocketSend,
+    pub receiver: WebSocketReceive,
+}
+
+struct DisconnectInfo {
+    session_id: String,
+    disconnected_at: u64,
+    with_opcode: u16,
+}
+
+impl
+    From<(
+        SplitSink<WebSocketStream<TcpStream>, Message>,
+        SplitStream<WebSocketStream<TcpStream>>,
+    )> for Connection
+{
+    fn from(
+        value: (
+            SplitSink<WebSocketStream<TcpStream>, Message>,
+            SplitStream<WebSocketStream<TcpStream>>,
+        ),
+    ) -> Self {
+        Self {
+            sender: value.0,
+            receiver: value.1,
+        }
+    }
 }
 
 struct NewConnection {
@@ -97,18 +130,21 @@ pub async fn start_gateway(
 
     let gateway_users: Arc<Mutex<BTreeMap<Snowflake, Arc<Mutex<GatewayUser>>>>> =
         Arc::new(Mutex::new(BTreeMap::new()));
+    let resumeable_clients: Arc<Mutex<BTreeMap<String, DisconnectInfo>>> =
+        Arc::new(Mutex::new(BTreeMap::new()));
+    tokio::task::spawn(async { purge_expired_disconnects(resumeable_clients) });
     while let Ok((stream, _)) = listener.accept().await {
         let connection_result = match tokio::task::spawn(establish_connection(stream)).await {
             Ok(result) => result,
             Err(e) => {
-                log::warn!(target: "symfonia::db::establish_connection", "User gateway task died. Is the host healthy?: {e}");
+                log::warn!(target: "symfonia::gateway::establish_connection", "User gateway task died. Is the host healthy?: {e}");
                 continue;
             }
         };
         match connection_result {
             Ok(new_connection) => checked_add_new_connection(gateway_users.clone(), new_connection),
             Err(e) => {
-                log::debug!(target: "symfonia::db::establish_connection", "User gateway connection could not be established: {e}");
+                log::debug!(target: "symfonia::gateway::establish_connection", "User gateway connection could not be established: {e}");
                 continue;
             }
         }
@@ -116,26 +152,56 @@ pub async fn start_gateway(
     Ok(())
 }
 
-/// Handle the Gateway connection initalization process of a client connecting to the Gateway up
-/// until the point where we receive the identify payload, at which point a [NewConnection] will
-/// be returned.
+/// A disconnected, resumable session can only be resumed within 90 seconds after a disconnect occurs.
+/// Sessions that can be resumed are stored in a `Map`. The purpose of this method is to periodically
+/// throw out expired sessions from that map.
+fn purge_expired_disconnects(resumeable_clients: Arc<Mutex<BTreeMap<String, DisconnectInfo>>>) {
+    loop {
+        sleep(Duration::from_secs(5));
+        log::trace!(target: "symfonia::gateway::purge_expired_disconnects", "Removing stale disconnected sessions from list of resumeable sessions");
+        let current_unix_timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::SystemTime::UNIX_EPOCH)
+            .expect("Check the clock/time settings on the host machine")
+            .as_secs();
+        let mut to_remove = Vec::new();
+        let mut lock = resumeable_clients.lock().unwrap();
+        for (disconnected_session_id, disconnected_session_info) in lock.iter() {
+            if current_unix_timestamp - disconnected_session_info.disconnected_at
+                > RESUME_RECONNECT_WINDOW_SECONDS as u64
+            {
+                to_remove.push(disconnected_session_id.clone());
+            }
+        }
+        let len = to_remove.len();
+        for session_id in to_remove.iter() {
+            lock.remove(session_id);
+        }
+        drop(lock);
+        log::trace!(target: "symfonia::gateway::purge_expired_disconnects", "Removed {} stale sessions", len);
+    }
+}
+
+/// `establish_connection` is the entrypoint method that gets called when a client tries to connect
+/// to the WebSocket server.
 ///
 /// If successful, returns a [NewConnection] with a new [Arc<Mutex<GatewayUser>>] and a
 /// [GatewayClient], whose `.parent` field contains a [Weak] reference to the new [GatewayUser].
 async fn establish_connection(stream: TcpStream) -> Result<NewConnection, Error> {
     let ws_stream = accept_async(stream).await?;
-    let (mut sender, mut receiver) = ws_stream.split();
-    sender
+    let mut connection: Connection = ws_stream.split().into();
+    connection
+        .sender
         .send(Message::Text(json!(GatewayHello::default()).to_string()))
         .await?;
-    let message = match receiver.next().await {
+    let message = match connection.receiver.next().await {
         Some(next) => next,
         None => return Err(GatewayError::Timeout.into()),
     }?;
     if let Ok(resume_message) = from_str::<GatewayResume>(&message.to_string()) {
-        // Resume procedure
+        log::debug!(target: "symfonia::gateway::establish_connection", "[{}] Received GatewayResume. Trying to resume gateway connection", &resume_message.session_id);
+        return resume_connection(connection, resume_message).await;
     } else if let Ok(heartbeat_message) = from_str::<GatewayHeartbeat>(&message.to_string()) {
-        // Continue setting up fresh/new Gateway connection
+        log::debug!(target: "symfonia::gateway::establish_connection", "Received GatewayHeartbeat. Continuing to build fresh gateway connection");
     } else {
         return Err(GatewayError::UnexpectedMessage.into());
     }
@@ -143,7 +209,10 @@ async fn establish_connection(stream: TcpStream) -> Result<NewConnection, Error>
     todo!()
 }
 
-async fn resume_connection() {
+async fn resume_connection(
+    connection: Connection,
+    resume_message: GatewayResume,
+) -> Result<NewConnection, Error> {
     todo!()
 }
 
