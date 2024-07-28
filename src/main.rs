@@ -40,6 +40,12 @@ mod util;
 pub type SharedEventPublisher = Arc<RwLock<Publisher<Event>>>;
 pub type EventPublisherMap = HashMap<Snowflake, SharedEventPublisher>;
 pub type SharedEventPublisherMap = Arc<RwLock<EventPublisherMap>>;
+pub type WebSocketSend =
+    futures::stream::SplitStream<tokio_tungstenite::WebSocketStream<tokio::net::TcpStream>>;
+pub type WebSocketReceive = futures::stream::SplitSink<
+    tokio_tungstenite::WebSocketStream<tokio::net::TcpStream>,
+    tokio_tungstenite::tungstenite::Message,
+>;
 
 pub fn eq_shared_event_publisher(a: &SharedEventPublisher, b: &SharedEventPublisher) -> bool {
     let a = a.read();
