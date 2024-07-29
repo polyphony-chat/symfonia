@@ -11,12 +11,9 @@ mod types;
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, Weak};
 use std::thread::sleep;
-use std::time::{Duration, SystemTime};
+use std::time::Duration;
 
-use chorus::types::{
-    GatewayHeartbeat, GatewayHeartbeatAck, GatewayHello, GatewayIdentifyPayload, GatewayResume,
-    Snowflake,
-};
+use chorus::types::{GatewayHeartbeat, GatewayHello, GatewayResume, Snowflake};
 use futures::stream::{SplitSink, SplitStream};
 use futures::{SinkExt, StreamExt};
 use log::info;
@@ -152,9 +149,9 @@ pub async fn start_gateway(
     Ok(())
 }
 
-/// A disconnected, resumable session can only be resumed within 90 seconds after a disconnect occurs.
-/// Sessions that can be resumed are stored in a `Map`. The purpose of this method is to periodically
-/// throw out expired sessions from that map.
+/// A disconnected, resumable session can only be resumed within `RESUME_RECONNECT_WINDOW_SECONDS`
+/// seconds after a disconnect occurs. Sessions that can be resumed are stored in a `Map`. The
+/// purpose of this method is to periodically throw out expired sessions from that map.
 fn purge_expired_disconnects(resumeable_clients: Arc<Mutex<BTreeMap<String, DisconnectInfo>>>) {
     loop {
         sleep(Duration::from_secs(5));
