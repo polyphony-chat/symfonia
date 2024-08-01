@@ -137,7 +137,7 @@ pub async fn start_gateway(
         let connection_result = match tokio::task::spawn(establish_connection(stream)).await {
             Ok(result) => result,
             Err(e) => {
-                log::warn!(target: "symfonia::gateway::establish_connection", "User gateway task died. Is the host healthy?: {e}");
+                log::debug!(target: "symfonia::gateway::establish_connection", "User gateway task died: {e}");
                 continue;
             }
         };
@@ -193,15 +193,26 @@ async fn establish_connection(stream: TcpStream) -> Result<NewConnection, Error>
         .sender
         .send(Message::Text(json!(GatewayHello::default()).to_string()))
         .await?;
-    let message = match connection.receiver.next().await {
+    let raw_message = match connection.receiver.next().await {
         Some(next) => next,
         None => return Err(GatewayError::Timeout.into()),
     }?;
-    if let Ok(resume_message) = from_str::<GatewayResume>(&message.to_string()) {
+    if let Ok(resume_message) = from_str::<GatewayResume>(&raw_message.to_string()) {
         log::debug!(target: "symfonia::gateway::establish_connection", "[{}] Received GatewayResume. Trying to resume gateway connection", &resume_message.session_id);
         return resume_connection(connection, resume_message).await;
-    } else if let Ok(heartbeat_message) = from_str::<GatewayHeartbeat>(&message.to_string()) {
+    } else if let Ok(heartbeat_message) = from_str::<GatewayHeartbeat>(&raw_message.to_string()) {
         log::debug!(target: "symfonia::gateway::establish_connection", "Received GatewayHeartbeat. Continuing to build fresh gateway connection");
+        let raw_identify = match connection.receiver.next().await {
+            Some(next) => next,
+            None => return Err(GatewayError::Timeout.into()),
+        }?;
+        let identify = match from_str::<GatewayIdentifyPayload>(&raw_identify.to_string()) {
+            Ok(identify) => identify,
+            Err(e) => {
+                log::debug!(target: "symfonia::gateway::establish_connection", "Expected GatewayIdentifyPayload, received wrong data: {e}");
+                return Err(GatewayError::UnexpectedMessage.into());
+            }
+        };
     } else {
         return Err(GatewayError::UnexpectedMessage.into());
     }
