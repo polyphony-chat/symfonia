@@ -12,7 +12,7 @@ use poem::{
     web::{Data, Json, Path},
     IntoResponse, Response,
 };
-use sqlx::MySqlPool;
+use sqlx::AnyPool;
 
 use crate::{
     database::entities::{Guild, User, VoiceState},
@@ -21,7 +21,7 @@ use crate::{
 
 #[handler]
 pub async fn update_voice_state(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(authed_user): Data<&User>,
     Path((guild_id, user_id)): Path<(Snowflake, String)>,
     Json(mut payload): Json<VoiceStateUpdateSchema>,

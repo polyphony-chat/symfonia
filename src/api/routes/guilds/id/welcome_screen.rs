@@ -10,7 +10,7 @@ use poem::{
     web::{Data, Json, Path},
     IntoResponse,
 };
-use sqlx::MySqlPool;
+use sqlx::AnyPool;
 
 use crate::{
     database::entities::Guild,
@@ -19,7 +19,7 @@ use crate::{
 
 #[handler]
 pub async fn get_welcome_screen(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(claims): Data<&Claims>,
     Path(guild_id): Path<Snowflake>,
 ) -> poem::Result<impl IntoResponse> {
@@ -36,7 +36,7 @@ pub async fn get_welcome_screen(
 
 #[handler]
 pub async fn modify_welcome_screen(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(claims): Data<&Claims>,
     Path(guild_id): Path<Snowflake>,
     Json(payload): Json<GuildModifyWelcomeScreenSchema>,

@@ -10,7 +10,7 @@ use poem::{
     web::{Data, Json, Path},
     IntoResponse, Route,
 };
-use sqlx::MySqlPool;
+use sqlx::AnyPool;
 
 use invites::{create_invite, get_invites};
 
@@ -94,7 +94,7 @@ pub fn setup_routes() -> Route {
 
 #[handler]
 pub async fn get_channel(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(claims): Data<&Claims>,
     Path(channel_id): Path<Snowflake>,
 ) -> poem::Result<impl IntoResponse> {
@@ -110,7 +110,7 @@ pub async fn get_channel(
 
 #[handler]
 pub async fn delete_channel(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(claims): Data<&Claims>,
     Path(channel_id): Path<Snowflake>,
 ) -> poem::Result<impl IntoResponse> {
@@ -127,7 +127,7 @@ pub async fn delete_channel(
 
 #[handler]
 pub async fn modify_channel(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(claims): Data<&Claims>,
     Path(channel_id): Path<Snowflake>,
     Json(payload): Json<ChannelModifySchema>,

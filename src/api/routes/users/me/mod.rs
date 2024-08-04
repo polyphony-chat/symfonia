@@ -12,7 +12,7 @@ use chorus::types::jwt::Claims;
 use poem::web::{Data, Json};
 use poem::{get, handler, IntoResponse, Route};
 use settings::{get_settings, update_settings};
-use sqlx::MySqlPool;
+use sqlx::AnyPool;
 
 pub fn setup_routes() -> Route {
     Route::new()
@@ -22,7 +22,7 @@ pub fn setup_routes() -> Route {
 
 #[handler]
 pub async fn get_data(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(claims): Data<&Claims>,
 ) -> poem::Result<impl IntoResponse> {
     let user = User::get_by_id(db, claims.id)

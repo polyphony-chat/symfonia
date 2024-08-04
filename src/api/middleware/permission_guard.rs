@@ -1,4 +1,4 @@
-/* 
+/*
  *  This Source Code Form is subject to the terms of the Mozilla Public
  *  License, v. 2.0. If a copy of the MPL was not distributed with this
  *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -6,7 +6,7 @@
 
 use chorus::types::{PermissionFlags, Snowflake};
 use poem::{Endpoint, Middleware, Request};
-use sqlx::MySqlPool;
+use sqlx::AnyPool;
 
 use crate::database::entities::User;
 
@@ -38,7 +38,7 @@ impl<E: Endpoint> Endpoint for PermissionGuardMiddlewareImpl<E> {
 
     async fn call(&self, mut req: Request) -> poem::Result<Self::Output> {
         let db = req
-            .data::<MySqlPool>()
+            .data::<AnyPool>()
             .expect("Failed to get database connection");
 
         if let Some(user) = req.data::<User>() {
@@ -59,7 +59,7 @@ impl<E: Endpoint> Endpoint for PermissionGuardMiddlewareImpl<E> {
 }
 
 async fn check_channel_permissions(
-    db: &MySqlPool,
+    db: &AnyPool,
     channel_id: Snowflake,
     permissions: PermissionFlags,
 ) -> poem::Result<()> {

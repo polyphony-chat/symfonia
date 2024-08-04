@@ -10,7 +10,7 @@ use poem::{
     web::{Data, Json, Path, Query},
     IntoResponse,
 };
-use sqlx::MySqlPool;
+use sqlx::AnyPool;
 
 use crate::{
     database::entities::{AuditLogEntry, Guild, User},
@@ -19,7 +19,7 @@ use crate::{
 
 #[handler]
 pub async fn get_audit_logs(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(authed_user): Data<&User>,
     Path(guild_id): Path<Snowflake>,
     Query(query): Query<GetAuditLogsQuery>,

@@ -11,7 +11,7 @@ use poem::{
     web::{Data, Json, Path},
     IntoResponse, Response,
 };
-use sqlx::MySqlPool;
+use sqlx::AnyPool;
 
 use crate::{
     database::entities::{Channel, Recipient, User},
@@ -20,7 +20,7 @@ use crate::{
 
 #[handler]
 pub async fn add_recipient(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(claims): Data<&Claims>,
     Data(user): Data<&User>,
     Path((channel_id, user_id)): Path<(Snowflake, Snowflake)>,
@@ -57,7 +57,7 @@ pub async fn add_recipient(
 
 #[handler]
 pub async fn remove_recipient(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(claims): Data<&Claims>,
     Path((channel_id, user_id)): Path<(Snowflake, Snowflake)>,
 ) -> poem::Result<impl IntoResponse> {

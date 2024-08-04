@@ -11,7 +11,7 @@ use poem::{
     IntoResponse,
 };
 use serde_json::json;
-use sqlx::MySqlPool;
+use sqlx::AnyPool;
 
 use crate::{
     database::entities::{Guild, User},
@@ -20,7 +20,7 @@ use crate::{
 
 #[handler]
 pub async fn search(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(authed_user): Data<&User>,
     Path(guild_id): Path<Snowflake>,
     Query(payload): Query<MessageSearchQuery>,

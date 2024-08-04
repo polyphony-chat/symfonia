@@ -11,7 +11,7 @@ use poem::{
     web::{Data, Path},
     IntoResponse, Response,
 };
-use sqlx::MySqlPool;
+use sqlx::AnyPool;
 
 use crate::{
     database::entities::{Guild, User},
@@ -20,7 +20,7 @@ use crate::{
 
 #[handler]
 pub async fn add_role(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(authed_user): Data<&User>,
     Path((guild_id, member_id, role_id)): Path<(Snowflake, Snowflake, Snowflake)>,
 ) -> poem::Result<impl IntoResponse> {
@@ -57,7 +57,7 @@ pub async fn add_role(
 
 #[handler]
 pub async fn remove_role(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(authed_user): Data<&User>,
     Path((guild_id, member_id, role_id)): Path<(Snowflake, Snowflake, Snowflake)>,
 ) -> poem::Result<impl IntoResponse> {

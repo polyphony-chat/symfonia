@@ -11,7 +11,7 @@ use poem::{
     IntoResponse, Response,
 };
 use reqwest::StatusCode;
-use sqlx::MySqlPool;
+use sqlx::AnyPool;
 
 use crate::{
     database::entities::{Channel, Emoji, GuildMember, Message, User},
@@ -20,7 +20,7 @@ use crate::{
 
 #[handler]
 pub async fn add_reaction(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(claims): Data<&Claims>,
     Path((channel_id, message_id)): Path<(Snowflake, Snowflake)>,
     Path((emoji, user_id)): Path<(String, String)>,
@@ -99,7 +99,7 @@ pub async fn add_reaction(
 
 #[handler]
 pub async fn delete_all_reactions(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Path((channel_id, message_id)): Path<(Snowflake, Snowflake)>,
 ) -> poem::Result<impl IntoResponse> {
     // TODO: Check permissions
@@ -116,7 +116,7 @@ pub async fn delete_all_reactions(
 
 #[handler]
 pub async fn delete_reaction(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(claims): Data<&Claims>,
     Path((channel_id, message_id)): Path<(Snowflake, Snowflake)>,
     Path((emoji, user_id)): Path<(String, String)>,
@@ -153,7 +153,7 @@ pub async fn delete_reaction(
 
 #[handler]
 pub async fn get_reaction(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Path((channel_id, message_id)): Path<(Snowflake, Snowflake)>,
     Path(emoji): Path<String>,
     Query(query): Query<ReactionQuerySchema>,

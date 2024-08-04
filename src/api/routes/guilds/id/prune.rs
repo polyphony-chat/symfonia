@@ -10,7 +10,7 @@ use poem::{
     web::{Data, Json, Path, Query},
     IntoResponse,
 };
-use sqlx::MySqlPool;
+use sqlx::AnyPool;
 
 use crate::{
     database::entities::{Config, Guild, Role, User},
@@ -19,7 +19,7 @@ use crate::{
 
 #[handler]
 pub async fn prune_members_dry_run(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(authed_user): Data<&User>,
     Data(config): Data<&Config>,
     Path(guild_id): Path<Snowflake>,
@@ -64,7 +64,7 @@ pub async fn prune_members_dry_run(
 
 #[handler]
 pub async fn prune_members(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(authed_user): Data<&User>,
     Data(config): Data<&Config>,
     Path(guild_id): Path<Snowflake>,

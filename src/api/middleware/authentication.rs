@@ -5,7 +5,7 @@
  */
 
 use poem::{http::StatusCode, Endpoint, Middleware, Request};
-use sqlx::MySqlPool;
+use sqlx::AnyPool;
 
 use crate::{
     database::entities::{Config, User},
@@ -33,7 +33,7 @@ impl<E: Endpoint> Endpoint for AuthenticationMiddlewareImpl<E> {
             .header("Authorization")
             .ok_or(poem::error::Error::from_status(StatusCode::UNAUTHORIZED))?;
 
-        let db = req.data::<MySqlPool>().unwrap();
+        let db = req.data::<AnyPool>().unwrap();
         let cfg = req.data::<Config>().unwrap();
 
         let claims = check_token(

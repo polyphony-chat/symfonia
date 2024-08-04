@@ -25,7 +25,7 @@ pub struct Recipient {
 
 impl Recipient {
     pub async fn create(
-        db: &sqlx::MySqlPool,
+        db: &sqlx::AnyPool,
         channel_id: Snowflake,
         user_id: Snowflake,
     ) -> Result<Self, Error> {
@@ -47,7 +47,7 @@ impl Recipient {
             })
     }
 
-    pub async fn populate_relations(&mut self, db: &sqlx::MySqlPool) -> Result<(), Error> {
+    pub async fn populate_relations(&mut self, db: &sqlx::AnyPool) -> Result<(), Error> {
         self.channel = Channel::get_by_id(db, self.channel_id).await?;
         self.user = User::get_by_id(db, self.user_id)
             .await?
@@ -55,7 +55,7 @@ impl Recipient {
         Ok(())
     }
 
-    pub async fn get_by_id(db: &sqlx::MySqlPool, id: Snowflake) -> Result<Option<Self>, Error> {
+    pub async fn get_by_id(db: &sqlx::AnyPool, id: Snowflake) -> Result<Option<Self>, Error> {
         sqlx::query_as("SELECT * FROM recipients WHERE id = ?")
             .bind(id)
             .fetch_optional(db)
@@ -64,7 +64,7 @@ impl Recipient {
     }
 
     pub async fn get_by_channel_id(
-        db: &sqlx::MySqlPool,
+        db: &sqlx::AnyPool,
         channel_id: Snowflake,
     ) -> Result<Vec<Self>, Error> {
         sqlx::query_as("SELECT * FROM recipients WHERE channel_id = ?")
@@ -75,7 +75,7 @@ impl Recipient {
     }
 
     pub async fn get_by_user_id(
-        db: &sqlx::MySqlPool,
+        db: &sqlx::AnyPool,
         user_id: Snowflake,
     ) -> Result<Vec<Self>, Error> {
         sqlx::query_as("SELECT * FROM recipients WHERE user_id = ?")
@@ -86,7 +86,7 @@ impl Recipient {
     }
 
     pub async fn get_by_channel_and_user_id(
-        db: &sqlx::MySqlPool,
+        db: &sqlx::AnyPool,
         channel_id: Snowflake,
         user_id: Snowflake,
     ) -> Result<Option<Self>, Error> {
@@ -98,7 +98,7 @@ impl Recipient {
             .map_err(Error::from)
     }
 
-    pub async fn delete(self, db: &sqlx::MySqlPool) -> Result<(), Error> {
+    pub async fn delete(self, db: &sqlx::AnyPool) -> Result<(), Error> {
         sqlx::query("DELETE FROM recipients WHERE id = ?")
             .bind(self.id)
             .execute(db)

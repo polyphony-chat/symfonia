@@ -8,10 +8,10 @@ use poem::http::StatusCode;
 use poem::web::Data;
 use poem::{get, Route};
 use poem::{handler, IntoResponse};
-use sqlx::MySqlPool;
+use sqlx::AnyPool;
 
 #[handler]
-pub async fn healthz(Data(db): Data<&MySqlPool>) -> poem::Result<impl IntoResponse> {
+pub async fn healthz(Data(db): Data<&AnyPool>) -> poem::Result<impl IntoResponse> {
     if db.is_closed() {
         return Err(poem::Error::from_status(StatusCode::SERVICE_UNAVAILABLE));
     }

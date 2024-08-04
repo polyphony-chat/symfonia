@@ -5,7 +5,7 @@
  */
 
 use chorus::types::Snowflake;
-use sqlx::MySqlPool;
+use sqlx::AnyPool;
 
 use crate::{
     database::entities::{Channel, User},
@@ -31,7 +31,7 @@ pub struct ReadState {
 
 impl ReadState {
     pub async fn create(
-        db: &MySqlPool,
+        db: &AnyPool,
         channel_id: Snowflake,
         user_id: Snowflake,
         message_id: Option<Snowflake>,
@@ -59,7 +59,7 @@ impl ReadState {
         })
     }
     pub async fn get_by_user_and_channel(
-        db: &MySqlPool,
+        db: &AnyPool,
         channel_id: Snowflake,
         user_id: Snowflake,
     ) -> Result<Option<Self>, Error> {
@@ -71,13 +71,13 @@ impl ReadState {
             .map_err(Error::SQLX)
     }
 
-    pub async fn populate_relations(&mut self, db: &MySqlPool) -> Result<(), Error> {
+    pub async fn populate_relations(&mut self, db: &AnyPool) -> Result<(), Error> {
         self.user = User::get_by_id(db, self.user_id).await?;
         self.channel = Channel::get_by_id(db, self.channel_id).await?;
         Ok(())
     }
 
-    pub async fn save(&self, db: &MySqlPool) -> Result<(), Error> {
+    pub async fn save(&self, db: &AnyPool) -> Result<(), Error> {
         sqlx::query("INSERT INTO read_states (channel_id, user_id, last_message_id, public_ack, notifications_cursor, last_pin_timestamp, mention_count, manual) VALUES (?,?,?,?,?,?,?,?)")
            .bind(self.channel_id)
            .bind(self.user_id)

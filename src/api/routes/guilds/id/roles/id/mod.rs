@@ -11,7 +11,7 @@ use poem::{
     web::{Data, Json, Path},
     IntoResponse, Response,
 };
-use sqlx::MySqlPool;
+use sqlx::AnyPool;
 
 use crate::{
     database::entities::Guild,
@@ -23,7 +23,7 @@ pub(crate) mod members;
 
 #[handler]
 pub async fn get_role(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(claims): Data<&Claims>,
     Path((guild_id, role_id)): Path<(Snowflake, Snowflake)>,
 ) -> poem::Result<impl IntoResponse> {
@@ -45,7 +45,7 @@ pub async fn get_role(
 
 #[handler]
 pub async fn delete_role(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(claims): Data<&Claims>,
     Path((guild_id, role_id)): Path<(Snowflake, Snowflake)>,
 ) -> poem::Result<impl IntoResponse> {
@@ -79,7 +79,7 @@ pub async fn delete_role(
 
 #[handler]
 pub async fn modify_role(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(claims): Data<&Claims>,
     Path((guild_id, role_id)): Path<(Snowflake, Snowflake)>,
     Json(payload): Json<RoleCreateModifySchema>,

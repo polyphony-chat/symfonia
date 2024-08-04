@@ -4,8 +4,8 @@
  *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use sqlx::mysql::MySqlConnectOptions;
-use sqlx::{AnyPool, Database, Executor, MySqlPool, Row, SqlitePool};
+use sqlx::any::AnyConnectOptions;
+use sqlx::{AnyPool, Database, Executor, Row, SqlitePool};
 
 use crate::errors::Error;
 
@@ -13,18 +13,18 @@ pub mod entities;
 
 pub trait Queryer<'c, DB: Database>: Executor<'c, Database = DB> {}
 
-impl<'c> Queryer<'c, sqlx::MySql> for &MySqlPool {}
+impl<'c> Queryer<'c, sqlx::MySql> for &AnyPool {}
 
 impl<'c> Queryer<'c, sqlx::Sqlite> for &SqlitePool {}
 
 impl<'c> Queryer<'c, sqlx::Any> for &AnyPool {}
 
-pub async fn establish_connection() -> Result<sqlx::MySqlPool, Error> {
+pub async fn establish_connection() -> Result<sqlx::AnyPool, Error> {
     let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
         log::warn!(target: "symfonia::db", "You did not specify `DATABASE_URL` environment variable, defaulting to 'mariadb://localhost:3306'.");
         "mariadb://localhost:3306".to_string()
     });
-    let mysql_connect_options = MySqlConnectOptions::new()
+    let mysql_connect_options = AnyConnectOptions::new()
         .host(&db_url)
         .username(&std::env::var("DATABASE_USERNAME").unwrap_or_else(|_| {
             log::warn!(target: "symfonia::db", "You did not specify `DATABASE_USERNAME` environment variable. Defaulting to 'symfonia'.");
@@ -38,13 +38,13 @@ pub async fn establish_connection() -> Result<sqlx::MySqlPool, Error> {
             log::warn!(target: "symfonia::db", "You did not specify `DATABASE_NAME` environment variable. Defaulting to 'symfonia'.");
             "symfonia".to_string()
         }));
-    let pool = MySqlPool::connect_with(mysql_connect_options).await?;
+    let pool = AnyConnectOptions::connect_with(mysql_connect_options).await?;
     //install_default_drivers();
 
     Ok(pool)
 }
 
-pub async fn check_migrating_from_spacebar(db: &MySqlPool) -> Result<bool, Error> {
+pub async fn check_migrating_from_spacebar(db: &AnyPool) -> Result<bool, Error> {
     let res = sqlx::query("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'migrations')")
         .fetch_one(db)
         .await?;
@@ -52,7 +52,7 @@ pub async fn check_migrating_from_spacebar(db: &MySqlPool) -> Result<bool, Error
     Ok(res.get(0))
 }
 
-pub async fn check_fresh_db(db: &MySqlPool) -> Result<bool, Error> {
+pub async fn check_fresh_db(db: &AnyPool) -> Result<bool, Error> {
     let res = sqlx::query("SELECT COUNT(*) FROM config")
         .fetch_one(db)
         .await?;
@@ -61,13 +61,13 @@ pub async fn check_fresh_db(db: &MySqlPool) -> Result<bool, Error> {
     Ok(c == 0)
 }
 
-pub async fn delete_spacebar_migrations(db: &MySqlPool) -> Result<(), Error> {
+pub async fn delete_spacebar_migrations(db: &AnyPool) -> Result<(), Error> {
     sqlx::query("DROP TABLE migrations").execute(db).await?;
 
     Ok(())
 }
 
-pub async fn seed_config(db: &MySqlPool) -> Result<(), Error> {
+pub async fn seed_config(db: &AnyPool) -> Result<(), Error> {
     sqlx::query(r#"INSERT INTO config (`key`, value) VALUES ('api_activeVersions_0', '"6"');"#)
         .execute(db)
         .await?;

@@ -11,7 +11,7 @@ use poem::{
     IntoResponse, Response,
 };
 use reqwest::StatusCode;
-use sqlx::MySqlPool;
+use sqlx::AnyPool;
 
 use crate::{
     database::entities::{Channel, GuildMember},
@@ -20,7 +20,7 @@ use crate::{
 
 #[handler]
 pub async fn typing_indicator(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(claims): Data<&Claims>,
     Path(channel_id): Path<Snowflake>,
 ) -> poem::Result<impl IntoResponse> {

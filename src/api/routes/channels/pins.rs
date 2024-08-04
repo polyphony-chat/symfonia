@@ -11,7 +11,7 @@ use poem::{
     web::{Data, Json, Path},
     IntoResponse, Response,
 };
-use sqlx::MySqlPool;
+use sqlx::AnyPool;
 
 use crate::{
     database::entities::{Config, Message},
@@ -20,7 +20,7 @@ use crate::{
 
 #[handler]
 pub async fn add_pinned_message(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(config): Data<&Config>,
     Data(claims): Data<&Claims>,
     Path((channel_id, message_id)): Path<(Snowflake, Snowflake)>,
@@ -46,7 +46,7 @@ pub async fn add_pinned_message(
 
 #[handler]
 pub async fn remove_pinned_message(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(claims): Data<&Claims>,
     Path((channel_id, message_id)): Path<(Snowflake, Snowflake)>,
 ) -> poem::Result<impl IntoResponse> {
@@ -66,7 +66,7 @@ pub async fn remove_pinned_message(
 
 #[handler]
 pub async fn get_pinned_messages(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Path(channel_id): Path<Snowflake>,
 ) -> poem::Result<impl IntoResponse> {
     // TODO: Check permission 'READ_MESSAGE_HISTORY'

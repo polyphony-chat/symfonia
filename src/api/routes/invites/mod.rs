@@ -7,7 +7,7 @@
 use chorus::types::jwt::Claims;
 use poem::web::{Data, Json, Path};
 use poem::{get, handler, IntoResponse, Route};
-use sqlx::MySqlPool;
+use sqlx::AnyPool;
 
 use crate::database::entities::{Channel, Invite, User};
 use crate::errors::{ChannelError, Error, InviteError, UserError};
@@ -17,7 +17,7 @@ pub fn setup_routes() -> Route {
 }
 #[handler]
 pub async fn get_invite(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(claims): Data<&Claims>,
     Path(invite_code): Path<String>,
 ) -> poem::Result<impl IntoResponse> {
@@ -30,7 +30,7 @@ pub async fn get_invite(
 
 #[handler]
 pub async fn accept_invite(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(claims): Data<&Claims>,
     Path(invite_code): Path<String>,
 ) -> poem::Result<impl IntoResponse> {
@@ -49,7 +49,7 @@ pub async fn accept_invite(
 
 #[handler]
 pub async fn delete_invite(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(claims): Data<&Claims>,
     Path(invite_code): Path<String>,
 ) -> poem::Result<impl IntoResponse> {

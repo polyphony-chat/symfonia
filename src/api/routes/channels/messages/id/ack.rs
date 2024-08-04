@@ -11,7 +11,7 @@ use poem::{
     IntoResponse,
 };
 use serde_json::json;
-use sqlx::MySqlPool;
+use sqlx::AnyPool;
 
 use crate::{
     database::entities::{Channel, ReadState},
@@ -20,7 +20,7 @@ use crate::{
 
 #[handler]
 pub async fn acknowledge_message(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(claims): Data<&Claims>,
     Path((channel_id, message_id)): Path<(Snowflake, Snowflake)>,
 ) -> poem::Result<impl IntoResponse> {

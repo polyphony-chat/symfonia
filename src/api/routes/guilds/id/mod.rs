@@ -17,7 +17,7 @@ use poem::{
     web::{Data, Json, Path},
     IntoResponse, Response,
 };
-use sqlx::MySqlPool;
+use sqlx::AnyPool;
 
 use crate::{
     database::entities::{Channel, Guild, GuildMember, Role, User},
@@ -41,7 +41,7 @@ pub(crate) mod welcome_screen;
 
 #[handler]
 pub async fn get_guild(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(claims): Data<&Claims>,
     Path(guild_id): Path<Snowflake>,
 ) -> poem::Result<impl IntoResponse> {
@@ -69,7 +69,7 @@ pub async fn get_guild(
 
 #[handler]
 pub async fn modify_guild(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(authed_user): Data<&User>,
     Path(guild_id): Path<Snowflake>,
     Json(payload): Json<GuildModifySchema>,
@@ -191,7 +191,7 @@ pub async fn modify_guild(
 
 #[handler]
 pub async fn delete_guild(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(claims): Data<&Claims>,
     Path(guild_id): Path<Snowflake>,
 ) -> poem::Result<impl IntoResponse> {

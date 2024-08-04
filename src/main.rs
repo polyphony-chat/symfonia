@@ -147,6 +147,8 @@ async fn main() {
 
     log::info!(target: "symfonia", "Starting up Symfonia");
 
+    sqlx::any::install_default_drivers();
+
     log::info!(target: "symfonia::db", "Establishing database connection");
     let db = database::establish_connection()
         .await

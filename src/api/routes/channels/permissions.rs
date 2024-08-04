@@ -11,7 +11,7 @@ use poem::{
     web::{Data, Json, Path},
     IntoResponse, Response,
 };
-use sqlx::MySqlPool;
+use sqlx::AnyPool;
 
 use crate::{
     database::entities::{Channel, GuildMember, Role},
@@ -20,7 +20,7 @@ use crate::{
 
 #[handler]
 pub async fn add_overwrite(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(claims): Data<&Claims>,
     Path((channel_id, overwrite_id)): Path<(Snowflake, Snowflake)>,
     Json(payload): Json<PermissionOverwrite>,
@@ -66,7 +66,7 @@ pub async fn add_overwrite(
 
 #[handler]
 pub async fn remove_overwrite(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(claims): Data<&Claims>,
     Path((channel_id, overwrite_id)): Path<(Snowflake, Snowflake)>,
 ) -> poem::Result<impl IntoResponse> {

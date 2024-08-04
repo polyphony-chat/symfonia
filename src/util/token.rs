@@ -8,9 +8,9 @@ use crate::database::entities::User;
 use crate::errors::{Error, UserError};
 use chorus::types::jwt::Claims;
 use jsonwebtoken::TokenData;
-use sqlx::MySqlPool;
+use sqlx::AnyPool;
 
-pub async fn check_token(db: &MySqlPool, token: &str, jwt_secret: &str) -> Result<Claims, Error> {
+pub async fn check_token(db: &AnyPool, token: &str, jwt_secret: &str) -> Result<Claims, Error> {
     let decoding_key = jsonwebtoken::DecodingKey::from_base64_secret(jwt_secret).unwrap();
     let mut validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::HS256);
     validation.insecure_disable_signature_validation(); // TODO: Remove

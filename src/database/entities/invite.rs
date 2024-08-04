@@ -10,7 +10,7 @@ use chorus::types::{CreateChannelInviteSchema, InviteType, Snowflake};
 use chrono::Utc;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
-use sqlx::MySqlPool;
+use sqlx::AnyPool;
 
 use crate::{
     database::entities::{Channel, Guild, User},
@@ -46,7 +46,7 @@ impl DerefMut for Invite {
 
 impl Invite {
     pub async fn create(
-        db: &MySqlPool,
+        db: &AnyPool,
         data: CreateChannelInviteSchema,
         channel_id: Option<Snowflake>,
         inviter_id: Option<Snowflake>,
@@ -128,7 +128,7 @@ impl Invite {
     }
 
     pub async fn create_vanity(
-        db: &MySqlPool,
+        db: &AnyPool,
         guild_id: Snowflake,
         code: &str,
     ) -> Result<Self, Error> {
@@ -168,7 +168,7 @@ impl Invite {
         Ok(invite)
     }
 
-    pub async fn get_by_code(db: &MySqlPool, code: &str) -> Result<Option<Self>, Error> {
+    pub async fn get_by_code(db: &AnyPool, code: &str) -> Result<Option<Self>, Error> {
         let invite: Option<Self> = sqlx::query_as("SELECT * FROM invites WHERE code = ?")
             .bind(code)
             .fetch_optional(db)
@@ -178,7 +178,7 @@ impl Invite {
         Ok(invite)
     }
 
-    pub async fn get_by_guild(db: &MySqlPool, guild_id: Snowflake) -> Result<Vec<Self>, Error> {
+    pub async fn get_by_guild(db: &AnyPool, guild_id: Snowflake) -> Result<Vec<Self>, Error> {
         let guild = Guild::get_by_id(db, guild_id)
             .await?
             .ok_or(Error::Guild(GuildError::InvalidGuild))?;
@@ -197,7 +197,7 @@ impl Invite {
     }
 
     pub async fn get_by_guild_vanity(
-        db: &MySqlPool,
+        db: &AnyPool,
         guild_id: Snowflake,
     ) -> Result<Option<Self>, Error> {
         sqlx::query_as("SELECT * FROM invites WHERE guild_id = ? AND vanity_url = 1")
@@ -207,7 +207,7 @@ impl Invite {
             .map_err(Error::SQLX)
     }
 
-    pub async fn get_by_channel(db: &MySqlPool, channel_id: Snowflake) -> Result<Vec<Self>, Error> {
+    pub async fn get_by_channel(db: &AnyPool, channel_id: Snowflake) -> Result<Vec<Self>, Error> {
         sqlx::query_as("SELECT * FROM invites WHERE channel_id = ?")
             .bind(channel_id)
             .fetch_all(db)
@@ -215,7 +215,7 @@ impl Invite {
             .map_err(Error::SQLX)
     }
 
-    pub async fn delete(&self, db: &MySqlPool) -> Result<(), Error> {
+    pub async fn delete(&self, db: &AnyPool) -> Result<(), Error> {
         sqlx::query("DELETE FROM invites WHERE code = ?")
             .bind(&self.code)
             .execute(db)
@@ -224,7 +224,7 @@ impl Invite {
             .map_err(Error::SQLX)
     }
 
-    pub async fn join(&mut self, db: &MySqlPool, user: &User) -> Result<(), Error> {
+    pub async fn join(&mut self, db: &AnyPool, user: &User) -> Result<(), Error> {
         if let Some(invite_type) = self.invite_type {
             match invite_type {
                 InviteType::Guild => {
@@ -252,7 +252,7 @@ impl Invite {
         Ok(())
     }
 
-    pub async fn increase_uses(&mut self, db: &MySqlPool) -> Result<(), Error> {
+    pub async fn increase_uses(&mut self, db: &AnyPool) -> Result<(), Error> {
         self.uses = self.uses.map(|uses| uses + 1);
         sqlx::query("UPDATE invites SET uses = ? WHERE code = ?")
             .bind(self.uses)
@@ -263,7 +263,7 @@ impl Invite {
             .map_err(Error::SQLX)
     }
 
-    pub async fn populate_relations(&mut self, db: &MySqlPool) -> Result<(), Error> {
+    pub async fn populate_relations(&mut self, db: &AnyPool) -> Result<(), Error> {
         // if let Some(guild_id) = self.guild_id {
         //     self.guild = Guild::get_by_id(db, guild_id).await?.map(|guild| GuildInvite::fr);
         // }
@@ -277,7 +277,7 @@ impl Invite {
         Ok(())
     }
 
-    pub async fn set_code(&mut self, db: &MySqlPool, code: &str) -> Result<(), Error> {
+    pub async fn set_code(&mut self, db: &AnyPool, code: &str) -> Result<(), Error> {
         sqlx::query("UPDATE invites SET code = ? WHERE code = ?")
             .bind(code)
             .bind(&self.code)
@@ -288,7 +288,7 @@ impl Invite {
         Ok(())
     }
 
-    pub async fn save(&self, db: &MySqlPool) -> Result<(), Error> {
+    pub async fn save(&self, db: &AnyPool) -> Result<(), Error> {
         sqlx::query("UPDATE invites SET type = ?, temporary = ?, uses = ?, max_uses = ?, max_age = ?, created_at = ?, expires_at = ?, guild_id = ?, channel_id = ?, inviter_id = ?, target_user_id = ?, target_user_type = ?, vanity_url = ?, flags = ? WHERE code = ?")
             .bind(&self.code)
             .bind(self.invite_type)

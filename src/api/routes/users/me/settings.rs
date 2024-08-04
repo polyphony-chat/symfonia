@@ -10,11 +10,11 @@ use chorus::types::jwt::Claims;
 use chorus::types::UserSettings;
 use poem::web::{Data, Json};
 use poem::{handler, IntoResponse};
-use sqlx::MySqlPool;
+use sqlx::AnyPool;
 
 #[handler]
 pub async fn get_settings(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(claims): Data<&Claims>,
 ) -> poem::Result<impl IntoResponse> {
     let user = User::get_by_id(db, claims.id)
@@ -26,7 +26,7 @@ pub async fn get_settings(
 
 #[handler]
 pub async fn update_settings(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(claims): Data<&Claims>,
     Json(settings): Json<UserSettings>,
 ) -> poem::Result<impl IntoResponse> {

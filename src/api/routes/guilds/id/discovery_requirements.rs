@@ -12,7 +12,7 @@ use poem::{
     web::{Data, Json, Path},
     IntoResponse,
 };
-use sqlx::MySqlPool;
+use sqlx::AnyPool;
 
 use crate::{
     database::entities::{Config, Guild},
@@ -21,7 +21,7 @@ use crate::{
 
 #[handler]
 pub async fn discovery_requirements(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&AnyPool>,
     Data(claims): Data<&Claims>,
     Data(config): Data<&Config>,
     Path(guild_id): Path<Snowflake>,
