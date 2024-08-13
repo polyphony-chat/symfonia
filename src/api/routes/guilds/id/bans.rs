@@ -14,7 +14,7 @@ use poem::{
     IntoResponse, Response,
 };
 use reqwest::StatusCode;
-use sqlx::AnyPool;
+use sqlx::PgPool;
 
 use crate::{
     database::entities::{Guild, GuildBan},
@@ -23,7 +23,7 @@ use crate::{
 
 #[handler]
 pub async fn get_bans(
-    Data(db): Data<&AnyPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path(guild_id): Path<Snowflake>,
     Query(query): Query<GuildBansQuery>,
@@ -41,7 +41,7 @@ pub async fn get_bans(
 
 #[handler]
 pub async fn get_banned_user(
-    Data(db): Data<&AnyPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path((guild_id, user_id)): Path<(Snowflake, Snowflake)>,
 ) -> poem::Result<impl IntoResponse> {
@@ -65,7 +65,7 @@ pub async fn get_banned_user(
 
 #[handler]
 pub async fn create_ban(
-    Data(db): Data<&AnyPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path((guild_id, user_id)): Path<(Snowflake, Snowflake)>,
     Json(payload): Json<GuildBanCreateSchema>,
@@ -92,7 +92,7 @@ pub async fn create_ban(
 
 #[handler]
 pub async fn bulk_ban(
-    Data(db): Data<&AnyPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path(guild_id): Path<Snowflake>,
     Json(payload): Json<GuildBanBulkCreateSchema>,
@@ -113,7 +113,7 @@ pub async fn bulk_ban(
 
 #[handler]
 pub async fn search(
-    Data(db): Data<&AnyPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path(guild_id): Path<Snowflake>,
     Query(query): Query<GuildBansSearchQuery>,
@@ -137,7 +137,7 @@ pub async fn search(
 
 #[handler]
 pub async fn delete_ban(
-    Data(db): Data<&AnyPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path((guild_id, user_id)): Path<(Snowflake, Snowflake)>,
 ) -> poem::Result<impl IntoResponse> {

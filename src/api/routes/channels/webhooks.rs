@@ -10,7 +10,7 @@ use poem::{
     web::{Data, Json, Path},
     IntoResponse,
 };
-use sqlx::AnyPool;
+use sqlx::PgPool;
 
 use crate::{
     database::entities::{Channel, Config, User, Webhook},
@@ -19,7 +19,7 @@ use crate::{
 
 #[handler]
 pub async fn get_webhooks(
-    Data(db): Data<&AnyPool>,
+    Data(db): Data<&PgPool>,
     Path(channel_id): Path<Snowflake>,
 ) -> poem::Result<impl IntoResponse> {
     // TODO: Check permissions 'MANAGE_WEBHOOKS'
@@ -41,7 +41,7 @@ pub async fn get_webhooks(
 
 #[handler]
 pub async fn create_webhook(
-    Data(db): Data<&AnyPool>,
+    Data(db): Data<&PgPool>,
     Data(user): Data<&User>,
     Data(config): Data<&Config>,
     Path(channel_id): Path<Snowflake>,

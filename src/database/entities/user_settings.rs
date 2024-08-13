@@ -7,7 +7,7 @@
 use std::ops::{Deref, DerefMut};
 
 use serde::{Deserialize, Serialize};
-use sqlx::AnyPool;
+use sqlx::PgPool;
 
 use crate::errors::Error;
 
@@ -37,7 +37,7 @@ impl UserSettings {
         Self { inner, index }
     }
 
-    pub async fn create(db: &AnyPool, locale: &str) -> Result<Self, Error> {
+    pub async fn create(db: &PgPool, locale: &str) -> Result<Self, Error> {
         let mut settings = Self {
             inner: chorus::types::UserSettings {
                 locale: locale.to_string(),
@@ -56,7 +56,7 @@ impl UserSettings {
         Ok(settings)
     }
 
-    pub async fn get_by_index(db: &AnyPool, index: u64) -> Result<UserSettings, Error> {
+    pub async fn get_by_index(db: &PgPool, index: u64) -> Result<UserSettings, Error> {
         sqlx::query_as("SELECT * FROM user_settings WHERE index = ?")
             .bind(index)
             .fetch_one(db)

@@ -10,7 +10,7 @@ use poem::{
     web::{Data, Json, Path, Query},
     IntoResponse,
 };
-use sqlx::AnyPool;
+use sqlx::PgPool;
 
 use crate::{
     database::entities::{Guild, GuildMember},
@@ -21,7 +21,7 @@ pub(crate) mod id;
 
 #[handler]
 pub async fn get_members(
-    Data(db): Data<&AnyPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path(guild_id): Path<Snowflake>,
     Query(query): Query<GuildGetMembersQuery>,
@@ -43,7 +43,7 @@ pub async fn get_members(
 // Not for user accounts, bot / internal only
 #[handler]
 pub async fn search_members(
-    Data(db): Data<&AnyPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path(guild_id): Path<Snowflake>,
     Query(query): Query<GuildMembersSearchQuery>,

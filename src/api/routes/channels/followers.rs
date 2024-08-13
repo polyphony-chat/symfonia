@@ -12,7 +12,7 @@ use poem::{
     web::{Data, Json, Path},
     IntoResponse,
 };
-use sqlx::AnyPool;
+use sqlx::PgPool;
 
 use crate::{
     database::entities::{Channel, Config, Guild, Webhook},
@@ -21,7 +21,7 @@ use crate::{
 
 #[handler]
 pub async fn create_following(
-    Data(db): Data<&AnyPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Data(config): Data<&Config>,
     Path(channel_id): Path<Snowflake>,

@@ -10,7 +10,7 @@ use poem::{
     web::{Data, Json, Path, Query},
     IntoResponse,
 };
-use sqlx::AnyPool;
+use sqlx::PgPool;
 
 use crate::{
     database::entities::Guild,
@@ -19,7 +19,7 @@ use crate::{
 
 #[handler]
 pub async fn get_invites(
-    Data(db): Data<&AnyPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path(guild_id): Path<Snowflake>,
     Query(query): Query<GetInvitesSchema>,

@@ -13,7 +13,7 @@ use chorus::types::{PublicUser, Rights, Snowflake, UserData};
 use chrono::{NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use sqlx::{AnyPool, FromRow, Row};
+use sqlx::{PgPool, FromRow, Row};
 
 use crate::{
     database::entities::{Config, Guild, GuildMember, UserSettings},
@@ -51,7 +51,7 @@ impl DerefMut for User {
 
 impl User {
     pub async fn create(
-        db: &AnyPool,
+        db: &PgPool,
         cfg: &Config,
         username: &str,
         password: Option<String>,
@@ -111,12 +111,12 @@ impl User {
         Ok(user)
     }
 
-    async fn find_unused_discriminator(db: &AnyPool, cfg: &Config) -> Result<String, Error> {
+    async fn find_unused_discriminator(db: &PgPool, cfg: &Config) -> Result<String, Error> {
         // TODO: intelligently find unused discriminator: https://dba.stackexchange.com/questions/48594/find-numbers-not-used-in-a-column
         todo!()
     }
 
-    pub async fn get_by_id(db: &AnyPool, id: Snowflake) -> Result<Option<Self>, Error> {
+    pub async fn get_by_id(db: &PgPool, id: Snowflake) -> Result<Option<Self>, Error> {
         sqlx::query_as("SELECT * FROM users WHERE id = ?")
             .bind(id)
             .fetch_optional(db)
@@ -125,7 +125,7 @@ impl User {
     }
 
     pub async fn get_by_id_list(
-        db: &AnyPool,
+        db: &PgPool,
         ids: &[Snowflake],
         after: Option<Snowflake>,
         limit: u32,
@@ -157,7 +157,7 @@ impl User {
     }
 
     pub async fn find_by_user_and_discrim(
-        db: &AnyPool,
+        db: &PgPool,
         user: &str,
         discrim: &str,
     ) -> Result<Option<Self>, Error> {
@@ -170,7 +170,7 @@ impl User {
     }
 
     pub async fn get_user_by_email_or_phone(
-        db: &AnyPool,
+        db: &PgPool,
         email: &str,
         phone: &str,
     ) -> Result<Option<Self>, Error> {
@@ -184,7 +184,7 @@ impl User {
 
     pub async fn add_to_guild(
         &self,
-        db: &AnyPool,
+        db: &PgPool,
         guild_id: Snowflake,
     ) -> Result<GuildMember, Error> {
         let public = self.to_public_user();
@@ -208,7 +208,7 @@ impl User {
         GuildMember::create(db, self, &guild).await
     }
 
-    pub async fn count(db: &AnyPool) -> Result<i32, Error> {
+    pub async fn count(db: &PgPool) -> Result<i32, Error> {
         sqlx::query("SELECT COUNT(*) FROM users")
             .fetch_one(db)
             .await
@@ -216,7 +216,7 @@ impl User {
             .map(|r| r.get::<i32, _>(0))
     }
 
-    pub async fn count_guilds(&self, db: &AnyPool) -> Result<i32, Error> {
+    pub async fn count_guilds(&self, db: &PgPool) -> Result<i32, Error> {
         GuildMember::count_by_user_id(db, self.id).await
     }
 

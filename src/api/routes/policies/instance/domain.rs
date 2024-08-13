@@ -15,7 +15,7 @@ use serde_json::json;
 
 #[handler]
 pub async fn domain(
-    Data(db): Data<&sqlx::AnyPool>,
+    Data(db): Data<&sqlx::PgPool>,
     Data(cfg): Data<&Config>,
 ) -> Result<impl IntoResponse, APIError> {
     let cdn = if let Some(endpoint) = &cfg.cdn.endpoint_public {

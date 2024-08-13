@@ -11,7 +11,7 @@ use poem::{
     web::{Data, Json, Path},
     IntoResponse, Response,
 };
-use sqlx::AnyPool;
+use sqlx::PgPool;
 
 use crate::{
     database::entities::{Channel, Config, Message, User},
@@ -20,7 +20,7 @@ use crate::{
 
 #[handler]
 pub async fn bulk_delete(
-    Data(db): Data<&AnyPool>,
+    Data(db): Data<&PgPool>,
     Data(config): Data<&Config>,
     Data(user): Data<&User>,
     Path(channel_id): Path<Snowflake>,

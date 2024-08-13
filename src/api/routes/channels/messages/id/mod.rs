@@ -11,7 +11,7 @@ use poem::{
     web::{Data, Json, Path},
     IntoResponse, Response,
 };
-use sqlx::AnyPool;
+use sqlx::PgPool;
 
 use crate::{
     database::entities::{Channel, Config, Message, User},
@@ -24,7 +24,7 @@ pub(crate) mod reactions;
 
 #[handler]
 pub async fn edit_message(
-    Data(db): Data<&AnyPool>,
+    Data(db): Data<&PgPool>,
     Data(_claims): Data<&Claims>,
     Data(_config): Data<&Config>,
     Data(authed_user): Data<&User>,
@@ -53,7 +53,7 @@ pub async fn edit_message(
 
 #[handler]
 pub async fn get_message(
-    Data(db): Data<&AnyPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     // Data(authed_user): Data<&User>,
     Path((channel_id, message_id)): Path<(Snowflake, Snowflake)>,
@@ -74,7 +74,7 @@ pub async fn get_message(
 
 #[handler]
 pub async fn delete_message(
-    Data(db): Data<&AnyPool>,
+    Data(db): Data<&PgPool>,
     Data(_claims): Data<&Claims>,
     Data(authed_user): Data<&User>,
     Path((channel_id, message_id)): Path<(Snowflake, Snowflake)>,

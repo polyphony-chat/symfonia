@@ -11,7 +11,7 @@ use poem::{
     web::{Data, Json, Path},
     IntoResponse, Response,
 };
-use sqlx::AnyPool;
+use sqlx::PgPool;
 
 use crate::{
     database::entities::{Guild, GuildMember, User},
@@ -23,7 +23,7 @@ pub(crate) mod roles;
 
 #[handler]
 pub async fn get_member(
-    Data(db): Data<&AnyPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path((guild_id, member_id)): Path<(Snowflake, Snowflake)>,
 ) -> poem::Result<impl IntoResponse> {
@@ -46,7 +46,7 @@ pub async fn get_member(
 
 #[handler]
 pub async fn modify_member(
-    Data(db): Data<&AnyPool>,
+    Data(db): Data<&PgPool>,
     Data(authed_user): Data<&User>,
     Path((guild_id, member_id)): Path<(Snowflake, String)>,
     Json(payload): Json<ModifyGuildMemberSchema>,
@@ -116,7 +116,7 @@ pub async fn modify_member(
 
 #[handler]
 pub async fn join_guild(
-    Data(db): Data<&AnyPool>,
+    Data(db): Data<&PgPool>,
     Data(authed_user): Data<&User>,
     Path((guild_id, member_id)): Path<(Snowflake, String)>,
 ) -> poem::Result<impl IntoResponse> {
@@ -145,7 +145,7 @@ pub async fn join_guild(
 
 #[handler]
 pub async fn remove_member(
-    Data(db): Data<&AnyPool>,
+    Data(db): Data<&PgPool>,
     Data(authed_user): Data<&User>,
     Path((guild_id, member_id)): Path<(Snowflake, String)>,
 ) -> poem::Result<impl IntoResponse> {

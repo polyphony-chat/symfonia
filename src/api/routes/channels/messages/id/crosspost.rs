@@ -10,7 +10,7 @@ use poem::{
     web::{Data, Json, Path},
     IntoResponse,
 };
-use sqlx::AnyPool;
+use sqlx::PgPool;
 
 use crate::{
     database::entities::{Channel, Message, User},
@@ -19,7 +19,7 @@ use crate::{
 
 #[handler]
 pub async fn create_crosspost_message(
-    Data(db): Data<&AnyPool>,
+    Data(db): Data<&PgPool>,
     Data(_claims): Data<&Claims>,
     Data(authed_user): Data<&User>,
     Path(channel_id): Path<Snowflake>,

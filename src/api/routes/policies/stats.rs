@@ -15,7 +15,7 @@ use crate::database::entities::{Config, Guild, GuildMember, Message, User};
 
 #[handler]
 pub async fn stats(
-    Data(db): Data<&sqlx::AnyPool>,
+    Data(db): Data<&sqlx::PgPool>,
     Data(cfg): Data<&Config>,
 ) -> poem::Result<impl IntoResponse> {
     if !cfg.security.stats_world_readable {

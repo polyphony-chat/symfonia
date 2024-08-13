@@ -6,7 +6,7 @@
 
 use chorus::types::{PermissionFlags, Snowflake};
 use poem::{Endpoint, Middleware, Request};
-use sqlx::AnyPool;
+use sqlx::PgPool;
 
 use crate::database::entities::User;
 
@@ -38,7 +38,7 @@ impl<E: Endpoint> Endpoint for PermissionGuardMiddlewareImpl<E> {
 
     async fn call(&self, mut req: Request) -> poem::Result<Self::Output> {
         let db = req
-            .data::<AnyPool>()
+            .data::<PgPool>()
             .expect("Failed to get database connection");
 
         if let Some(user) = req.data::<User>() {
@@ -59,7 +59,7 @@ impl<E: Endpoint> Endpoint for PermissionGuardMiddlewareImpl<E> {
 }
 
 async fn check_channel_permissions(
-    db: &AnyPool,
+    db: &PgPool,
     channel_id: Snowflake,
     permissions: PermissionFlags,
 ) -> poem::Result<()> {

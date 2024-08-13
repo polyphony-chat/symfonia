@@ -9,7 +9,7 @@ use std::ops::{Deref, DerefMut};
 use chorus::types::Snowflake;
 use futures::FutureExt;
 use serde::{Deserialize, Serialize};
-use sqlx::AnyPool;
+use sqlx::PgPool;
 
 use crate::{database::entities::Guild, errors::Error};
 
@@ -45,7 +45,7 @@ impl VoiceState {
     //     self_deaf: bool,
     // )
 
-    pub async fn get_by_id(db: &AnyPool, id: Snowflake) -> Result<Option<Self>, Error> {
+    pub async fn get_by_id(db: &PgPool, id: Snowflake) -> Result<Option<Self>, Error> {
         sqlx::query_as("SELECT * FROM voice_states WHERE id = ?")
             .bind(id)
             .fetch_optional(db)
@@ -54,7 +54,7 @@ impl VoiceState {
     }
 
     pub async fn get_by_guild_and_channel(
-        db: &AnyPool,
+        db: &PgPool,
         guild_id: Snowflake,
         channel_id: Option<Snowflake>,
         user_id: Snowflake,
@@ -70,7 +70,7 @@ impl VoiceState {
         .map_err(Error::from)
     }
 
-    pub async fn populate_relations(&mut self, db: &AnyPool) -> Result<(), Error> {
+    pub async fn populate_relations(&mut self, db: &PgPool) -> Result<(), Error> {
         if let Some(guild_id) = self.guild_id {
             let guild = Guild::get_by_id(db, guild_id).await?;
             if let Some(guild) = &guild {
@@ -85,7 +85,7 @@ impl VoiceState {
         Ok(())
     }
 
-    pub async fn save(&self, db: &AnyPool) -> Result<(), Error> {
+    pub async fn save(&self, db: &PgPool) -> Result<(), Error> {
         sqlx::query(
             "UPDATE voice_states SET suppress = ?, request_to_speak_timestamp = ? WHERE id = ?",
         )
@@ -98,7 +98,7 @@ impl VoiceState {
         .map_err(Error::from)
     }
 
-    pub async fn delete(self, db: &AnyPool) -> Result<(), Error> {
+    pub async fn delete(self, db: &PgPool) -> Result<(), Error> {
         sqlx::query("DELETE FROM voice_states WHERE id =?")
             .bind(self.id)
             .execute(db)

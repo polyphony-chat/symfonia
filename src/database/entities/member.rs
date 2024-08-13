@@ -41,7 +41,7 @@ impl DerefMut for GuildMember {
 }
 
 impl GuildMember {
-    pub async fn create(db: &sqlx::AnyPool, user: &User, guild: &Guild) -> Result<Self, Error> {
+    pub async fn create(db: &sqlx::PgPool, user: &User, guild: &Guild) -> Result<Self, Error> {
         let user = user.to_owned();
         let mut member = Self {
             index: 0,
@@ -82,7 +82,7 @@ impl GuildMember {
     }
 
     pub async fn get_by_id(
-        db: &sqlx::AnyPool,
+        db: &sqlx::PgPool,
         id: Snowflake,
         guild_id: Snowflake,
     ) -> Result<Option<Self>, Error> {
@@ -107,7 +107,7 @@ impl GuildMember {
     }
 
     pub async fn get_by_guild_id(
-        db: &sqlx::AnyPool,
+        db: &sqlx::PgPool,
         guild_id: Snowflake,
         limit: u16,
         after: Option<Snowflake>,
@@ -122,7 +122,7 @@ impl GuildMember {
     }
 
     pub async fn get_by_role_id(
-        db: &sqlx::AnyPool,
+        db: &sqlx::PgPool,
         guild_id: Snowflake,
         role_id: Snowflake,
     ) -> Result<Vec<Self>, Error> {
@@ -135,7 +135,7 @@ impl GuildMember {
     }
 
     pub async fn get_by_user_id(
-        db: &sqlx::AnyPool,
+        db: &sqlx::PgPool,
         user_id: Snowflake,
     ) -> Result<Vec<Self>, Error> {
         sqlx::query_as("SELECT * FROM members WHERE id = ?")
@@ -146,7 +146,7 @@ impl GuildMember {
     }
 
     pub async fn search(
-        db: &sqlx::AnyPool,
+        db: &sqlx::PgPool,
         guild_id: Snowflake,
         query: &str,
         limit: u16,
@@ -167,7 +167,7 @@ impl GuildMember {
         Ok(members)
     }
 
-    pub async fn populate_relations(&mut self, db: &sqlx::AnyPool) -> Result<(), Error> {
+    pub async fn populate_relations(&mut self, db: &sqlx::PgPool) -> Result<(), Error> {
         // let guild = self.get_guild(db).await?;
 
         self.user_data = self.get_user(db).await?;
@@ -176,7 +176,7 @@ impl GuildMember {
         Ok(())
     }
 
-    pub async fn count(db: &sqlx::AnyPool) -> Result<i32, Error> {
+    pub async fn count(db: &sqlx::PgPool) -> Result<i32, Error> {
         sqlx::query("SELECT COUNT(*) FROM members")
             .fetch_one(db)
             .await
@@ -184,7 +184,7 @@ impl GuildMember {
             .map(|row| row.get::<i32, _>(0))
     }
 
-    pub async fn count_by_role(db: &sqlx::AnyPool, role_id: Snowflake) -> Result<i32, Error> {
+    pub async fn count_by_role(db: &sqlx::PgPool, role_id: Snowflake) -> Result<i32, Error> {
         sqlx::query("SELECT COUNT(*) FROM member_roles WHERE role_id = ?")
             .bind(role_id)
             .fetch_one(db)
@@ -193,7 +193,7 @@ impl GuildMember {
             .map(|row| row.get::<i32, _>(0))
     }
 
-    pub async fn count_by_user_id(db: &sqlx::AnyPool, user_id: Snowflake) -> Result<i32, Error> {
+    pub async fn count_by_user_id(db: &sqlx::PgPool, user_id: Snowflake) -> Result<i32, Error> {
         sqlx::query("SELECT COUNT(*) FROM members WHERE id = ?")
             .bind(user_id)
             .fetch_one(db)
@@ -202,7 +202,7 @@ impl GuildMember {
             .map_err(Error::from)
     }
 
-    pub async fn delete(self, db: &sqlx::AnyPool) -> Result<(), Error> {
+    pub async fn delete(self, db: &sqlx::PgPool) -> Result<(), Error> {
         sqlx::query("DELETE FROM members WHERE id =?")
             .bind(self.id)
             .execute(db)
@@ -211,7 +211,7 @@ impl GuildMember {
             .map(|_| ())
     }
 
-    pub async fn save(&self, db: &sqlx::AnyPool) -> Result<(), Error> {
+    pub async fn save(&self, db: &sqlx::PgPool) -> Result<(), Error> {
         sqlx::query("UPDATE members SET settings = ?, nick = ?, deaf = ?, mute = ?, pending = ?, last_message_id = ?, avatar = ?, flags = ?, permissions = ? WHERE id = ?") //banner = ?, bio = ?, theme_colors = ?,
             .bind(&self.settings)
             .bind(&self.nick)
@@ -234,19 +234,19 @@ impl GuildMember {
 
     // Start helper functions
 
-    pub async fn get_guild(&self, db: &sqlx::AnyPool) -> Result<Guild, Error> {
+    pub async fn get_guild(&self, db: &sqlx::PgPool) -> Result<Guild, Error> {
         Guild::get_by_id(db, self.guild_id)
             .await
             .and_then(|r| r.ok_or(Error::Guild(GuildError::InvalidGuild)))
     }
 
-    pub async fn get_user(&self, db: &sqlx::AnyPool) -> Result<User, Error> {
+    pub async fn get_user(&self, db: &sqlx::PgPool) -> Result<User, Error> {
         User::get_by_id(db, self.id)
             .await
             .and_then(|r| r.ok_or(Error::User(UserError::InvalidUser)))
     }
 
-    pub async fn add_role(&mut self, db: &sqlx::AnyPool, role_id: Snowflake) -> Result<(), Error> {
+    pub async fn add_role(&mut self, db: &sqlx::PgPool, role_id: Snowflake) -> Result<(), Error> {
         if self.roles.contains(&role_id) {
             return Ok(());
         }
@@ -263,7 +263,7 @@ impl GuildMember {
 
     pub async fn remove_role(
         &mut self,
-        db: &sqlx::AnyPool,
+        db: &sqlx::PgPool,
         role_id: Snowflake,
     ) -> Result<(), Error> {
         if !self.roles.contains(&role_id) {

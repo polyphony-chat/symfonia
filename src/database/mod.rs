@@ -5,7 +5,7 @@
  */
 
 use sqlx::any::AnyConnectOptions;
-use sqlx::{AnyPool, Database, Executor, Row, SqlitePool};
+use sqlx::{Database, Executor, PgPool, Row, SqlitePool};
 
 use crate::errors::Error;
 
@@ -13,13 +13,13 @@ pub mod entities;
 
 pub trait Queryer<'c, DB: Database>: Executor<'c, Database = DB> {}
 
-impl<'c> Queryer<'c, sqlx::MySql> for &AnyPool {}
+impl<'c> Queryer<'c, sqlx::MySql> for &PgPool {}
 
 impl<'c> Queryer<'c, sqlx::Sqlite> for &SqlitePool {}
 
-impl<'c> Queryer<'c, sqlx::Any> for &AnyPool {}
+impl<'c> Queryer<'c, sqlx::Any> for &PgPool {}
 
-pub async fn establish_connection() -> Result<sqlx::AnyPool, Error> {
+pub async fn establish_connection() -> Result<sqlx::PgPool, Error> {
     let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
         log::warn!(target: "symfonia::db", "You did not specify `DATABASE_URL` environment variable, defaulting to 'mariadb://localhost:3306'.");
         "mariadb://localhost:3306".to_string()
@@ -44,7 +44,7 @@ pub async fn establish_connection() -> Result<sqlx::AnyPool, Error> {
     Ok(pool)
 }
 
-pub async fn check_migrating_from_spacebar(db: &AnyPool) -> Result<bool, Error> {
+pub async fn check_migrating_from_spacebar(db: &PgPool) -> Result<bool, Error> {
     let res = sqlx::query("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'migrations')")
         .fetch_one(db)
         .await?;
@@ -52,7 +52,7 @@ pub async fn check_migrating_from_spacebar(db: &AnyPool) -> Result<bool, Error> 
     Ok(res.get(0))
 }
 
-pub async fn check_fresh_db(db: &AnyPool) -> Result<bool, Error> {
+pub async fn check_fresh_db(db: &PgPool) -> Result<bool, Error> {
     let res = sqlx::query("SELECT COUNT(*) FROM config")
         .fetch_one(db)
         .await?;
@@ -61,13 +61,13 @@ pub async fn check_fresh_db(db: &AnyPool) -> Result<bool, Error> {
     Ok(c == 0)
 }
 
-pub async fn delete_spacebar_migrations(db: &AnyPool) -> Result<(), Error> {
+pub async fn delete_spacebar_migrations(db: &PgPool) -> Result<(), Error> {
     sqlx::query("DROP TABLE migrations").execute(db).await?;
 
     Ok(())
 }
 
-pub async fn seed_config(db: &AnyPool) -> Result<(), Error> {
+pub async fn seed_config(db: &PgPool) -> Result<(), Error> {
     sqlx::query(r#"INSERT INTO config (`key`, value) VALUES ('api_activeVersions_0', '"6"');"#)
         .execute(db)
         .await?;

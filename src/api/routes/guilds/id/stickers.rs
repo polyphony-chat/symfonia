@@ -13,7 +13,7 @@ use poem::{
     web::{Data, Json, Multipart, Path},
     IntoResponse, Response,
 };
-use sqlx::AnyPool;
+use sqlx::PgPool;
 
 use crate::{
     database::entities::{Guild, Sticker},
@@ -22,7 +22,7 @@ use crate::{
 
 #[handler]
 pub async fn get_stickers(
-    Data(db): Data<&AnyPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path(guild_id): Path<Snowflake>,
 ) -> poem::Result<impl IntoResponse> {
@@ -41,7 +41,7 @@ pub async fn get_stickers(
 
 #[handler]
 pub async fn create_sticker(
-    Data(db): Data<&AnyPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path(guild_id): Path<Snowflake>,
     sticker_data: Multipart,
@@ -76,7 +76,7 @@ pub async fn create_sticker(
 
 #[handler]
 pub async fn get_sticker(
-    Data(db): Data<&AnyPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path((guild_id, sticker_id)): Path<(Snowflake, Snowflake)>,
 ) -> poem::Result<impl IntoResponse> {
@@ -105,7 +105,7 @@ pub async fn get_sticker(
 
 #[handler]
 pub async fn modify_sticker(
-    Data(db): Data<&AnyPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path((guild_id, sticker_id)): Path<(Snowflake, Snowflake)>,
     Json(payload): Json<GuildModifyStickerSchema>,
@@ -145,7 +145,7 @@ pub async fn modify_sticker(
 
 #[handler]
 pub async fn delete(
-    Data(db): Data<&AnyPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path((guild_id, sticker_id)): Path<(Snowflake, Snowflake)>,
 ) -> poem::Result<impl IntoResponse> {
