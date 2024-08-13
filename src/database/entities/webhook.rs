@@ -92,10 +92,7 @@ impl Webhook {
             .map_err(Error::SQLX)
     }
 
-    pub async fn get_by_channel_id(
-        db: &PgPool,
-        channel_id: Snowflake,
-    ) -> Result<Vec<Self>, Error> {
+    pub async fn get_by_channel_id(db: &PgPool, channel_id: Snowflake) -> Result<Vec<Self>, Error> {
         sqlx::query_as("SELECT * FROM webhooks WHERE channel_id =?")
             .bind(channel_id)
             .fetch_all(db)

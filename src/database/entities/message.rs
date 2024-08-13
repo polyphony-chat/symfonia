@@ -12,7 +12,7 @@ use chorus::types::{
 };
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use sqlx::{PgPool, FromRow, QueryBuilder, Row};
+use sqlx::{FromRow, PgPool, QueryBuilder, Row};
 
 use crate::{
     database::entities::User,
@@ -264,11 +264,7 @@ impl Message {
         Ok(())
     }
 
-    pub async fn modify(
-        &mut self,
-        db: &PgPool,
-        payload: MessageModifySchema,
-    ) -> Result<(), Error> {
+    pub async fn modify(&mut self, db: &PgPool, payload: MessageModifySchema) -> Result<(), Error> {
         if let Some(content) = &payload.content {
             self.content = Some(content.to_owned());
         }
@@ -306,11 +302,7 @@ impl Message {
         Ok(())
     }
 
-    pub async fn remove_reaction(
-        &mut self,
-        db: &PgPool,
-        emoji: PartialEmoji,
-    ) -> Result<(), Error> {
+    pub async fn remove_reaction(&mut self, db: &PgPool, emoji: PartialEmoji) -> Result<(), Error> {
         if let Some(reactions) = self.reactions.as_mut() {
             let orig_len = reactions.len();
             reactions.retain(|r| {

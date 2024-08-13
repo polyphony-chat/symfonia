@@ -13,7 +13,7 @@ use chorus::types::{PublicUser, Rights, Snowflake, UserData};
 use chrono::{NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use sqlx::{PgPool, FromRow, Row};
+use sqlx::{FromRow, PgPool, Row};
 
 use crate::{
     database::entities::{Config, Guild, GuildMember, UserSettings},

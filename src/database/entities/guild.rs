@@ -11,7 +11,7 @@ use chorus::types::{
     WelcomeScreenObject,
 };
 use serde::{Deserialize, Serialize};
-use sqlx::{PgPool, FromRow, QueryBuilder, Row};
+use sqlx::{FromRow, PgPool, QueryBuilder, Row};
 
 use crate::{
     database::entities::{

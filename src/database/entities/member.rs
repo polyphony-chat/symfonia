@@ -134,10 +134,7 @@ impl GuildMember {
             .map_err(Error::from)
     }
 
-    pub async fn get_by_user_id(
-        db: &sqlx::PgPool,
-        user_id: Snowflake,
-    ) -> Result<Vec<Self>, Error> {
+    pub async fn get_by_user_id(db: &sqlx::PgPool, user_id: Snowflake) -> Result<Vec<Self>, Error> {
         sqlx::query_as("SELECT * FROM members WHERE id = ?")
             .bind(user_id)
             .fetch_all(db)
