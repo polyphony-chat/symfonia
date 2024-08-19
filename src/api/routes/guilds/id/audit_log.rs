@@ -45,7 +45,7 @@ pub async fn get_audit_logs(
         guild.id,
         query.before,
         query.after,
-        query.limit.unwrap_or(50),
+        query.limit.unwrap_or(50).into(),
         query.user_id,
         query.action_type,
     )

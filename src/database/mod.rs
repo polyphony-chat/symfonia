@@ -4,8 +4,8 @@
  *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use sqlx::any::AnyConnectOptions;
-use sqlx::{Database, Executor, PgPool, Row, SqlitePool};
+use sqlx::postgres::PgConnectOptions;
+use sqlx::{Database, Executor, PgPool, Row};
 
 use crate::errors::Error;
 
@@ -13,18 +13,14 @@ pub mod entities;
 
 pub trait Queryer<'c, DB: Database>: Executor<'c, Database = DB> {}
 
-impl<'c> Queryer<'c, sqlx::MySql> for &PgPool {}
-
-impl<'c> Queryer<'c, sqlx::Sqlite> for &SqlitePool {}
-
-impl<'c> Queryer<'c, sqlx::Any> for &PgPool {}
+impl<'c> Queryer<'c, sqlx::Postgres> for &PgPool {}
 
 pub async fn establish_connection() -> Result<sqlx::PgPool, Error> {
     let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
         log::warn!(target: "symfonia::db", "You did not specify `DATABASE_URL` environment variable, defaulting to 'mariadb://localhost:3306'.");
         "mariadb://localhost:3306".to_string()
     });
-    let mysql_connect_options = AnyConnectOptions::new()
+    let connect_options = PgConnectOptions::new()
         .host(&db_url)
         .username(&std::env::var("DATABASE_USERNAME").unwrap_or_else(|_| {
             log::warn!(target: "symfonia::db", "You did not specify `DATABASE_USERNAME` environment variable. Defaulting to 'symfonia'.");
@@ -38,7 +34,7 @@ pub async fn establish_connection() -> Result<sqlx::PgPool, Error> {
             log::warn!(target: "symfonia::db", "You did not specify `DATABASE_NAME` environment variable. Defaulting to 'symfonia'.");
             "symfonia".to_string()
         }));
-    let pool = AnyConnectOptions::connect_with(mysql_connect_options).await?;
+    let pool = PgPool::connect_with(connect_options).await?;
     //install_default_drivers();
 
     Ok(pool)

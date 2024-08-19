@@ -9,6 +9,7 @@ use std::ops::{Deref, DerefMut};
 use chorus::types::{AuditLogActionType, Snowflake};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
+use sqlx_pg_uint::PgU8;
 
 use crate::errors::Error;
 
@@ -51,7 +52,7 @@ impl AuditLogEntry {
         guild_id: Snowflake,
         before: Option<Snowflake>,
         after: Option<Snowflake>,
-        limit: u8,
+        limit: PgU8,
         user_id: Option<Snowflake>,
         action_type: Option<AuditLogActionType>,
     ) -> Result<Vec<Self>, Error> {

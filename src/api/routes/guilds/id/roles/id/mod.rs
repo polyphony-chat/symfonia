@@ -126,7 +126,7 @@ pub async fn modify_role(
     }
 
     if let Some(position) = payload.position {
-        role.position = position as u16;
+        role.position = (position as u16).into();
     }
 
     if let Some(icon) = payload.icon {

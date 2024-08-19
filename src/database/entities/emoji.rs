@@ -74,7 +74,7 @@ impl Emoji {
                 animated: Some(animated),
                 managed: Some(managed),
                 require_colons: Some(require_colons),
-                roles: Some(sqlx::types::Json(role_ids)),
+                roles: Some(role_ids),
                 user,
                 available: Some(true),
             },

@@ -46,15 +46,15 @@ pub async fn prune_members_dry_run(
 
         let highest = roles
             .iter()
-            .max_by_key(|r| r.position)
-            .map(|r| r.position)
-            .unwrap_or(0);
-        <Result<u16, Error>>::Ok(highest)
+            .max_by_key(|r| r.position.clone())
+            .map(|r| r.position.clone())
+            .unwrap_or(0.into());
+        <Result<u16, Error>>::Ok(highest.into())
     }
     .await?;
 
     let members = guild
-        .calculate_inactive_members(db, query.days, query.include_roles, my_highest)
+        .calculate_inactive_members(db, query.days, query.include_roles, my_highest.into())
         .await?;
 
     Ok(Json(GuildPruneResult {
@@ -91,15 +91,15 @@ pub async fn prune_members(
 
         let highest = roles
             .iter()
-            .max_by_key(|r| r.position)
-            .map(|r| r.position)
-            .unwrap_or(0);
-        <Result<u16, Error>>::Ok(highest)
+            .max_by_key(|r| r.position.clone())
+            .map(|r| r.position.clone())
+            .unwrap_or(0.into());
+        <Result<u16, Error>>::Ok(highest.into())
     }
     .await?;
 
     let members = guild
-        .calculate_inactive_members(db, query.days, query.include_roles, my_highest)
+        .calculate_inactive_members(db, query.days, query.include_roles, my_highest.into())
         .await?;
 
     let total_count = members.len();

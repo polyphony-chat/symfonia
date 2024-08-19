@@ -46,14 +46,15 @@ thiserror = "1.0.61"
 tokio = { version = "1.38.0", features = ["full"] }
 sentry = "0.33.0"
 clap = { version = "4.5.4", features = ["derive"] }
-
-chorus = { git = "http://github.com/polyphony-chat/chorus", branch = "sqlx/postgres", features = [
+chorus = { features = [
     "backend",
-], default-features = false } # git = "ssh://git@github.com/Quat3rnion/chorus" # path = "../chorus" git = "ssh://git@github.com/polyphony-chat/chorus" 
+], default-features = false, path = "../chorus" } # git = "ssh://git@github.com/Quat3rnion/chorus" # path = "../chorus" git = "ssh://git@github.com/polyphony-chat/chorus" 
 serde_path_to_error = "0.1.16"
 percent-encoding = "2.3.1"
 hex = "0.4.3"
 itertools = "0.13.0"
-
+sqlx-pg-uint = { git = "https://github.com/bitfl0wer/sqlx-pg-uint", features = [
+    "serde",
+] }
 [dev-dependencies]
 rusty-hook = "0.11.2"

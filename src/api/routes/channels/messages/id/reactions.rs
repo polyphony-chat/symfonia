@@ -65,13 +65,13 @@ pub async fn add_reaction(
             return Ok(Response::builder().status(StatusCode::NO_CONTENT).finish());
         }
 
-        reaction.count += 1;
+        reaction.count += 1.into();
         reaction.user_ids.push(claims.id);
     } else {
         let new_reaction = Reaction {
             emoji: partial_emoji.clone().into(),
-            count: 1,
-            burst_count: 0,
+            count: 1.into(),
+            burst_count: 0.into(),
             me: true,
             burst_me: false,
             user_ids: vec![claims.id],
@@ -180,7 +180,7 @@ pub async fn get_reaction(
 
     let mut limit = query.limit.unwrap_or(25).min(100);
 
-    let users = User::get_by_id_list(db, &reaction.user_ids, query.after, limit).await?;
+    let users = User::get_by_id_list(db, &reaction.user_ids, query.after, limit.into()).await?;
 
     let public_projections = users.iter().map(|u| u.to_public_user()).collect::<Vec<_>>();
 

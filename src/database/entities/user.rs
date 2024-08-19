@@ -14,6 +14,7 @@ use chrono::{NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use sqlx::{FromRow, PgPool, Row};
+use sqlx_pg_uint::{PgU32, PgU64};
 
 use crate::{
     database::entities::{Config, Guild, GuildMember, UserSettings},
@@ -74,7 +75,7 @@ impl User {
                 discriminator: "0001".to_string(),
                 email: email.clone(),
                 premium: cfg.defaults.user.premium.into(),
-                premium_type: cfg.defaults.user.premium_type.into(),
+                premium_type: Some(cfg.defaults.user.premium_type.into()),
                 bot: Some(bot),
                 verified: cfg.defaults.user.verified.into(),
                 ..Default::default()
@@ -102,9 +103,9 @@ impl User {
             .bind(false)
             .bind(bot)
             .bind(false) // TODO: Base nsfw off date of birth
-            .bind(0u32) // TODO: flags
+            .bind(PgU32::from(0)) // TODO: flags
             .bind(Rights::default())
-            .bind(user.settings.index)
+            .bind(PgU64::from(user.settings.index))
             .execute(db)
             .await?;
 
@@ -128,7 +129,7 @@ impl User {
         db: &PgPool,
         ids: &[Snowflake],
         after: Option<Snowflake>,
-        limit: u32,
+        limit: PgU32,
     ) -> Result<Vec<Self>, Error> {
         let mut query_builder = sqlx::QueryBuilder::new("SELECT * FROM users WHERE id IN (");
         let mut separated = query_builder.separated(", ");

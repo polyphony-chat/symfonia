@@ -12,6 +12,7 @@ use chorus::types::{
 };
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool, QueryBuilder, Row};
+use sqlx_pg_uint::PgU16;
 
 use crate::{
     database::entities::{
@@ -304,7 +305,7 @@ impl Guild {
         db: &PgPool,
         days: u8,
         roles: Vec<Snowflake>,
-        highest_role: u16,
+        highest_role: PgU16,
     ) -> Result<Vec<GuildMember>, Error> {
         let now = chrono::Utc::now().naive_utc();
         let cutoff = now - chrono::Duration::days(days as i64);
@@ -559,7 +560,7 @@ impl GuildBan {
         db: &PgPool,
         guild_id: Snowflake,
         search_term: &str,
-        limit: u16,
+        limit: PgU16,
     ) -> Result<Vec<Self>, Error> {
         sqlx::query_as("SELECT b.* FROM bans b JOIN members m ON b.user_id = m.id AND b.guild_id = m.guild_id JOIN users u ON b.user_id = u.id WHERE u.username LIKE ? AND b.guild_id = ? LIMIT ?")
             .bind(format!("%{}%", search_term))

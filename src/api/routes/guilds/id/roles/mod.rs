@@ -116,7 +116,7 @@ pub async fn update_position(
         return Err(Error::Guild(GuildError::RoleNotFound).into());
     }
 
-    role.position = payload.position;
+    role.position = payload.position.into();
     role.save(db).await?;
 
     let mut roles = guild.get_roles(db).await?;

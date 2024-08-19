@@ -125,7 +125,8 @@ pub async fn search(
     // TODO: Check permissions
 
     let mut bans =
-        GuildBan::find_by_username(db, guild.id, &query.query, query.limit.unwrap_or(10)).await?;
+        GuildBan::find_by_username(db, guild.id, &query.query, query.limit.unwrap_or(10).into())
+            .await?;
     bans.retain(|b| b.user_id != b.executor_id);
 
     for ban in bans.iter_mut() {
