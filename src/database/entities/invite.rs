@@ -11,6 +11,7 @@ use chrono::Utc;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
+use sqlx_pg_uint::{PgU32, PgU8};
 
 use crate::{
     database::entities::{Channel, Guild, User},
@@ -86,8 +87,8 @@ impl Invite {
                 guild_scheduled_event: None,
                 invite_type: Some(invite_type),
                 inviter: None,
-                max_age: data.max_age,
-                max_uses: data.max_uses,
+                max_age: data.max_age.map(|max_age| max_age.into()),
+                max_uses: data.max_uses.map(|max_uses| max_uses.into()),
                 stage_instance: None,
                 target_application: None,
                 target_type: data.target_type,
@@ -109,9 +110,9 @@ impl Invite {
             .bind(random_code)
             .bind(invite.invite_type)
             .bind(invite.temporary)
-            .bind(invite.uses.unwrap_or(0))
-            .bind(invite.max_uses)
-            .bind(invite.max_age)
+            .bind(invite.uses.clone().unwrap_or(0.into()))
+            .bind(invite.max_uses.clone())
+            .bind(invite.max_age.clone())
             .bind(invite.created_at)
             .bind(invite.expires_at)
             .bind(invite.guild_id)
@@ -150,9 +151,9 @@ impl Invite {
             .bind(code)
             .bind(invite.invite_type)
             .bind(invite.temporary)
-            .bind(invite.uses.unwrap_or(0))
-            .bind(invite.max_uses)
-            .bind(invite.max_age)
+            .bind(invite.uses.clone().unwrap_or(PgU32::from(0)))
+            .bind(invite.max_uses.clone())
+            .bind(invite.max_age.clone())
             .bind(invite.created_at)
             .bind(invite.expires_at)
             .bind(invite.guild_id)
@@ -244,8 +245,8 @@ impl Invite {
             // TODO: Some form of handling for invites without an invite type?  maybe just default to guild?
         }
 
-        let max_uses = self.max_uses.unwrap_or(0) as u32;
-        if self.uses.unwrap_or(0) > max_uses && max_uses > 0 {
+        let max_uses = self.max_uses.clone().unwrap_or(PgU8::from(0)).to_uint() as u32;
+        if self.uses.clone().unwrap_or(PgU32::from(0)) > PgU32::from(max_uses) && max_uses > 0 {
             self.delete(db).await?;
         }
 
@@ -253,9 +254,12 @@ impl Invite {
     }
 
     pub async fn increase_uses(&mut self, db: &PgPool) -> Result<(), Error> {
-        self.uses = self.uses.map(|uses| uses + 1);
+        self.uses = self
+            .uses
+            .as_mut()
+            .map(|uses| PgU32::from(uses.to_uint() + 1));
         sqlx::query("UPDATE invites SET uses = ? WHERE code = ?")
-            .bind(self.uses)
+            .bind(&self.uses)
             .bind(&self.code)
             .execute(db)
             .await
@@ -293,9 +297,9 @@ impl Invite {
             .bind(&self.code)
             .bind(self.invite_type)
             .bind(self.temporary)
-            .bind(self.uses.unwrap_or(0))
-            .bind(self.max_uses)
-            .bind(self.max_age)
+            .bind(self.uses.as_ref().unwrap_or(&0.into()))
+            .bind(&self.max_uses)
+            .bind(&self.max_age)
             .bind(self.created_at)
             .bind(self.expires_at)
             .bind(self.guild_id)

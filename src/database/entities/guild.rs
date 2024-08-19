@@ -531,6 +531,7 @@ impl GuildBan {
         after: Option<Snowflake>,
         limit: Option<u16>,
     ) -> Result<Vec<GuildBan>, Error> {
+        let limit = limit.map(PgU16::from);
         sqlx::query_as("SELECT * FROM bans WHERE (user_id < ? OR ? IS NULL) AND (user_id > ? OR ? IS NULL) AND guild_id = ? LIMIT IFNULL(?, 1000)")
             .bind(before)
             .bind(before)

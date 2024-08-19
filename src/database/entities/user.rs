@@ -30,7 +30,7 @@ pub struct User {
     pub deleted: bool,
     pub fingerprints: String, // TODO: Simple-array, should actually be a vec
     #[sqlx(rename = "settingsIndex")]
-    pub settings_index: u64,
+    pub settings_index: PgU64,
     pub rights: Rights,
     #[sqlx(skip)]
     pub settings: UserSettings,
@@ -86,9 +86,9 @@ impl User {
             }),
             fingerprints: fingerprint.unwrap_or_default(),
             rights: cfg.register.default_rights,
-            settings_index: user_settings.index,
+            settings_index: user_settings.index.clone().into(),
             extended_settings: sqlx::types::Json(Value::Object(Map::default())),
-            settings: user_settings,
+            settings: user_settings.clone(),
             ..Default::default()
         };
 
@@ -105,7 +105,7 @@ impl User {
             .bind(false) // TODO: Base nsfw off date of birth
             .bind(PgU32::from(0)) // TODO: flags
             .bind(Rights::default())
-            .bind(PgU64::from(user.settings.index))
+            .bind(PgU64::from(user.settings.index.clone()))
             .execute(db)
             .await?;
 

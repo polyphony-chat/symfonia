@@ -262,7 +262,7 @@ impl Channel {
         self.user_limit = data.user_limit;
         self.rtc_region = data.rtc_region;
         self.default_auto_archive_duration = data.default_auto_archive_duration;
-        self.default_reaction_emoji = data.default_reaction_emoji.map(Json);
+        self.default_reaction_emoji = data.default_reaction_emoji;
         self.flags = data.flags;
         self.default_thread_rate_limit_per_user = data.default_thread_rate_limit_per_user;
         self.video_quality_mode = data.video_quality_mode;

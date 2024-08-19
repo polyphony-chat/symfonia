@@ -61,7 +61,7 @@ impl Role {
                 mentionable,
                 name: name.to_string(),
                 permissions,
-                position,
+                position: position.into(),
                 icon: icon.to_owned(),
                 unicode_emoji: unicode_emoji.to_owned(),
                 ..Default::default()
@@ -78,7 +78,7 @@ impl Role {
             .bind(role.managed)
             .bind(role.mentionable)
             .bind(&role.permissions)
-            .bind(role.position)
+            .bind(role.position.clone())
             .bind(&role.icon)
             .bind(&role.unicode_emoji)
             .execute(db)
@@ -120,7 +120,7 @@ impl Role {
             .bind(self.managed)
             .bind(self.mentionable)
             .bind(&self.permissions)
-            .bind(self.position)
+            .bind(self.position.clone())
             .bind(&self.icon)
             .bind(&self.unicode_emoji)
             .bind(self.id)

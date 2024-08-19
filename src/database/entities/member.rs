@@ -9,6 +9,7 @@ use std::ops::{Deref, DerefMut};
 use chorus::types::{Snowflake, UserGuildSettingsUpdate};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Row};
+use sqlx_pg_uint::PgU16;
 
 use crate::database::entities::{Guild, User};
 use crate::errors::{Error, GuildError, UserError};
@@ -69,7 +70,8 @@ impl GuildMember {
             .await
             .map_err(Error::from)?;
 
-        let index = res.last_insert_id();
+        todo!("last_insert_id does not exist for Postgres");
+        let index = res.last_insert_id(); // FIXME: Does not exist for Postgres
         member.index = index as i32;
 
         sqlx::query("INSERT INTO member_roles (`index`, role_id) VALUES (?,?)")
@@ -112,6 +114,7 @@ impl GuildMember {
         limit: u16,
         after: Option<Snowflake>,
     ) -> Result<Vec<Self>, Error> {
+        let limit = PgU16::from(limit);
         sqlx::query_as("SELECT * FROM members WHERE guild_id = ? WHERE id > IFNULL(?, 0) LIMIT ?")
             .bind(guild_id)
             .bind(limit)
@@ -148,6 +151,7 @@ impl GuildMember {
         query: &str,
         limit: u16,
     ) -> Result<Vec<Self>, Error> {
+        let limit = PgU16::from(limit);
         let mut members: Vec<Self> =
             sqlx::query_as("SELECT * FROM members WHERE guild_id = ? AND name LIKE ? LIMIT ?")
                 .bind(guild_id)

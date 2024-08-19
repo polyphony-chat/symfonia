@@ -35,7 +35,7 @@ pub async fn update_settings(
         .ok_or(Error::User(UserError::InvalidUser))?;
 
     user.settings =
-        crate::database::entities::UserSettings::consume(settings, user.settings_index as u64);
+        crate::database::entities::UserSettings::consume(settings, user.settings_index.to_uint());
     // TODO: user.settings.update(db).await.map_err(Error::SQLX)?;
 
     Ok(Json(user.settings))
