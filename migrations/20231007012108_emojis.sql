@@ -10,7 +10,7 @@ create table if not exists emojis
     name           varchar(255) not null,
     require_colons smallint      not null,
     roles          text         not null,
-    `groups`       text         null,
+    groups       text         null,
     constraint FK_4b988e0db89d94cebcf07f598cc
         foreign key (guild_id) references guilds (id)
             on delete cascade,
