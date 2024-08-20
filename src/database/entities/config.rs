@@ -132,7 +132,7 @@ impl DerefMut for ConfigEntity {
 
 impl ConfigEntity {
     pub async fn get_entity_by_key(db: &PgPool, key: &str) -> Result<Self, Error> {
-        sqlx::query_as("SELECT * FROM config WHERE `key` = ?")
+        sqlx::query_as("SELECT * FROM config WHERE key = ?")
             .bind(key)
             .fetch_one(db)
             .await
