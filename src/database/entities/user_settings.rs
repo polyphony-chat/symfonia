@@ -55,8 +55,9 @@ impl UserSettings {
             .execute(db)
             .await?;
 
-        todo!("settings.index = res.last_insert_id(); Does not work!");
-        settings.index = res.last_insert_id(); // FIXME: Does not exist for Postgres
+        // todo!("settings.index = res.last_insert_id(); Does not work!");
+        // TODO(bitfl0wer) Why do we even need the index? :thinking:
+        // settings.index = res.last_insert_id(); // FIXME: Does not exist for Postgres
 
         Ok(settings)
     }

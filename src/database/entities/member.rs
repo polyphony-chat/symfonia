@@ -71,16 +71,16 @@ impl GuildMember {
             .map_err(Error::from)?;
 
         todo!("last_insert_id does not exist for Postgres");
-        let index = res.last_insert_id(); // FIXME: Does not exist for Postgres
-        member.index = index as i32;
+        // let index = res.last_insert_id(); // FIXME: Does not exist for Postgres
+        //member.index = index as i32;
 
-        sqlx::query("INSERT INTO member_roles (`index`, role_id) VALUES (?,?)")
-            .bind(index)
-            .bind(guild.id)
-            .execute(db)
-            .await?;
+        //sqlx::query("INSERT INTO member_roles (`index`, role_id) VALUES (?,?)")
+        //    .bind(index)
+        //    .bind(guild.id)
+        //    .execute(db)
+        //    .await?;
 
-        Ok(member)
+        //Ok(member)
     }
 
     pub async fn get_by_id(

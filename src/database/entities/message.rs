@@ -13,6 +13,7 @@ use chorus::types::{
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool, QueryBuilder, Row};
+use sqlx_pg_uint::PgU64;
 
 use crate::{
     database::entities::User,
@@ -226,6 +227,7 @@ impl Message {
         author_id: Snowflake,
         window: u64,
     ) -> Result<i32, Error> {
+        let window = PgU64::from(window);
         let res = sqlx::query("SELECT COUNT(*) FROM `messages` WHERE `channel_id` = ? AND `author_id` = ? AND `timestamp` > NOW() - INTERVAL ? SECOND")
             .bind(channel_id)
             .bind(author_id)
