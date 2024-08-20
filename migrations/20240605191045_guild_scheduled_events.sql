@@ -7,7 +7,7 @@ create table guild_scheduled_events
     creator_id           varchar(255)                          null,
     name                 varchar(100)                          null,
     description          text                                  null,
-    scheduled_start_time timestamp default current_timestamp() not null on update current_timestamp(),
+    scheduled_start_time timestamp default CURRENT_TIMESTAMP   not null,
     scheduled_end_time   timestamp                             null,
     privacy_level        int                                   not null,
     status               int                                   not null,
@@ -24,3 +24,15 @@ create table guild_scheduled_events
         foreign key (creator_id) references users (id)
 );
 
+create or replace function update_scheduled_start_time()
+returns TRIGGER as $$
+begin
+    NEW.scheduled_start_time := CURRENT_TIMESTAMP;
+    return NEW;
+end;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_scheduled_start_time_trigger
+BEFORE UPDATE ON guild_scheduled_events
+FOR EACH ROW
+EXECUTE FUNCTION update_scheduled_start_time();
