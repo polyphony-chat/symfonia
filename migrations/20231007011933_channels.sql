@@ -2,7 +2,7 @@ create table if not exists channels
 (
     id                                 varchar(255) not null
         primary key,
-    created_at                         datetime     not null,
+    created_at                         timestamp     not null,
     name                               varchar(255) null,
     icon                               text         null,
     type                               int          not null,

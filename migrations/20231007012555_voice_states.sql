@@ -14,7 +14,7 @@ create table if not exists voice_states
     self_stream                smallint      null,
     self_video                 smallint      not null,
     suppress                   smallint      not null,
-    request_to_speak_timestamp datetime     null,
+    request_to_speak_timestamp timestamp     null,
     constraint FK_03779ef216d4b0358470d9cb748
         foreign key (guild_id) references guilds (id)
             on delete cascade,

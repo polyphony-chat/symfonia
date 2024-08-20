@@ -5,7 +5,7 @@ create table if not exists members
     id                           varchar(255) not null,
     guild_id                     varchar(255) not null,
     nick                         varchar(255) null,
-    joined_at                    datetime     not null,
+    joined_at                    timestamp     not null,
     premium_since                bigint       null,
     deaf                         smallint      not null,
     mute                         smallint      not null,
@@ -18,7 +18,7 @@ create table if not exists members
     bio                          varchar(255) not null,
     theme_colors                 text         null,
     pronouns                     varchar(255) null,
-    communication_disabled_until datetime     null,
+    communication_disabled_until timestamp     null,
     constraint IDX_bb2bf9386ac443afbbbf9f12d3
         unique (id, guild_id),
     constraint FK_16aceddd5b89825b8ed6029ad1c
