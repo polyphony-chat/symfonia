@@ -6,6 +6,6 @@ create table if not exists client_release
     pub_date datetime     not null,
     url      varchar(255) not null,
     platform varchar(255) not null,
-    enabled  tinyint      not null,
+    enabled  smallint      not null,
     notes    varchar(255) null
 );

@@ -17,7 +17,7 @@ create table if not exists channels
     video_quality_mode                 int          null,
     bitrate                            int          null,
     user_limit                         int          null,
-    nsfw                               tinyint      not null,
+    nsfw                               smallint      not null,
     rate_limit_per_user                int          null,
     topic                              varchar(255) null,
     retention_policy_id                varchar(255) null,
