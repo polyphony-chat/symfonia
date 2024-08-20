@@ -16,7 +16,7 @@ create table if not exists users
     premium_type        numeric(5, 0)      not null constraint chk_smallint_unsigned check (premium_type >= 0 and premium_type <= 65535),
     bot                 smallint           not null,
     bio                 varchar(255)       not null,
-    `system`            smallint           not null,
+    system            smallint           not null,
     nsfw_allowed        smallint           not null,
     mfa_enabled         smallint           not null,
     webauthn_enabled    smallint default 0 not null,
