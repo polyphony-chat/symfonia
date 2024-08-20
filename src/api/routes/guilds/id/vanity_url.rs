@@ -41,7 +41,7 @@ pub async fn get_vanity(
         if let Some(invite) = Invite::get_by_guild_vanity(db, guild.id).await? {
             return Ok(Json(GuildVanityInviteResponse {
                 code: invite.code.to_owned(),
-                uses: invite.uses.clone().map(|uses| uses.to_uint()),
+                uses: invite.uses.as_ref().map(|uses| uses.to_uint()),
             })
             .with_status(StatusCode::OK));
         }

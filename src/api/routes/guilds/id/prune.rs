@@ -11,6 +11,7 @@ use poem::{
     IntoResponse,
 };
 use sqlx::PgPool;
+use sqlx_pg_uint::PgU16;
 
 use crate::{
     database::entities::{Config, Guild, Role, User},
@@ -44,12 +45,13 @@ pub async fn prune_members_dry_run(
             roles.push(role);
         }
 
+        let zero = PgU16::new(0);
         let highest = roles
             .iter()
-            .max_by_key(|r| r.position.clone())
-            .map(|r| r.position.clone())
-            .unwrap_or(0.into());
-        <Result<u16, Error>>::Ok(highest.into())
+            .max_by_key(|r| &r.position)
+            .map(|r| &r.position)
+            .unwrap_or(&zero);
+        <Result<u16, Error>>::Ok(highest.to_uint())
     }
     .await?;
 
@@ -89,12 +91,13 @@ pub async fn prune_members(
             roles.push(role);
         }
 
+        let zero = PgU16::new(0);
         let highest = roles
             .iter()
-            .max_by_key(|r| r.position.clone())
-            .map(|r| r.position.clone())
-            .unwrap_or(0.into());
-        <Result<u16, Error>>::Ok(highest.into())
+            .max_by_key(|r| &r.position)
+            .map(|r| &r.position)
+            .unwrap_or(&zero);
+        <Result<u16, Error>>::Ok(highest.to_uint())
     }
     .await?;
 
