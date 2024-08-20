@@ -41,7 +41,7 @@ pub async fn establish_connection() -> Result<sqlx::PgPool, Error> {
 }
 
 pub async fn check_migrating_from_spacebar(db: &PgPool) -> Result<bool, Error> {
-    let res = sqlx::query("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'migrations')")
+    let res = sqlx::query("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = current_database() AND table_name = 'migrations')")
         .fetch_one(db)
         .await?;
 
