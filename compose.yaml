@@ -8,9 +8,9 @@ services:
       - PGDATA=/var/lib/postgresql/data/pgdata
     healthcheck:
       test: ["CMD-SHELL", "pg_isready"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      interval: 3s
+      timeout: 3s
+      retries: 10
   app:
     env_file: .env
     build: .
