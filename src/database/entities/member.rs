@@ -74,7 +74,7 @@ impl GuildMember {
         // let index = res.last_insert_id(); // FIXME: Does not exist for Postgres
         //member.index = index as i32;
 
-        //sqlx::query("INSERT INTO member_roles (`index`, role_id) VALUES (?,?)")
+        //sqlx::query("INSERT INTO member_roles (index, role_id) VALUES (?,?)")
         //    .bind(index)
         //    .bind(guild.id)
         //    .execute(db)
@@ -129,7 +129,7 @@ impl GuildMember {
         guild_id: Snowflake,
         role_id: Snowflake,
     ) -> Result<Vec<Self>, Error> {
-        sqlx::query_as("SELECT gm.* FROM members gm JOIN member_roles mr ON mr.`index` = gm.`index` WHERE mr.role_id = ? AND gm.guild_id = ?")
+        sqlx::query_as("SELECT gm.* FROM members gm JOIN member_roles mr ON mr.index = gm.index WHERE mr.role_id = ? AND gm.guild_id = ?")
             .bind(role_id)
             .bind(guild_id)
             .fetch_all(db)
@@ -253,7 +253,7 @@ impl GuildMember {
         }
 
         self.roles.push(role_id);
-        sqlx::query("INSERT INTO member_roles (`index`, role_id) VALUES (?,?)")
+        sqlx::query("INSERT INTO member_roles (index, role_id) VALUES (?,?)")
             .bind(self.index)
             .bind(role_id)
             .execute(db)
@@ -272,7 +272,7 @@ impl GuildMember {
         }
 
         self.roles.retain(|r| r != &role_id);
-        sqlx::query("DELETE FROM member_roles WHERE `index` =? AND role_id =?")
+        sqlx::query("DELETE FROM member_roles WHERE index =? AND role_id =?")
             .bind(self.index)
             .bind(role_id)
             .execute(db)

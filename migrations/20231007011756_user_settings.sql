@@ -1,6 +1,6 @@
 create table if not exists user_settings
 (
-    `index`                          bigint unsigned auto_increment
+    index                          bigint unsigned auto_increment
         primary key,
     afk_timeout                      int          null,
     allow_accessibility_detection    smallint      null,

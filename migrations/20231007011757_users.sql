@@ -40,6 +40,6 @@ create table if not exists users
     constraint users_settingsIndex_uindex
         unique (settingsIndex),
     constraint users_user_settings_index_fk
-        foreign key (settingsIndex) references user_settings (`index`)
+        foreign key (settingsIndex) references user_settings (index)
 );
 

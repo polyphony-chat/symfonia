@@ -312,7 +312,7 @@ impl Guild {
         let min_snowflake = Snowflake::from(cutoff.and_utc().timestamp() as u64);
 
         if roles.is_empty() {
-            sqlx::query_as("SELECT gm.* FROM guild_members gm JOIN member_roles mr ON gm.`index` = mr.`index` JOIN roles r ON r.id = mr.role_id WHERE gm.guild_id = ? AND (gm.last_message_id < ? OR gm.last_message_id IS NULL) AND r.position < ?")
+            sqlx::query_as("SELECT gm.* FROM guild_members gm JOIN member_roles mr ON gm.index = mr.index JOIN roles r ON r.id = mr.role_id WHERE gm.guild_id = ? AND (gm.last_message_id < ? OR gm.last_message_id IS NULL) AND r.position < ?")
                 .bind(self.id)
                 .bind(min_snowflake)
                 .bind(highest_role)
@@ -320,7 +320,7 @@ impl Guild {
                 .await
                 .map_err(Error::SQLX)
         } else {
-            let mut builder = QueryBuilder::new("SELECT gm.* FROM members gm JOIN member_roles mr ON gm.`index` = mr.`index` JOIN roles r ON r.id = mr.role_id WHERE gm.guild_id = ? AND (gm.last_message_id < ? OR gm.last_message_id IS NULL) AND r.position < ? AND mr.role_id IN (");
+            let mut builder = QueryBuilder::new("SELECT gm.* FROM members gm JOIN member_roles mr ON gm.index = mr.index JOIN roles r ON r.id = mr.role_id WHERE gm.guild_id = ? AND (gm.last_message_id < ? OR gm.last_message_id IS NULL) AND r.position < ? AND mr.role_id IN (");
 
             let mut separated = builder.separated(", ");
             for role in &roles {

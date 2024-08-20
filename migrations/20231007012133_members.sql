@@ -1,6 +1,6 @@
 create table if not exists members
 (
-    `index`                      int auto_increment
+    index                      int auto_increment
         primary key,
     id                           varchar(255) not null,
     guild_id                     varchar(255) not null,
