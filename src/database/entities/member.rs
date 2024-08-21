@@ -9,7 +9,7 @@ use std::ops::{Deref, DerefMut};
 use chorus::types::{Snowflake, UserGuildSettingsUpdate};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Row};
-use sqlx_pg_uint::PgU16;
+use sqlx_pg_uint::{PgU16, PgU64};
 
 use crate::database::entities::{Guild, User};
 use crate::errors::{Error, GuildError, UserError};
@@ -19,7 +19,7 @@ pub struct GuildMember {
     #[serde(flatten)]
     #[sqlx(flatten)]
     inner: chorus::types::GuildMember,
-    pub index: i32,
+    pub index: PgU64,
     pub id: Snowflake,
     pub guild_id: Snowflake,
     pub settings: sqlx::types::Json<UserGuildSettingsUpdate>,
@@ -45,7 +45,7 @@ impl GuildMember {
     pub async fn create(db: &sqlx::PgPool, user: &User, guild: &Guild) -> Result<Self, Error> {
         let user = user.to_owned();
         let mut member = Self {
-            index: 0,
+            index: 0.into(),
             id: user.id,
             guild_id: guild.id,
             settings: Default::default(),
@@ -61,26 +61,26 @@ impl GuildMember {
             last_message_id: None,
         };
 
-        let res = sqlx::query("INSERT INTO members (id, guild_id, joined_at, deaf, mute, pending, settings, bio) VALUES (?, ?, NOW(), 0, 0, 0, ?, ?)")
+        let res = sqlx::query("INSERT INTO members (id, guild_id, joined_at, deaf, mute, pending, settings, bio) VALUES (?, ?, NOW(), 0, 0, 0, ?, ?) RETURNING members_index_seq")
             .bind(user.id)
             .bind(guild.id)
             .bind(sqlx::types::Json(UserGuildSettingsUpdate::default()))
             .bind(user.bio.clone().unwrap_or_default())
-            .execute(db)
+            .fetch_one(db)
             .await
             .map_err(Error::from)?;
 
-        todo!("last_insert_id does not exist for Postgres");
-        // let index = res.last_insert_id(); // FIXME: Does not exist for Postgres
-        //member.index = index as i32;
+        let index = PgU64::from_row(&res)?;
 
-        //sqlx::query("INSERT INTO member_roles (index, role_id) VALUES (?,?)")
-        //    .bind(index)
-        //    .bind(guild.id)
-        //    .execute(db)
-        //    .await?;
+        member.index = index.clone();
 
-        //Ok(member)
+        sqlx::query("INSERT INTO member_roles (index, role_id) VALUES (?,?)")
+            .bind(index)
+            .bind(guild.id)
+            .execute(db)
+            .await?;
+
+        Ok(member)
     }
 
     pub async fn get_by_id(
@@ -254,7 +254,7 @@ impl GuildMember {
 
         self.roles.push(role_id);
         sqlx::query("INSERT INTO member_roles (index, role_id) VALUES (?,?)")
-            .bind(self.index)
+            .bind(&self.index)
             .bind(role_id)
             .execute(db)
             .await?;
@@ -273,7 +273,7 @@ impl GuildMember {
 
         self.roles.retain(|r| r != &role_id);
         sqlx::query("DELETE FROM member_roles WHERE index =? AND role_id =?")
-            .bind(self.index)
+            .bind(&self.index)
             .bind(role_id)
             .execute(db)
             .await?;
