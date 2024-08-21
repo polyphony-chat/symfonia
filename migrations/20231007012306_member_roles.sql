@@ -16,4 +16,4 @@ create table if not exists member_roles
 create index if not exists IDX_e9080e7a7997a0170026d5139c
     on member_roles (role_id);
 
-ALTER SEQUENCE members_roles_index_seq OWNED BY member_roles.index;
+ALTER SEQUENCE member_roles_index_seq OWNED BY member_roles.index;
