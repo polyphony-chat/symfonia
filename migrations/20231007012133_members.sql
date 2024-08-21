@@ -2,7 +2,7 @@ CREATE SEQUENCE members_index_seq;
 
 create table if not exists members
 (
-    index                        numeric(20, 0)     not null default nextval('user_settings_index_seq') constraint chk_index_range check (index >= 0 and index <= 18446744073709551615) primary key,
+    index                        numeric(20, 0)     not null default nextval('members_index_seq') constraint chk_index_range check (index >= 0 and index <= 18446744073709551615) primary key,
     id                           varchar(255)       not null,
     guild_id                     varchar(255)       not null,
     nick                         varchar(255)       null,
