@@ -15,10 +15,12 @@ pub trait Queryer<'c, DB: Database>: Executor<'c, Database = DB> {}
 
 impl<'c> Queryer<'c, sqlx::Postgres> for &PgPool {}
 
+static DEFAULT_CONNECTION_URL: &str = "postgresql://localhost:5432";
+
 pub async fn establish_connection() -> Result<sqlx::PgPool, Error> {
     let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
-        log::warn!(target: "symfonia::db", "You did not specify `DATABASE_URL` environment variable, defaulting to 'mariadb://localhost:3306'.");
-        "mariadb://localhost:3306".to_string()
+        log::warn!(target: "symfonia::db", "You did not specify `DATABASE_URL` environment variable, defaulting to '{DEFAULT_CONNECTION_URL}'.");
+        DEFAULT_CONNECTION_URL.to_string()
     });
     let connect_options = PgConnectOptions::new()
         .host(&db_url)
