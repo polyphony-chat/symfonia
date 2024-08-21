@@ -78,7 +78,7 @@ impl Role {
             .bind(role.managed)
             .bind(role.mentionable)
             .bind(&role.permissions)
-            .bind(role.position.clone())
+            .bind(&role.position)
             .bind(&role.icon)
             .bind(&role.unicode_emoji)
             .execute(db)
