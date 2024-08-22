@@ -214,6 +214,10 @@ async fn establish_connection(stream: TcpStream) -> Result<NewConnection, Error>
             return Err(GatewayError::UnexpectedMessage.into());
         }
     };
+    // TODO(bitfl0wer):
+    // - extract user id and token claims from identify
+    // - use jwt decode to verify claims of user id and token validity
+    // - if valid, create new gatewayclient
 
     todo!()
 }
