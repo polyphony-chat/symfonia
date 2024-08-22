@@ -13,7 +13,7 @@ use poem::{
     web::{Data, Json, Path, Query},
     IntoResponse,
 };
-use sqlx::MySqlPool;
+use sqlx::PgPool;
 
 use crate::{
     database::entities::{Channel, Config, Guild, Message, User},
@@ -25,7 +25,7 @@ pub(crate) mod id;
 
 #[handler]
 pub async fn get_messages(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path(channel_id): Path<Snowflake>,
     Query(payload): Query<GetChannelMessagesSchema>,
@@ -64,7 +64,7 @@ pub async fn get_messages(
 
 #[handler]
 pub async fn create_message(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Data(config): Data<&Config>,
     Path(channel_id): Path<Snowflake>,
@@ -170,7 +170,7 @@ pub async fn create_message(
 
 #[handler]
 pub async fn create_greet_message(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Data(config): Data<&Config>,
     Path(channel_id): Path<Snowflake>,

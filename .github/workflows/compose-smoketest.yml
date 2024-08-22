@@ -1,0 +1,27 @@
+name: docker compose smoketest
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main", "dev"]
+
+jobs:
+  deploy_compose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: "true"
+          prefix-key: "ubuntu-latest"
+      - name: Create .env file
+        run: cp compose-example.env .env
+      - name: Docker Compose Action
+        uses: hoverkraft-tech/compose-action@v2.0.1
+        with:
+          compose-file: "compose.yaml"
+          up-flags: "--build"
+          down-flags: "-v"

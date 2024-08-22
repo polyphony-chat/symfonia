@@ -8,7 +8,8 @@ use std::ops::{Deref, DerefMut};
 
 use chorus::types::{AuditLogActionType, Snowflake};
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, MySqlPool};
+use sqlx::{FromRow, PgPool};
+use sqlx_pg_uint::PgU8;
 
 use crate::errors::Error;
 
@@ -34,11 +35,11 @@ impl DerefMut for AuditLogEntry {
 }
 
 impl AuditLogEntry {
-    pub async fn create(db: &MySqlPool) -> Result<Self, Error> {
+    pub async fn create(db: &PgPool) -> Result<Self, Error> {
         todo!()
     }
 
-    pub async fn get_by_id(db: &MySqlPool, id: Snowflake) -> Result<Option<Self>, Error> {
+    pub async fn get_by_id(db: &PgPool, id: Snowflake) -> Result<Option<Self>, Error> {
         sqlx::query_as("SELECT * FROM audit_logs WHERE id = ?")
             .bind(id)
             .fetch_optional(db)
@@ -47,11 +48,11 @@ impl AuditLogEntry {
     }
 
     pub async fn get_by_guild(
-        db: &MySqlPool,
+        db: &PgPool,
         guild_id: Snowflake,
         before: Option<Snowflake>,
         after: Option<Snowflake>,
-        limit: u8,
+        limit: PgU8,
         user_id: Option<Snowflake>,
         action_type: Option<AuditLogActionType>,
     ) -> Result<Vec<Self>, Error> {

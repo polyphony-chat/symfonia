@@ -14,7 +14,7 @@ use poem::{
     web::{Data, Json, Path},
     IntoResponse,
 };
-use sqlx::MySqlPool;
+use sqlx::PgPool;
 
 use crate::{
     database::entities::{Guild, Invite},
@@ -23,7 +23,7 @@ use crate::{
 
 #[handler]
 pub async fn get_vanity(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path(guild_id): Path<Snowflake>,
 ) -> poem::Result<impl IntoResponse> {
@@ -41,7 +41,7 @@ pub async fn get_vanity(
         if let Some(invite) = Invite::get_by_guild_vanity(db, guild.id).await? {
             return Ok(Json(GuildVanityInviteResponse {
                 code: invite.code.to_owned(),
-                uses: invite.uses,
+                uses: invite.uses.as_ref().map(|uses| uses.to_uint()),
             })
             .with_status(StatusCode::OK));
         }
@@ -55,7 +55,7 @@ pub async fn get_vanity(
 
 #[handler]
 pub async fn set_vanity(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path(guild_id): Path<Snowflake>,
     Json(payload): Json<GuildCreateVanitySchema>,

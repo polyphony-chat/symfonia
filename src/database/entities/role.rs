@@ -10,7 +10,7 @@ use std::ops::{Deref, DerefMut};
 
 use chorus::types::{PermissionFlags, Snowflake};
 use serde::{Deserialize, Serialize};
-use sqlx::{MySqlPool, Row};
+use sqlx::{PgPool, Row};
 
 use crate::errors::Error;
 use crate::{eq_shared_event_publisher, SharedEventPublisherMap};
@@ -53,7 +53,7 @@ impl Role {
     }
 
     pub async fn create(
-        db: &MySqlPool,
+        db: &PgPool,
         shared_event_publisher_map: SharedEventPublisherMap,
         id: Option<Snowflake>,
         guild_id: Snowflake,
@@ -76,7 +76,7 @@ impl Role {
                 mentionable,
                 name: name.to_string(),
                 permissions,
-                position,
+                position: position.into(),
                 icon: icon.to_owned(),
                 unicode_emoji: unicode_emoji.to_owned(),
                 ..Default::default()
@@ -96,7 +96,7 @@ impl Role {
             .bind(role.managed)
             .bind(role.mentionable)
             .bind(&role.permissions)
-            .bind(role.position)
+            .bind(&role.position)
             .bind(&role.icon)
             .bind(&role.unicode_emoji)
             .execute(db)
@@ -105,7 +105,7 @@ impl Role {
         Ok(role)
     }
 
-    pub async fn get_by_id(db: &MySqlPool, id: Snowflake) -> Result<Option<Self>, Error> {
+    pub async fn get_by_id(db: &PgPool, id: Snowflake) -> Result<Option<Self>, Error> {
         sqlx::query_as("SELECT * FROM roles WHERE id = ?")
             .bind(id)
             .fetch_optional(db)
@@ -113,7 +113,7 @@ impl Role {
             .map_err(Error::SQLX)
     }
 
-    pub async fn get_by_guild(db: &MySqlPool, guild_id: Snowflake) -> Result<Vec<Self>, Error> {
+    pub async fn get_by_guild(db: &PgPool, guild_id: Snowflake) -> Result<Vec<Self>, Error> {
         sqlx::query_as("SELECT * FROM roles WHERE guild_id = ?")
             .bind(guild_id)
             .fetch_all(db)
@@ -121,7 +121,7 @@ impl Role {
             .map_err(Error::SQLX)
     }
 
-    pub async fn count_by_guild(db: &MySqlPool, guild_id: Snowflake) -> Result<i32, Error> {
+    pub async fn count_by_guild(db: &PgPool, guild_id: Snowflake) -> Result<i32, Error> {
         sqlx::query("SELECT COUNT(*) FROM roles WHERE guild_id = ?")
             .bind(guild_id)
             .fetch_one(db)
@@ -130,7 +130,7 @@ impl Role {
             .map_err(Error::SQLX)
     }
 
-    pub async fn save(&self, db: &MySqlPool) -> Result<(), Error> {
+    pub async fn save(&self, db: &PgPool) -> Result<(), Error> {
         sqlx::query("UPDATE roles SET name = ?, color = ?, hoist = ?, managed = ?, mentionable = ?, permissions = ?, position = ?, icon = ?, unicode_emoji = ? WHERE id = ?")
             .bind(&self.name)
             .bind(self.color)
@@ -138,7 +138,7 @@ impl Role {
             .bind(self.managed)
             .bind(self.mentionable)
             .bind(&self.permissions)
-            .bind(self.position)
+            .bind(self.position.clone())
             .bind(&self.icon)
             .bind(&self.unicode_emoji)
             .bind(self.id)
@@ -148,7 +148,7 @@ impl Role {
             .map_err(Error::SQLX)
     }
 
-    pub async fn delete(&self, db: &MySqlPool) -> Result<(), Error> {
+    pub async fn delete(&self, db: &PgPool) -> Result<(), Error> {
         sqlx::query("DELETE FROM roles WHERE id = ?")
             .bind(self.id)
             .execute(db)

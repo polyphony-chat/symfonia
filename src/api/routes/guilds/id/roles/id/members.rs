@@ -11,7 +11,7 @@ use poem::{
     web::{Data, Json, Path},
     IntoResponse, Response,
 };
-use sqlx::MySqlPool;
+use sqlx::PgPool;
 
 use crate::{
     database::entities::Guild,
@@ -20,7 +20,7 @@ use crate::{
 
 #[handler]
 pub async fn bulk_assign_roles(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path((guild_id, role_id)): Path<(Snowflake, Snowflake)>,
     Json(member_ids): Json<Vec<Snowflake>>,

@@ -2,7 +2,7 @@ create table if not exists channels
 (
     id                                 varchar(255) not null
         primary key,
-    created_at                         datetime     not null,
+    created_at                         timestamp     not null,
     name                               varchar(255) null,
     icon                               text         null,
     type                               int          not null,
@@ -17,7 +17,7 @@ create table if not exists channels
     video_quality_mode                 int          null,
     bitrate                            int          null,
     user_limit                         int          null,
-    nsfw                               tinyint      not null,
+    nsfw                               smallint      not null,
     rate_limit_per_user                int          null,
     topic                              varchar(255) null,
     retention_policy_id                varchar(255) null,

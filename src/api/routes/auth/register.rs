@@ -14,7 +14,7 @@ use crate::database::entities::{Config, User};
 
 #[handler]
 pub async fn register(
-    Data(db): Data<&sqlx::MySqlPool>,
+    Data(db): Data<&sqlx::PgPool>,
     Data(cfg): Data<&Config>,
     Json(payload): Json<RegisterSchema>,
     req: &Request,

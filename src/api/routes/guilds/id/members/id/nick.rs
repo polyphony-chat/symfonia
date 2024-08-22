@@ -10,7 +10,7 @@ use poem::{
     web::{Data, Json, Path},
     IntoResponse,
 };
-use sqlx::MySqlPool;
+use sqlx::PgPool;
 
 use crate::{
     database::entities::Guild,
@@ -19,7 +19,7 @@ use crate::{
 
 #[handler]
 pub async fn change_nickname(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path((guild_id, member_id)): Path<(Snowflake, String)>,
     Json(payload): Json<ModifyCurrentGuildMemberSchema>,

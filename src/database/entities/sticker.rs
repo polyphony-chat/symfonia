@@ -8,7 +8,7 @@ use std::ops::{Deref, DerefMut};
 
 use chorus::types::{Snowflake, StickerFormatType, StickerType};
 use serde::{Deserialize, Serialize};
-use sqlx::{MySqlPool, Row};
+use sqlx::{PgPool, Row};
 
 use crate::{database::entities::User, errors::Error};
 
@@ -35,7 +35,7 @@ impl DerefMut for Sticker {
 
 impl Sticker {
     pub async fn create(
-        db: &MySqlPool,
+        db: &PgPool,
         guild_id: Option<Snowflake>,
         pack_id: Option<Snowflake>,
         user_id: Option<Snowflake>,
@@ -78,7 +78,7 @@ impl Sticker {
         })
     }
 
-    pub async fn populate_relations(&mut self, db: &MySqlPool) -> Result<(), Error> {
+    pub async fn populate_relations(&mut self, db: &PgPool) -> Result<(), Error> {
         if let Some(user_id) = self.user_id {
             self.user = User::get_by_id(db, user_id)
                 .await?
@@ -87,7 +87,7 @@ impl Sticker {
         Ok(())
     }
 
-    pub async fn get_by_id(db: &MySqlPool, id: Snowflake) -> Result<Option<Self>, Error> {
+    pub async fn get_by_id(db: &PgPool, id: Snowflake) -> Result<Option<Self>, Error> {
         sqlx::query_as("SELECT * FROM stickers WHERE id = ?")
             .bind(id)
             .fetch_optional(db)
@@ -95,7 +95,7 @@ impl Sticker {
             .map_err(Error::SQLX)
     }
 
-    pub async fn get_by_guild(db: &MySqlPool, guild_id: Snowflake) -> Result<Vec<Self>, Error> {
+    pub async fn get_by_guild(db: &PgPool, guild_id: Snowflake) -> Result<Vec<Self>, Error> {
         sqlx::query_as("SELECT * FROM stickers WHERE guild_id = ?")
             .bind(guild_id)
             .fetch_all(db)
@@ -103,7 +103,7 @@ impl Sticker {
             .map_err(Error::SQLX)
     }
 
-    pub async fn count_by_guild(db: &MySqlPool, guild_id: Snowflake) -> Result<i32, Error> {
+    pub async fn count_by_guild(db: &PgPool, guild_id: Snowflake) -> Result<i32, Error> {
         sqlx::query("SELECT COUNT(*) FROM stickers WHERE guild_id = ?")
             .bind(guild_id)
             .fetch_one(db)
@@ -112,7 +112,7 @@ impl Sticker {
             .map(|r| r.get::<i32, _>(0))
     }
 
-    pub async fn save(&self, db: &MySqlPool) -> Result<(), Error> {
+    pub async fn save(&self, db: &PgPool) -> Result<(), Error> {
         sqlx::query("UPDATE stickers SET name = ?, description = ?, tags = ? WHERE id = ?")
             .bind(&self.name)
             .bind(&self.description)
@@ -124,7 +124,7 @@ impl Sticker {
         Ok(())
     }
 
-    pub async fn delete(self, db: &MySqlPool) -> Result<(), Error> {
+    pub async fn delete(self, db: &PgPool) -> Result<(), Error> {
         sqlx::query("DELETE FROM stickers WHERE id = ?")
             .bind(self.id)
             .execute(db)

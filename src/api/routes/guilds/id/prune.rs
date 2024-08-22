@@ -10,7 +10,8 @@ use poem::{
     web::{Data, Json, Path, Query},
     IntoResponse,
 };
-use sqlx::MySqlPool;
+use sqlx::PgPool;
+use sqlx_pg_uint::PgU16;
 
 use crate::{
     database::entities::{Config, Guild, Role, User},
@@ -19,7 +20,7 @@ use crate::{
 
 #[handler]
 pub async fn prune_members_dry_run(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&PgPool>,
     Data(authed_user): Data<&User>,
     Data(config): Data<&Config>,
     Path(guild_id): Path<Snowflake>,
@@ -44,17 +45,18 @@ pub async fn prune_members_dry_run(
             roles.push(role);
         }
 
+        let zero = PgU16::new(0);
         let highest = roles
             .iter()
-            .max_by_key(|r| r.position)
-            .map(|r| r.position)
-            .unwrap_or(0);
-        <Result<u16, Error>>::Ok(highest)
+            .max_by_key(|r| &r.position)
+            .map(|r| &r.position)
+            .unwrap_or(&zero);
+        <Result<u16, Error>>::Ok(highest.to_uint())
     }
     .await?;
 
     let members = guild
-        .calculate_inactive_members(db, query.days, query.include_roles, my_highest)
+        .calculate_inactive_members(db, query.days, query.include_roles, my_highest.into())
         .await?;
 
     Ok(Json(GuildPruneResult {
@@ -64,7 +66,7 @@ pub async fn prune_members_dry_run(
 
 #[handler]
 pub async fn prune_members(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&PgPool>,
     Data(authed_user): Data<&User>,
     Data(config): Data<&Config>,
     Path(guild_id): Path<Snowflake>,
@@ -89,17 +91,18 @@ pub async fn prune_members(
             roles.push(role);
         }
 
+        let zero = PgU16::new(0);
         let highest = roles
             .iter()
-            .max_by_key(|r| r.position)
-            .map(|r| r.position)
-            .unwrap_or(0);
-        <Result<u16, Error>>::Ok(highest)
+            .max_by_key(|r| &r.position)
+            .map(|r| &r.position)
+            .unwrap_or(&zero);
+        <Result<u16, Error>>::Ok(highest.to_uint())
     }
     .await?;
 
     let members = guild
-        .calculate_inactive_members(db, query.days, query.include_roles, my_highest)
+        .calculate_inactive_members(db, query.days, query.include_roles, my_highest.into())
         .await?;
 
     let total_count = members.len();

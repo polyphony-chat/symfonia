@@ -7,7 +7,7 @@
 use std::ops::{Deref, DerefMut};
 
 use serde::{Deserialize, Serialize};
-use sqlx::MySqlPool;
+use sqlx::PgPool;
 
 use crate::errors::Error;
 
@@ -32,7 +32,7 @@ impl DerefMut for GuildTemplate {
 }
 
 impl GuildTemplate {
-    pub async fn get_by_code(db: &MySqlPool, code: &str) -> Result<Option<GuildTemplate>, Error> {
+    pub async fn get_by_code(db: &PgPool, code: &str) -> Result<Option<GuildTemplate>, Error> {
         sqlx::query_as("SELECT * FROM guild_templates WHERE code = ?")
             .bind(code)
             .fetch_optional(db)

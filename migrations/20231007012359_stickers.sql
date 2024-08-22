@@ -4,7 +4,7 @@ create table if not exists stickers
         primary key,
     name        varchar(255) not null,
     description varchar(255) null,
-    available   tinyint      null,
+    available   smallint      null,
     tags        varchar(255) null,
     pack_id     varchar(255) null,
     guild_id    varchar(255) null,

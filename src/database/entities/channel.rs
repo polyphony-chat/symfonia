@@ -13,7 +13,7 @@ use chorus::types::{
 };
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use sqlx::{types::Json, MySqlPool};
+use sqlx::{types::Json, PgPool};
 
 use crate::eq_shared_event_publisher;
 use crate::{
@@ -58,7 +58,7 @@ impl Channel {
     }
 
     pub async fn create(
-        db: &MySqlPool,
+        db: &PgPool,
         channel_type: ChannelType,
         name: Option<String>,
         nsfw: bool,
@@ -124,7 +124,7 @@ impl Channel {
     }
 
     pub async fn create_dm_channel(
-        db: &MySqlPool,
+        db: &PgPool,
         recipients: Vec<Snowflake>,
         creator_id: Snowflake,
         name: impl Into<Option<String>>,
@@ -165,7 +165,7 @@ impl Channel {
         Ok(channel)
     }
 
-    pub async fn populate_relations(&mut self, db: &MySqlPool) -> Result<(), Error> {
+    pub async fn populate_relations(&mut self, db: &PgPool) -> Result<(), Error> {
         let recipients = Recipient::get_by_channel_id(db, self.id).await?;
         let mut recipient_users = vec![];
         for recipient in recipients {
@@ -178,7 +178,7 @@ impl Channel {
         Ok(())
     }
 
-    pub async fn get_by_id(db: &MySqlPool, id: Snowflake) -> Result<Option<Self>, Error> {
+    pub async fn get_by_id(db: &PgPool, id: Snowflake) -> Result<Option<Self>, Error> {
         sqlx::query_as("SELECT * FROM channels WHERE id = ?")
             .bind(id)
             .fetch_optional(db)
@@ -186,7 +186,7 @@ impl Channel {
             .map_err(Error::SQLX)
     }
 
-    pub async fn get_by_guild_id(db: &MySqlPool, guild_id: Snowflake) -> Result<Vec<Self>, Error> {
+    pub async fn get_by_guild_id(db: &PgPool, guild_id: Snowflake) -> Result<Vec<Self>, Error> {
         sqlx::query_as("SELECT * FROM channels WHERE guild_id = ?")
             .bind(guild_id)
             .fetch_all(db)
@@ -194,13 +194,13 @@ impl Channel {
             .map_err(Error::SQLX)
     }
 
-    pub async fn get_invites(&self, db: &MySqlPool) -> Result<Vec<Invite>, Error> {
+    pub async fn get_invites(&self, db: &PgPool) -> Result<Vec<Invite>, Error> {
         Invite::get_by_channel(db, self.id).await
     }
 
     pub async fn create_message(
         &mut self,
-        db: &MySqlPool,
+        db: &PgPool,
         payload: MessageSendSchema,
         author_id: Snowflake,
     ) -> Result<Message, Error> {
@@ -235,7 +235,7 @@ impl Channel {
 
     pub async fn get_messages(
         &self,
-        db: &MySqlPool,
+        db: &PgPool,
         anchor: Option<ChannelMessagesAnchor>,
         limit: i32,
     ) -> Result<Vec<Message>, Error> {
@@ -252,7 +252,7 @@ impl Channel {
         Ok(messages)
     }
 
-    pub async fn delete(&self, db: &MySqlPool) -> Result<(), Error> {
+    pub async fn delete(&self, db: &PgPool) -> Result<(), Error> {
         sqlx::query("DELETE FROM channels WHERE id = ?")
             .bind(self.id)
             .execute(db)
@@ -274,7 +274,7 @@ impl Channel {
         self.user_limit = data.user_limit;
         self.rtc_region = data.rtc_region;
         self.default_auto_archive_duration = data.default_auto_archive_duration;
-        self.default_reaction_emoji = data.default_reaction_emoji.map(Json);
+        self.default_reaction_emoji = data.default_reaction_emoji;
         self.flags = data.flags;
         self.default_thread_rate_limit_per_user = data.default_thread_rate_limit_per_user;
         self.video_quality_mode = data.video_quality_mode;
@@ -285,7 +285,7 @@ impl Channel {
     }
 
     pub async fn reorder(
-        db: &MySqlPool,
+        db: &PgPool,
         guild_id: Snowflake,
         channel_id: Snowflake,
         position: u32,
@@ -308,7 +308,7 @@ impl Channel {
         Ok(())
     }
 
-    pub async fn save(&self, db: &MySqlPool) -> Result<(), Error> {
+    pub async fn save(&self, db: &PgPool) -> Result<(), Error> {
         sqlx::query("UPDATE channels SET name = ?, topic = ?, nsfw = ?, position = ?, permission_overwrites = ?, rate_limit_per_user = ?, parent_id = ?, bitrate = ?, icon = ?, user_limit = ?, rtc_region = ?, default_auto_archive_duration = ?, default_reaction_emoji = ?, flags = ?, default_thread_rate_limit_per_user = ?, video_quality_mode = ?, channel_type = ?, last_message_id = ? WHERE id = ?")
             .bind(&self.name)
             .bind(&self.topic)
@@ -337,7 +337,7 @@ impl Channel {
 
     pub async fn create_invite(
         &self,
-        db: &MySqlPool,
+        db: &PgPool,
         payload: CreateChannelInviteSchema,
         inviter_id: Option<Snowflake>,
     ) -> Result<Invite, Error> {
@@ -356,7 +356,7 @@ impl Channel {
             || self.channel_type == ChannelType::VoicelessWhiteboard)
     }
 
-    pub async fn get_follower_webhooks(&self, db: &MySqlPool) -> Result<Vec<Webhook>, Error> {
+    pub async fn get_follower_webhooks(&self, db: &PgPool) -> Result<Vec<Webhook>, Error> {
         sqlx::query_as("SELECT * FROM webhooks WHERE id IN (SELECT webhook_id FROM channel_followers WHERE channel_id = ?)")
             .bind(self.id)
             .fetch_all(db)
@@ -366,7 +366,7 @@ impl Channel {
 
     pub async fn add_follower_webhook(
         &self,
-        db: &MySqlPool,
+        db: &PgPool,
         webhook_id: Snowflake,
     ) -> Result<(), Error> {
         sqlx::query("INSERT INTO channel_followers (channel_id, webhook_id) VALUES (?,?)")

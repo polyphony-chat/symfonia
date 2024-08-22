@@ -4,5 +4,5 @@ create table if not exists categories
         primary key,
     name          varchar(255) null,
     localizations text         not null,
-    is_primary    tinyint      null
+    is_primary    smallint      null
 );

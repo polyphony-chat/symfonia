@@ -13,7 +13,7 @@ use poem::{
     IntoResponse, Response,
 };
 use reqwest::StatusCode;
-use sqlx::MySqlPool;
+use sqlx::PgPool;
 
 use crate::{
     database::entities::{Channel, Guild},
@@ -22,7 +22,7 @@ use crate::{
 
 #[handler]
 pub async fn get_channels(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path(guild_id): Path<Snowflake>,
 ) -> poem::Result<impl IntoResponse> {
@@ -38,7 +38,7 @@ pub async fn get_channels(
 
 #[handler]
 pub async fn create_channel(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path(guild_id): Path<Snowflake>,
     Json(payload): Json<ChannelModifySchema>,
@@ -65,7 +65,7 @@ pub async fn create_channel(
 
 #[handler]
 pub async fn reoder_channels(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path(guild_id): Path<Snowflake>,
     Json(payload): Json<ModifyChannelPositionsSchema>,

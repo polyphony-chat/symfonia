@@ -7,8 +7,8 @@ create table if not exists templates
     description             varchar(255) null,
     usage_count             int          null,
     creator_id              varchar(255) null,
-    created_at              datetime     not null,
-    updated_at              datetime     not null,
+    created_at              timestamp     not null,
+    updated_at              timestamp     not null,
     source_guild_id         varchar(255) null,
     serialized_source_guild text         not null,
     constraint IDX_be38737bf339baf63b1daeffb5

@@ -10,7 +10,7 @@ use poem::{
     web::{Data, Json},
     IntoResponse, Route,
 };
-use sqlx::MySqlPool;
+use sqlx::PgPool;
 
 use crate::SharedEventPublisherMap;
 use crate::{
@@ -140,7 +140,7 @@ pub fn setup_routes() -> Route {
 
 #[handler]
 pub async fn create_guild(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&PgPool>,
     Data(publisher_map): Data<&SharedEventPublisherMap>,
     Data(cfg): Data<&Config>,
     Data(claims): Data<&Claims>,

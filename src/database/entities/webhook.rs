@@ -8,7 +8,7 @@ use std::ops::{Deref, DerefMut};
 
 use chorus::types::{Snowflake, WebhookType};
 use serde::{Deserialize, Serialize};
-use sqlx::{MySqlPool, Row};
+use sqlx::{PgPool, Row};
 
 use crate::errors::Error;
 
@@ -36,7 +36,7 @@ impl DerefMut for Webhook {
 
 impl Webhook {
     pub async fn create(
-        db: &MySqlPool,
+        db: &PgPool,
         name: &str,
         guild_id: Snowflake,
         channel_id: Snowflake,
@@ -84,7 +84,7 @@ impl Webhook {
         Ok(webhook)
     }
 
-    pub async fn get_by_id(db: &MySqlPool, id: Snowflake) -> Result<Option<Self>, Error> {
+    pub async fn get_by_id(db: &PgPool, id: Snowflake) -> Result<Option<Self>, Error> {
         sqlx::query_as("SELECT * FROM webhooks WHERE id =?")
             .bind(id)
             .fetch_optional(db)
@@ -92,10 +92,7 @@ impl Webhook {
             .map_err(Error::SQLX)
     }
 
-    pub async fn get_by_channel_id(
-        db: &MySqlPool,
-        channel_id: Snowflake,
-    ) -> Result<Vec<Self>, Error> {
+    pub async fn get_by_channel_id(db: &PgPool, channel_id: Snowflake) -> Result<Vec<Self>, Error> {
         sqlx::query_as("SELECT * FROM webhooks WHERE channel_id =?")
             .bind(channel_id)
             .fetch_all(db)
@@ -103,7 +100,7 @@ impl Webhook {
             .map_err(Error::SQLX)
     }
 
-    pub async fn count_by_channel(db: &MySqlPool, channel_id: Snowflake) -> Result<i32, Error> {
+    pub async fn count_by_channel(db: &PgPool, channel_id: Snowflake) -> Result<i32, Error> {
         sqlx::query("SELECT COUNT(*) FROM webhooks WHERE channel_id = ?")
             .bind(channel_id)
             .fetch_one(db)

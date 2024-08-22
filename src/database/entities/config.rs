@@ -10,7 +10,7 @@ use chorus::types::ConfigValue;
 use futures::FutureExt;
 use poem::EndpointExt;
 use serde_json::{Map, Value};
-use sqlx::MySqlPool;
+use sqlx::PgPool;
 use tokio::io::AsyncReadExt;
 
 use crate::errors::Error;
@@ -32,7 +32,7 @@ impl DerefMut for Config {
 }
 
 impl Config {
-    pub async fn init(db: &MySqlPool) -> Result<Self, Error> {
+    pub async fn init(db: &PgPool) -> Result<Self, Error> {
         let config = if let Ok(confg_path) = std::env::var("CONFIG_PATH") {
             if let Ok(mut f) = tokio::fs::File::open(&confg_path).await {
                 let mut data = String::new();
@@ -131,8 +131,8 @@ impl DerefMut for ConfigEntity {
 }
 
 impl ConfigEntity {
-    pub async fn get_entity_by_key(db: &MySqlPool, key: &str) -> Result<Self, Error> {
-        sqlx::query_as("SELECT * FROM config WHERE `key` = ?")
+    pub async fn get_entity_by_key(db: &PgPool, key: &str) -> Result<Self, Error> {
+        sqlx::query_as("SELECT * FROM config WHERE key = ?")
             .bind(key)
             .fetch_one(db)
             .await
@@ -140,7 +140,7 @@ impl ConfigEntity {
             .map_err(Error::SQLX)
     }
 
-    pub async fn collect_entities(db: &MySqlPool) -> Result<Vec<Self>, Error> {
+    pub async fn collect_entities(db: &PgPool) -> Result<Vec<Self>, Error> {
         sqlx::query_as("SELECT * FROM config")
             .fetch_all(db)
             .await

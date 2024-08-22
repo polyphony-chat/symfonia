@@ -11,7 +11,7 @@ use poem::{
     IntoResponse, Response,
 };
 use reqwest::StatusCode;
-use sqlx::MySqlPool;
+use sqlx::PgPool;
 
 use crate::{
     database::entities::{Config, Emoji, Guild},
@@ -20,7 +20,7 @@ use crate::{
 
 #[handler]
 pub async fn get_emojis(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path(guild_id): Path<Snowflake>,
 ) -> poem::Result<impl IntoResponse> {
@@ -38,7 +38,7 @@ pub async fn get_emojis(
 
 #[handler]
 pub async fn get_emoji(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path((guild_id, emoji_id)): Path<(Snowflake, Snowflake)>,
 ) -> poem::Result<impl IntoResponse> {
@@ -60,7 +60,7 @@ pub async fn get_emoji(
 
 #[handler]
 pub async fn create_emoji(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Data(config): Data<&Config>,
     Path(guild_id): Path<Snowflake>,
@@ -109,7 +109,7 @@ pub async fn create_emoji(
 
 #[handler]
 pub async fn modify_emoji(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path((guild_id, emoji_id)): Path<(Snowflake, Snowflake)>,
     Json(payload): Json<EmojiModifySchema>,
@@ -133,7 +133,7 @@ pub async fn modify_emoji(
         emoji.name = payload.name;
     }
     if payload.roles.is_some() {
-        emoji.roles = payload.roles.map(sqlx::types::Json);
+        emoji.roles = payload.roles;
     }
 
     emoji.save(db).await?;
@@ -145,7 +145,7 @@ pub async fn modify_emoji(
 
 #[handler]
 pub async fn delete_emoji(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path((guild_id, emoji_id)): Path<(Snowflake, Snowflake)>,
 ) -> poem::Result<impl IntoResponse> {

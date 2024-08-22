@@ -31,15 +31,15 @@ Whether you are using Docker or not, you will need to have the following install
 
 ### Non-Docker
 
-1. Install [MariaDB](https://mariadb.org/download/)
+1. Install [PostgreSQL](https://www.postgresql.org/download/)
 2. Create a new database, and a user that has full access to that database
 3. Create a `.env` file in the root of the project with the following contents:
 
 ```env
-DATABASE_URL=[URL to your MariaDB database]
-DATABASE_USERNAME=[Your MariaDB username]
-DATABASE_PASSWORD=[Your MariaDB password]
-DATABASE_NAME=[Your MariaDB database name]
+DATABASE_URL=[URL to your Postgres database]
+DATABASE_USERNAME=[Your Postgres username]
+DATABASE_PASSWORD=[Your Postgres password]
+DATABASE_NAME=[Your Postgres database name]
 ```
 
 4. Run the project with `cargo run`.

@@ -1,31 +1,24 @@
 services:
   db:
     env_file: .env
-    image: mariadb
-    environment:
-      MARIADB_RANDOM_ROOT_PASSWORD: 1
+    image: postgres
     volumes:
-      - "mariadb:/var/lib/mysql"
+      - "postgres:/var/lib/postgresql/data"
+    environment:
+      - PGDATA=/var/lib/postgresql/data/pgdata
     healthcheck:
-      test:
-        [
-          "CMD",
-          "healthcheck.sh",
-          "--connect",
-          "--innodb_initialized"
-        ]
-      start_period: 10s
-      interval: 10s
-      timeout: 5s
-      retries: 3
+      test: ["CMD-SHELL", "pg_isready -d ${POSTGRES_DB} -U ${POSTGRES_USER}"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
   app:
     env_file: .env
     build: .
     environment:
       - DATABASE_URL=db
-      - DATABASE_USERNAME=${MARIADB_USER}
-      - DATABASE_PASSWORD=${MARIADB_PASSWORD}
-      - DATABASE_NAME=${MARIADB_DATABASE}
+      - DATABASE_USERNAME=${POSTGRES_USER}
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD}
+      - DATABASE_NAME=${POSTGRES_DB}
     depends_on:
       db:
         condition: service_healthy
@@ -36,4 +29,4 @@ services:
       - 3003:3003/udp
 
 volumes:
-  mariadb:
+  postgres:

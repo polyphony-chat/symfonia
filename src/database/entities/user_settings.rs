@@ -7,7 +7,8 @@
 use std::ops::{Deref, DerefMut};
 
 use serde::{Deserialize, Serialize};
-use sqlx::MySqlPool;
+use sqlx::PgPool;
+use sqlx_pg_uint::PgU64;
 
 use crate::errors::Error;
 
@@ -16,7 +17,7 @@ pub struct UserSettings {
     #[sqlx(flatten)]
     #[serde(flatten)]
     inner: chorus::types::UserSettings,
-    pub index: u64,
+    pub index: PgU64,
 }
 
 impl Deref for UserSettings {
@@ -34,16 +35,19 @@ impl DerefMut for UserSettings {
 
 impl UserSettings {
     pub fn consume(inner: chorus::types::UserSettings, index: u64) -> Self {
-        Self { inner, index }
+        Self {
+            inner,
+            index: PgU64::from(index),
+        }
     }
 
-    pub async fn create(db: &MySqlPool, locale: &str) -> Result<Self, Error> {
+    pub async fn create(db: &PgPool, locale: &str) -> Result<Self, Error> {
         let mut settings = Self {
             inner: chorus::types::UserSettings {
                 locale: locale.to_string(),
                 ..Default::default()
             },
-            index: 0,
+            index: PgU64::from(0),
         };
 
         let res = sqlx::query("INSERT INTO user_settings (locale) VALUES (?)")
@@ -51,12 +55,15 @@ impl UserSettings {
             .execute(db)
             .await?;
 
-        settings.index = res.last_insert_id();
+        // todo!("settings.index = res.last_insert_id(); Does not work!");
+        // TODO(bitfl0wer) Why do we even need the index? :thinking:
+        // settings.index = res.last_insert_id(); // FIXME: Does not exist for Postgres
 
         Ok(settings)
     }
 
-    pub async fn get_by_index(db: &MySqlPool, index: u64) -> Result<UserSettings, Error> {
+    pub async fn get_by_index(db: &PgPool, index: u64) -> Result<UserSettings, Error> {
+        let index = PgU64::from(index);
         sqlx::query_as("SELECT * FROM user_settings WHERE index = ?")
             .bind(index)
             .fetch_one(db)
