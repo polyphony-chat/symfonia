@@ -11,7 +11,7 @@ use poem::{
     IntoResponse, Response,
 };
 use reqwest::StatusCode;
-use sqlx::MySqlPool;
+use sqlx::PgPool;
 
 use crate::{
     database::entities::{Channel, Emoji, GuildMember, Message, User},
@@ -20,7 +20,7 @@ use crate::{
 
 #[handler]
 pub async fn add_reaction(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path((channel_id, message_id)): Path<(Snowflake, Snowflake)>,
     Path((emoji, user_id)): Path<(String, String)>,
@@ -65,13 +65,13 @@ pub async fn add_reaction(
             return Ok(Response::builder().status(StatusCode::NO_CONTENT).finish());
         }
 
-        reaction.count += 1;
+        reaction.count += 1.into();
         reaction.user_ids.push(claims.id);
     } else {
         let new_reaction = Reaction {
             emoji: partial_emoji.clone().into(),
-            count: 1,
-            burst_count: 0,
+            count: 1.into(),
+            burst_count: 0.into(),
             me: true,
             burst_me: false,
             user_ids: vec![claims.id],
@@ -99,7 +99,7 @@ pub async fn add_reaction(
 
 #[handler]
 pub async fn delete_all_reactions(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&PgPool>,
     Path((channel_id, message_id)): Path<(Snowflake, Snowflake)>,
 ) -> poem::Result<impl IntoResponse> {
     // TODO: Check permissions
@@ -116,7 +116,7 @@ pub async fn delete_all_reactions(
 
 #[handler]
 pub async fn delete_reaction(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path((channel_id, message_id)): Path<(Snowflake, Snowflake)>,
     Path((emoji, user_id)): Path<(String, String)>,
@@ -153,7 +153,7 @@ pub async fn delete_reaction(
 
 #[handler]
 pub async fn get_reaction(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&PgPool>,
     Path((channel_id, message_id)): Path<(Snowflake, Snowflake)>,
     Path(emoji): Path<String>,
     Query(query): Query<ReactionQuerySchema>,
@@ -180,7 +180,7 @@ pub async fn get_reaction(
 
     let mut limit = query.limit.unwrap_or(25).min(100);
 
-    let users = User::get_by_id_list(db, &reaction.user_ids, query.after, limit).await?;
+    let users = User::get_by_id_list(db, &reaction.user_ids, query.after, limit.into()).await?;
 
     let public_projections = users.iter().map(|u| u.to_public_user()).collect::<Vec<_>>();
 

@@ -8,7 +8,7 @@ use std::ops::{Deref, DerefMut};
 
 use chorus::types::Snowflake;
 use serde::{Deserialize, Serialize};
-use sqlx::{MySqlPool, Row};
+use sqlx::{PgPool, Row};
 
 use crate::{database::entities::User, errors::Error};
 
@@ -35,7 +35,7 @@ impl DerefMut for Emoji {
 
 impl Emoji {
     pub async fn create(
-        db: &MySqlPool,
+        db: &PgPool,
         guild_id: Snowflake,
         user_id: Option<Snowflake>,
         name: &str,
@@ -74,7 +74,7 @@ impl Emoji {
                 animated: Some(animated),
                 managed: Some(managed),
                 require_colons: Some(require_colons),
-                roles: Some(sqlx::types::Json(role_ids)),
+                roles: Some(role_ids),
                 user,
                 available: Some(true),
             },
@@ -83,7 +83,7 @@ impl Emoji {
         })
     }
 
-    pub async fn get_by_id(db: &MySqlPool, id: Snowflake) -> Result<Option<Self>, Error> {
+    pub async fn get_by_id(db: &PgPool, id: Snowflake) -> Result<Option<Self>, Error> {
         sqlx::query_as("SELECT * FROM emojis WHERE id = ? AND guild_id = ?")
             .bind(id)
             .fetch_optional(db)
@@ -91,7 +91,7 @@ impl Emoji {
             .map_err(Error::SQLX)
     }
 
-    pub async fn get_by_guild(db: &MySqlPool, guild_id: Snowflake) -> Result<Vec<Self>, Error> {
+    pub async fn get_by_guild(db: &PgPool, guild_id: Snowflake) -> Result<Vec<Self>, Error> {
         sqlx::query_as("SELECT * FROM emojis WHERE guild_id = ?")
             .bind(guild_id)
             .fetch_all(db)
@@ -99,7 +99,7 @@ impl Emoji {
             .map_err(Error::SQLX)
     }
 
-    pub async fn count(db: &MySqlPool, guild_id: Snowflake) -> Result<i32, Error> {
+    pub async fn count(db: &PgPool, guild_id: Snowflake) -> Result<i32, Error> {
         sqlx::query("SELECT COUNT(*) FROM emojis WHERE guild_id =?")
             .bind(guild_id)
             .fetch_one(db)
@@ -108,7 +108,7 @@ impl Emoji {
             .map(|r| r.get::<i32, _>(0))
     }
 
-    pub async fn save(&mut self, db: &MySqlPool) -> Result<(), Error> {
+    pub async fn save(&mut self, db: &PgPool) -> Result<(), Error> {
         sqlx::query(
             "UPDATE emojis SET name = ?, require_colons = ?, roles =? WHERE id = ? AND guild_id = ?",
         )
@@ -124,7 +124,7 @@ impl Emoji {
         Ok(())
     }
 
-    pub async fn delete(self, db: &MySqlPool) -> Result<(), Error> {
+    pub async fn delete(self, db: &PgPool) -> Result<(), Error> {
         sqlx::query("DELETE FROM emojis WHERE id = ?")
             .bind(self.id)
             .execute(db)

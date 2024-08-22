@@ -13,7 +13,8 @@ use chorus::types::{PublicUser, Rights, Snowflake, UserData};
 use chrono::{NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use sqlx::{FromRow, MySqlPool, Row};
+use sqlx::{FromRow, PgPool, Row};
+use sqlx_pg_uint::{PgU32, PgU64};
 
 use crate::{
     database::entities::{Config, Guild, GuildMember, UserSettings},
@@ -29,7 +30,7 @@ pub struct User {
     pub deleted: bool,
     pub fingerprints: String, // TODO: Simple-array, should actually be a vec
     #[sqlx(rename = "settingsIndex")]
-    pub settings_index: u64,
+    pub settings_index: PgU64,
     pub rights: Rights,
     #[sqlx(skip)]
     pub settings: UserSettings,
@@ -51,7 +52,7 @@ impl DerefMut for User {
 
 impl User {
     pub async fn create(
-        db: &MySqlPool,
+        db: &PgPool,
         cfg: &Config,
         username: &str,
         password: Option<String>,
@@ -74,7 +75,7 @@ impl User {
                 discriminator: "0001".to_string(),
                 email: email.clone(),
                 premium: cfg.defaults.user.premium.into(),
-                premium_type: cfg.defaults.user.premium_type.into(),
+                premium_type: Some(cfg.defaults.user.premium_type.into()),
                 bot: Some(bot),
                 verified: cfg.defaults.user.verified.into(),
                 ..Default::default()
@@ -85,9 +86,9 @@ impl User {
             }),
             fingerprints: fingerprint.unwrap_or_default(),
             rights: cfg.register.default_rights,
-            settings_index: user_settings.index,
+            settings_index: user_settings.index.clone().into(),
             extended_settings: sqlx::types::Json(Value::Object(Map::default())),
-            settings: user_settings,
+            settings: user_settings.clone(),
             ..Default::default()
         };
 
@@ -102,21 +103,21 @@ impl User {
             .bind(false)
             .bind(bot)
             .bind(false) // TODO: Base nsfw off date of birth
-            .bind(0u32) // TODO: flags
+            .bind(PgU32::from(0)) // TODO: flags
             .bind(Rights::default())
-            .bind(user.settings.index)
+            .bind(PgU64::from(user.settings.index.clone()))
             .execute(db)
             .await?;
 
         Ok(user)
     }
 
-    async fn find_unused_discriminator(db: &MySqlPool, cfg: &Config) -> Result<String, Error> {
+    async fn find_unused_discriminator(db: &PgPool, cfg: &Config) -> Result<String, Error> {
         // TODO: intelligently find unused discriminator: https://dba.stackexchange.com/questions/48594/find-numbers-not-used-in-a-column
         todo!()
     }
 
-    pub async fn get_by_id(db: &MySqlPool, id: Snowflake) -> Result<Option<Self>, Error> {
+    pub async fn get_by_id(db: &PgPool, id: Snowflake) -> Result<Option<Self>, Error> {
         sqlx::query_as("SELECT * FROM users WHERE id = ?")
             .bind(id)
             .fetch_optional(db)
@@ -125,10 +126,10 @@ impl User {
     }
 
     pub async fn get_by_id_list(
-        db: &MySqlPool,
+        db: &PgPool,
         ids: &[Snowflake],
         after: Option<Snowflake>,
-        limit: u32,
+        limit: PgU32,
     ) -> Result<Vec<Self>, Error> {
         let mut query_builder = sqlx::QueryBuilder::new("SELECT * FROM users WHERE id IN (");
         let mut separated = query_builder.separated(", ");
@@ -157,7 +158,7 @@ impl User {
     }
 
     pub async fn find_by_user_and_discrim(
-        db: &MySqlPool,
+        db: &PgPool,
         user: &str,
         discrim: &str,
     ) -> Result<Option<Self>, Error> {
@@ -170,7 +171,7 @@ impl User {
     }
 
     pub async fn get_user_by_email_or_phone(
-        db: &MySqlPool,
+        db: &PgPool,
         email: &str,
         phone: &str,
     ) -> Result<Option<Self>, Error> {
@@ -184,7 +185,7 @@ impl User {
 
     pub async fn add_to_guild(
         &self,
-        db: &MySqlPool,
+        db: &PgPool,
         guild_id: Snowflake,
     ) -> Result<GuildMember, Error> {
         let public = self.to_public_user();
@@ -208,7 +209,7 @@ impl User {
         GuildMember::create(db, self, &guild).await
     }
 
-    pub async fn count(db: &MySqlPool) -> Result<i32, Error> {
+    pub async fn count(db: &PgPool) -> Result<i32, Error> {
         sqlx::query("SELECT COUNT(*) FROM users")
             .fetch_one(db)
             .await
@@ -216,7 +217,7 @@ impl User {
             .map(|r| r.get::<i32, _>(0))
     }
 
-    pub async fn count_guilds(&self, db: &MySqlPool) -> Result<i32, Error> {
+    pub async fn count_guilds(&self, db: &PgPool) -> Result<i32, Error> {
         GuildMember::count_by_user_id(db, self.id).await
     }
 

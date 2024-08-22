@@ -10,7 +10,7 @@ use poem::{
     web::{Data, Json, Path},
     IntoResponse,
 };
-use sqlx::MySqlPool;
+use sqlx::PgPool;
 
 use crate::{
     database::entities::{Config, Guild, Role, User},
@@ -22,7 +22,7 @@ pub(crate) mod member_counts;
 
 #[handler]
 pub async fn get_roles(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&PgPool>,
     Data(authed_user): Data<&User>,
     Path(guild_id): Path<Snowflake>,
 ) -> poem::Result<impl IntoResponse> {
@@ -41,7 +41,7 @@ pub async fn get_roles(
 
 #[handler]
 pub async fn create_role(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&PgPool>,
     Data(authed_user): Data<&User>,
     Data(config): Data<&Config>,
     Path(guild_id): Path<Snowflake>,
@@ -86,7 +86,7 @@ pub async fn create_role(
 
 #[handler]
 pub async fn update_position(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&PgPool>,
     Data(authed_user): Data<&User>,
     Data(config): Data<&Config>,
     Path(guild_id): Path<Snowflake>,
@@ -116,7 +116,7 @@ pub async fn update_position(
         return Err(Error::Guild(GuildError::RoleNotFound).into());
     }
 
-    role.position = payload.position;
+    role.position = payload.position.into();
     role.save(db).await?;
 
     let mut roles = guild.get_roles(db).await?;

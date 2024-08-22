@@ -12,7 +12,7 @@ use poem::{
 };
 use reqwest::StatusCode;
 use serde_json::json;
-use sqlx::MySqlPool;
+use sqlx::PgPool;
 
 use crate::{
     database::entities::{Config, Guild, GuildTemplate, User},
@@ -21,7 +21,7 @@ use crate::{
 
 #[handler]
 pub async fn get_template(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&PgPool>,
     Data(config): Data<&Config>,
     Path(code): Path<String>,
 ) -> poem::Result<impl IntoResponse> {
@@ -84,7 +84,7 @@ pub async fn get_template(
 
 #[handler]
 pub async fn create_guild_from_template(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&PgPool>,
     Data(authed_user): Data<&User>,
     Data(config): Data<&Config>,
     Path(code): Path<String>,

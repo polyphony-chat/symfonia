@@ -12,7 +12,8 @@ use chorus::types::{
 };
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, MySqlPool, QueryBuilder, Row};
+use sqlx::{FromRow, PgPool, QueryBuilder, Row};
+use sqlx_pg_uint::PgU64;
 
 use crate::{
     database::entities::User,
@@ -45,7 +46,7 @@ impl DerefMut for Message {
 
 impl Message {
     pub async fn create(
-        db: &MySqlPool,
+        db: &PgPool,
         payload: MessageSendSchema,
         guild_id: Option<Snowflake>,
         channel_id: Snowflake,
@@ -128,7 +129,7 @@ impl Message {
     }
 
     pub async fn get_by_nonce(
-        db: &MySqlPool,
+        db: &PgPool,
         channel_id: Snowflake,
         author_id: Snowflake,
         nonce: &str,
@@ -145,7 +146,7 @@ impl Message {
     }
 
     pub async fn get_by_id(
-        db: &MySqlPool,
+        db: &PgPool,
         channel_id: Snowflake,
         id: Snowflake,
     ) -> Result<Option<Self>, Error> {
@@ -158,7 +159,7 @@ impl Message {
     }
 
     pub async fn get_by_channel_id(
-        db: &MySqlPool,
+        db: &PgPool,
         channel_id: Snowflake,
         anchor: ChannelMessagesAnchor,
         limit: i32,
@@ -212,7 +213,7 @@ impl Message {
         }
     }
 
-    pub async fn get_pinned(db: &MySqlPool, channel_id: Snowflake) -> Result<Vec<Self>, Error> {
+    pub async fn get_pinned(db: &PgPool, channel_id: Snowflake) -> Result<Vec<Self>, Error> {
         sqlx::query_as("SELECT * FROM `messages` WHERE `channel_id` = ? AND `pinned` = true")
             .bind(channel_id)
             .fetch_all(db)
@@ -221,11 +222,12 @@ impl Message {
     }
 
     pub async fn count_by_user_in_window(
-        db: &MySqlPool,
+        db: &PgPool,
         channel_id: Snowflake,
         author_id: Snowflake,
         window: u64,
     ) -> Result<i32, Error> {
+        let window = PgU64::from(window);
         let res = sqlx::query("SELECT COUNT(*) FROM `messages` WHERE `channel_id` = ? AND `author_id` = ? AND `timestamp` > NOW() - INTERVAL ? SECOND")
             .bind(channel_id)
             .bind(author_id)
@@ -237,7 +239,7 @@ impl Message {
         Ok(data)
     }
 
-    pub async fn count_pinned(db: &MySqlPool, channel_id: Snowflake) -> Result<i32, Error> {
+    pub async fn count_pinned(db: &PgPool, channel_id: Snowflake) -> Result<i32, Error> {
         let res = sqlx::query(
             "SELECT COUNT(*) FROM `messages` WHERE `channel_id` = ? AND `pinned` = true",
         )
@@ -249,7 +251,7 @@ impl Message {
         Ok(data)
     }
 
-    pub async fn count(db: &MySqlPool) -> Result<i32, Error> {
+    pub async fn count(db: &PgPool) -> Result<i32, Error> {
         sqlx::query("SELECT COUNT(*) FROM `messages`")
             .fetch_one(db)
             .await
@@ -257,18 +259,14 @@ impl Message {
             .map(|r| r.get::<i32, _>(0))
     }
 
-    pub async fn populate_relations(&mut self, db: &MySqlPool) -> Result<(), Error> {
+    pub async fn populate_relations(&mut self, db: &PgPool) -> Result<(), Error> {
         self.author = User::get_by_id(db, self.author_id)
             .await?
             .map(|u| u.to_public_user());
         Ok(())
     }
 
-    pub async fn modify(
-        &mut self,
-        db: &MySqlPool,
-        payload: MessageModifySchema,
-    ) -> Result<(), Error> {
+    pub async fn modify(&mut self, db: &PgPool, payload: MessageModifySchema) -> Result<(), Error> {
         if let Some(content) = &payload.content {
             self.content = Some(content.to_owned());
         }
@@ -288,7 +286,7 @@ impl Message {
         todo!()
     }
 
-    pub async fn set_pinned(&mut self, db: &MySqlPool, pinned: bool) -> Result<(), Error> {
+    pub async fn set_pinned(&mut self, db: &PgPool, pinned: bool) -> Result<(), Error> {
         self.pinned = pinned;
         sqlx::query("UPDATE `messages` SET `pinned` = ? WHERE `id` = ?")
             .bind(pinned)
@@ -300,17 +298,13 @@ impl Message {
         Ok(())
     }
 
-    pub async fn clear_reactions(&mut self, db: &MySqlPool) -> Result<(), Error> {
+    pub async fn clear_reactions(&mut self, db: &PgPool) -> Result<(), Error> {
         self.reactions = None;
         self.save(db).await?;
         Ok(())
     }
 
-    pub async fn remove_reaction(
-        &mut self,
-        db: &MySqlPool,
-        emoji: PartialEmoji,
-    ) -> Result<(), Error> {
+    pub async fn remove_reaction(&mut self, db: &PgPool, emoji: PartialEmoji) -> Result<(), Error> {
         if let Some(reactions) = self.reactions.as_mut() {
             let orig_len = reactions.len();
             reactions.retain(|r| {
@@ -329,7 +323,7 @@ impl Message {
         Ok(())
     }
 
-    pub async fn save(&self, db: &MySqlPool) -> Result<(), Error> {
+    pub async fn save(&self, db: &PgPool) -> Result<(), Error> {
         sqlx::query("UPDATE `messages` SET `content` = ?, `embeds` = ?, `attachments` = ?, `components` = ?, `flags` = ?, `edited_timestamp` = NOW() WHERE `id` = ?")
             .bind(&self.content)
             .bind(&self.embeds)
@@ -341,7 +335,7 @@ impl Message {
             .map_err(Error::SQLX)
     }
 
-    pub async fn delete(&self, db: &MySqlPool) -> Result<(), Error> {
+    pub async fn delete(&self, db: &PgPool) -> Result<(), Error> {
         sqlx::query("DELETE FROM `messages` WHERE `id` = ?")
             .bind(self.id)
             .execute(db)
@@ -350,7 +344,7 @@ impl Message {
             .map_err(Error::SQLX)
     }
 
-    pub async fn bulk_delete(db: &MySqlPool, ids: Vec<Snowflake>) -> Result<(), Error> {
+    pub async fn bulk_delete(db: &PgPool, ids: Vec<Snowflake>) -> Result<(), Error> {
         // TODO: Limit the timeframe?
         let mut query_builder = QueryBuilder::new("DELETE FROM `messages` WHERE `id` IN (");
 
@@ -398,7 +392,7 @@ impl Message {
     }
 
     pub async fn search(
-        db: &MySqlPool,
+        db: &PgPool,
         guild_id: impl Into<Option<Snowflake>>,
         channel_id: impl Into<Option<Snowflake>>,
         search_payload: &MessageSearchQuery,

@@ -11,7 +11,8 @@ use chorus::types::{
     WelcomeScreenObject,
 };
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, MySqlPool, QueryBuilder, Row};
+use sqlx::{FromRow, PgPool, QueryBuilder, Row};
+use sqlx_pg_uint::PgU16;
 
 use crate::{
     database::entities::{
@@ -48,7 +49,7 @@ impl DerefMut for Guild {
 
 impl Guild {
     pub async fn create(
-        db: &MySqlPool,
+        db: &PgPool,
         cfg: &Config,
         name: &str,
         icon: Option<String>,
@@ -177,7 +178,7 @@ impl Guild {
     }
 
     pub async fn create_from_template(
-        db: &MySqlPool,
+        db: &PgPool,
         cfg: &Config,
         owner_id: Snowflake,
         template: &GuildTemplate,
@@ -190,7 +191,7 @@ impl Guild {
         Self::create(db, cfg, name, None, owner_id, &g.channels).await
     }
 
-    pub async fn get_by_id(db: &MySqlPool, id: Snowflake) -> Result<Option<Self>, Error> {
+    pub async fn get_by_id(db: &PgPool, id: Snowflake) -> Result<Option<Self>, Error> {
         sqlx::query_as("SELECT * FROM guilds WHERE id = ?")
             .bind(id)
             .fetch_optional(db)
@@ -201,7 +202,7 @@ impl Guild {
     // Helper functions start
     pub async fn get_member(
         &self,
-        db: &MySqlPool,
+        db: &PgPool,
         user_id: Snowflake,
     ) -> Result<Option<GuildMember>, Error> {
         GuildMember::get_by_id(db, user_id, self.id).await
@@ -209,13 +210,13 @@ impl Guild {
 
     pub async fn get_members_by_role(
         &self,
-        db: &MySqlPool,
+        db: &PgPool,
         role_id: Snowflake,
     ) -> Result<Vec<GuildMember>, Error> {
         GuildMember::get_by_role_id(db, role_id, self.id).await
     }
 
-    pub async fn has_member(&self, db: &MySqlPool, user_id: Snowflake) -> Result<bool, Error> {
+    pub async fn has_member(&self, db: &PgPool, user_id: Snowflake) -> Result<bool, Error> {
         sqlx::query_as("SELECT * FROM guild_members WHERE guild_id = ? AND user_id =?")
             .bind(self.id)
             .bind(user_id)
@@ -225,39 +226,39 @@ impl Guild {
             .map(|r: Option<GuildMember>| r.is_some())
     }
 
-    pub async fn get_role(&self, db: &MySqlPool, id: Snowflake) -> Result<Option<Role>, Error> {
+    pub async fn get_role(&self, db: &PgPool, id: Snowflake) -> Result<Option<Role>, Error> {
         Role::get_by_id(db, id)
             .await
             .map(|x| x.filter(|y| y.guild_id == self.id))
     }
 
-    pub async fn get_invites(&self, db: &MySqlPool) -> Result<Vec<Invite>, Error> {
+    pub async fn get_invites(&self, db: &PgPool) -> Result<Vec<Invite>, Error> {
         Invite::get_by_guild(db, self.id).await
     }
 
-    pub async fn get_emoji(&self, db: &MySqlPool, id: Snowflake) -> Result<Option<Emoji>, Error> {
+    pub async fn get_emoji(&self, db: &PgPool, id: Snowflake) -> Result<Option<Emoji>, Error> {
         Emoji::get_by_id(db, id)
             .await // We only want emojis from this guild
             .map(|x| x.filter(|y| y.guild_id == self.id))
     }
 
-    pub async fn get_emojis(&self, db: &MySqlPool) -> Result<Vec<Emoji>, Error> {
+    pub async fn get_emojis(&self, db: &PgPool) -> Result<Vec<Emoji>, Error> {
         Emoji::get_by_guild(db, self.id).await
     }
 
-    pub async fn get_stickers(&self, db: &MySqlPool) -> Result<Vec<Sticker>, Error> {
+    pub async fn get_stickers(&self, db: &PgPool) -> Result<Vec<Sticker>, Error> {
         Sticker::get_by_guild(db, self.id).await
     }
 
-    pub async fn get_roles(&self, db: &MySqlPool) -> Result<Vec<Role>, Error> {
+    pub async fn get_roles(&self, db: &PgPool) -> Result<Vec<Role>, Error> {
         Role::get_by_guild(db, self.id).await
     }
 
-    pub async fn count_roles(&self, db: &MySqlPool) -> Result<i32, Error> {
+    pub async fn count_roles(&self, db: &PgPool) -> Result<i32, Error> {
         Role::count_by_guild(db, self.id).await
     }
 
-    pub async fn count(db: &MySqlPool) -> Result<i32, Error> {
+    pub async fn count(db: &PgPool) -> Result<i32, Error> {
         sqlx::query("SELECT COUNT(*) FROM guilds")
             .fetch_one(db)
             .await
@@ -265,7 +266,7 @@ impl Guild {
             .map(|r| r.get::<i32, _>(0))
     }
 
-    pub async fn populate_relations(&mut self, db: &MySqlPool) -> Result<(), Error> {
+    pub async fn populate_relations(&mut self, db: &PgPool) -> Result<(), Error> {
         self.emojis = self
             .get_emojis(db)
             .await?
@@ -289,7 +290,7 @@ impl Guild {
         Ok(())
     }
 
-    pub async fn add_member(&self, db: &MySqlPool, user_id: Snowflake) -> Result<(), Error> {
+    pub async fn add_member(&self, db: &PgPool, user_id: Snowflake) -> Result<(), Error> {
         let user = User::get_by_id(db, user_id)
             .await?
             .ok_or(Error::User(UserError::InvalidUser))?;
@@ -301,17 +302,17 @@ impl Guild {
 
     pub async fn calculate_inactive_members(
         &self,
-        db: &MySqlPool,
+        db: &PgPool,
         days: u8,
         roles: Vec<Snowflake>,
-        highest_role: u16,
+        highest_role: PgU16,
     ) -> Result<Vec<GuildMember>, Error> {
         let now = chrono::Utc::now().naive_utc();
         let cutoff = now - chrono::Duration::days(days as i64);
         let min_snowflake = Snowflake::from(cutoff.and_utc().timestamp() as u64);
 
         if roles.is_empty() {
-            sqlx::query_as("SELECT gm.* FROM guild_members gm JOIN member_roles mr ON gm.`index` = mr.`index` JOIN roles r ON r.id = mr.role_id WHERE gm.guild_id = ? AND (gm.last_message_id < ? OR gm.last_message_id IS NULL) AND r.position < ?")
+            sqlx::query_as("SELECT gm.* FROM guild_members gm JOIN member_roles mr ON gm.index = mr.index JOIN roles r ON r.id = mr.role_id WHERE gm.guild_id = ? AND (gm.last_message_id < ? OR gm.last_message_id IS NULL) AND r.position < ?")
                 .bind(self.id)
                 .bind(min_snowflake)
                 .bind(highest_role)
@@ -319,7 +320,7 @@ impl Guild {
                 .await
                 .map_err(Error::SQLX)
         } else {
-            let mut builder = QueryBuilder::new("SELECT gm.* FROM members gm JOIN member_roles mr ON gm.`index` = mr.`index` JOIN roles r ON r.id = mr.role_id WHERE gm.guild_id = ? AND (gm.last_message_id < ? OR gm.last_message_id IS NULL) AND r.position < ? AND mr.role_id IN (");
+            let mut builder = QueryBuilder::new("SELECT gm.* FROM members gm JOIN member_roles mr ON gm.index = mr.index JOIN roles r ON r.id = mr.role_id WHERE gm.guild_id = ? AND (gm.last_message_id < ? OR gm.last_message_id IS NULL) AND r.position < ? AND mr.role_id IN (");
 
             let mut separated = builder.separated(", ");
             for role in &roles {
@@ -340,7 +341,7 @@ impl Guild {
         }
     }
 
-    pub async fn save(&self, db: &MySqlPool) -> Result<(), Error> {
+    pub async fn save(&self, db: &PgPool) -> Result<(), Error> {
         sqlx::query("UPDATE guilds SET afk_timeout =?, default_message_notifications =?, explicit_content_filter =?, features =?, icon =?, max_members =?, max_presences =?, max_video_channel_users =?, name =?, owner_id =?, region =?, system_channel_flags =?, preferred_locale =?, welcome_screen =?, large =?, premium_tier =?, unavailable =?, widget_enabled =?, nsfw =?, public_updates_channel_id =?, rules_channel_id =? WHERE id =?")
             .bind(self.afk_timeout)
             .bind(self.default_message_notifications)
@@ -369,7 +370,7 @@ impl Guild {
             .map_err(Error::SQLX)
     }
 
-    pub async fn delete(self, db: &MySqlPool) -> Result<(), Error> {
+    pub async fn delete(self, db: &PgPool) -> Result<(), Error> {
         sqlx::query("DELETE FROM guilds WHERE id =?")
             .bind(self.id)
             .execute(db)
@@ -380,7 +381,7 @@ impl Guild {
 
     pub async fn search_members(
         &self,
-        db: &sqlx::MySqlPool,
+        db: &sqlx::PgPool,
         query: &str,
         limit: u16,
     ) -> Result<Vec<GuildMember>, Error> {
@@ -422,7 +423,7 @@ impl DerefMut for GuildBan {
 
 impl GuildBan {
     pub async fn create(
-        db: &MySqlPool,
+        db: &PgPool,
         guild_id: Snowflake,
         user_id: Snowflake,
         executing_user_id: Snowflake,
@@ -458,7 +459,7 @@ impl GuildBan {
     }
 
     pub async fn builk_create(
-        db: &MySqlPool,
+        db: &PgPool,
         guild_id: Snowflake,
         user_ids: Vec<Snowflake>,
         executing_user_id: Snowflake,
@@ -507,7 +508,7 @@ impl GuildBan {
         Ok(rows)
     }
 
-    pub async fn populate_relations(&mut self, db: &MySqlPool) -> Result<(), Error> {
+    pub async fn populate_relations(&mut self, db: &PgPool) -> Result<(), Error> {
         let user = User::get_by_id(db, self.user_id)
             .await?
             .ok_or(Error::User(UserError::InvalidUser))?;
@@ -515,7 +516,7 @@ impl GuildBan {
         Ok(())
     }
 
-    pub async fn get_by_id(db: &MySqlPool, id: Snowflake) -> Result<Option<GuildBan>, Error> {
+    pub async fn get_by_id(db: &PgPool, id: Snowflake) -> Result<Option<GuildBan>, Error> {
         sqlx::query_as("SELECT * FROM guild_bans WHERE id = ?")
             .bind(id)
             .fetch_optional(db)
@@ -524,12 +525,13 @@ impl GuildBan {
     }
 
     pub async fn get_by_guild(
-        db: &MySqlPool,
+        db: &PgPool,
         guild_id: Snowflake,
         before: Option<Snowflake>,
         after: Option<Snowflake>,
         limit: Option<u16>,
     ) -> Result<Vec<GuildBan>, Error> {
+        let limit = limit.map(PgU16::from);
         sqlx::query_as("SELECT * FROM bans WHERE (user_id < ? OR ? IS NULL) AND (user_id > ? OR ? IS NULL) AND guild_id = ? LIMIT IFNULL(?, 1000)")
             .bind(before)
             .bind(before)
@@ -543,7 +545,7 @@ impl GuildBan {
     }
 
     pub async fn get_by_user(
-        db: &MySqlPool,
+        db: &PgPool,
         guild_id: Snowflake,
         user_id: Snowflake,
     ) -> Result<Option<Self>, Error> {
@@ -556,10 +558,10 @@ impl GuildBan {
     }
 
     pub async fn find_by_username(
-        db: &MySqlPool,
+        db: &PgPool,
         guild_id: Snowflake,
         search_term: &str,
-        limit: u16,
+        limit: PgU16,
     ) -> Result<Vec<Self>, Error> {
         sqlx::query_as("SELECT b.* FROM bans b JOIN members m ON b.user_id = m.id AND b.guild_id = m.guild_id JOIN users u ON b.user_id = u.id WHERE u.username LIKE ? AND b.guild_id = ? LIMIT ?")
             .bind(format!("%{}%", search_term))
@@ -570,7 +572,7 @@ impl GuildBan {
             .map_err(Error::SQLX)
     }
 
-    pub async fn delete(self, db: &MySqlPool) -> Result<(), Error> {
+    pub async fn delete(self, db: &PgPool) -> Result<(), Error> {
         sqlx::query("DELETE FROM guild_bans WHERE id = ?")
             .bind(self.id)
             .execute(db)

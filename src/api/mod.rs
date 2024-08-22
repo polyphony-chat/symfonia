@@ -11,7 +11,7 @@ use poem::{
     EndpointExt, IntoResponse, Route, Server,
 };
 use serde_json::json;
-use sqlx::MySqlPool;
+use sqlx::PgPool;
 
 use crate::{
     api::{
@@ -27,7 +27,7 @@ use crate::{
 mod middleware;
 mod routes;
 
-pub async fn start_api(db: MySqlPool) -> Result<(), Error> {
+pub async fn start_api(db: PgPool) -> Result<(), Error> {
     log::info!(target: "symfonia::api::cfg", "Loading configuration");
     let config = Config::init(&db).await?;
 

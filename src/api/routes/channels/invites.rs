@@ -8,14 +8,14 @@ use chorus::types::jwt::Claims;
 use chorus::types::{CreateChannelInviteSchema, Snowflake};
 use poem::web::{Data, Json, Path};
 use poem::{handler, IntoResponse};
-use sqlx::MySqlPool;
+use sqlx::PgPool;
 
 use crate::database::entities::Channel;
 use crate::errors::{ChannelError, Error};
 
 #[handler]
 pub async fn create_invite(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path(channel_id): Path<Snowflake>,
     Json(payload): Json<CreateChannelInviteSchema>,
@@ -34,7 +34,7 @@ pub async fn create_invite(
 
 #[handler]
 pub async fn get_invites(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path(channel_id): Path<Snowflake>,
 ) -> poem::Result<impl IntoResponse> {

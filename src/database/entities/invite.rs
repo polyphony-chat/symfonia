@@ -10,7 +10,8 @@ use chorus::types::{CreateChannelInviteSchema, InviteType, Snowflake};
 use chrono::Utc;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
-use sqlx::MySqlPool;
+use sqlx::PgPool;
+use sqlx_pg_uint::{PgU32, PgU8};
 
 use crate::{
     database::entities::{Channel, Guild, User},
@@ -46,7 +47,7 @@ impl DerefMut for Invite {
 
 impl Invite {
     pub async fn create(
-        db: &MySqlPool,
+        db: &PgPool,
         data: CreateChannelInviteSchema,
         channel_id: Option<Snowflake>,
         inviter_id: Option<Snowflake>,
@@ -86,8 +87,8 @@ impl Invite {
                 guild_scheduled_event: None,
                 invite_type: Some(invite_type),
                 inviter: None,
-                max_age: data.max_age,
-                max_uses: data.max_uses,
+                max_age: data.max_age.map(|max_age| max_age.into()),
+                max_uses: data.max_uses.map(|max_uses| max_uses.into()),
                 stage_instance: None,
                 target_application: None,
                 target_type: data.target_type,
@@ -109,9 +110,9 @@ impl Invite {
             .bind(random_code)
             .bind(invite.invite_type)
             .bind(invite.temporary)
-            .bind(invite.uses.unwrap_or(0))
-            .bind(invite.max_uses)
-            .bind(invite.max_age)
+            .bind(invite.uses.clone().unwrap_or(0.into()))
+            .bind(invite.max_uses.clone())
+            .bind(invite.max_age.clone())
             .bind(invite.created_at)
             .bind(invite.expires_at)
             .bind(invite.guild_id)
@@ -128,7 +129,7 @@ impl Invite {
     }
 
     pub async fn create_vanity(
-        db: &MySqlPool,
+        db: &PgPool,
         guild_id: Snowflake,
         code: &str,
     ) -> Result<Self, Error> {
@@ -150,9 +151,9 @@ impl Invite {
             .bind(code)
             .bind(invite.invite_type)
             .bind(invite.temporary)
-            .bind(invite.uses.unwrap_or(0))
-            .bind(invite.max_uses)
-            .bind(invite.max_age)
+            .bind(invite.uses.clone().unwrap_or(PgU32::from(0)))
+            .bind(invite.max_uses.clone())
+            .bind(invite.max_age.clone())
             .bind(invite.created_at)
             .bind(invite.expires_at)
             .bind(invite.guild_id)
@@ -168,7 +169,7 @@ impl Invite {
         Ok(invite)
     }
 
-    pub async fn get_by_code(db: &MySqlPool, code: &str) -> Result<Option<Self>, Error> {
+    pub async fn get_by_code(db: &PgPool, code: &str) -> Result<Option<Self>, Error> {
         let invite: Option<Self> = sqlx::query_as("SELECT * FROM invites WHERE code = ?")
             .bind(code)
             .fetch_optional(db)
@@ -178,7 +179,7 @@ impl Invite {
         Ok(invite)
     }
 
-    pub async fn get_by_guild(db: &MySqlPool, guild_id: Snowflake) -> Result<Vec<Self>, Error> {
+    pub async fn get_by_guild(db: &PgPool, guild_id: Snowflake) -> Result<Vec<Self>, Error> {
         let guild = Guild::get_by_id(db, guild_id)
             .await?
             .ok_or(Error::Guild(GuildError::InvalidGuild))?;
@@ -197,7 +198,7 @@ impl Invite {
     }
 
     pub async fn get_by_guild_vanity(
-        db: &MySqlPool,
+        db: &PgPool,
         guild_id: Snowflake,
     ) -> Result<Option<Self>, Error> {
         sqlx::query_as("SELECT * FROM invites WHERE guild_id = ? AND vanity_url = 1")
@@ -207,7 +208,7 @@ impl Invite {
             .map_err(Error::SQLX)
     }
 
-    pub async fn get_by_channel(db: &MySqlPool, channel_id: Snowflake) -> Result<Vec<Self>, Error> {
+    pub async fn get_by_channel(db: &PgPool, channel_id: Snowflake) -> Result<Vec<Self>, Error> {
         sqlx::query_as("SELECT * FROM invites WHERE channel_id = ?")
             .bind(channel_id)
             .fetch_all(db)
@@ -215,7 +216,7 @@ impl Invite {
             .map_err(Error::SQLX)
     }
 
-    pub async fn delete(&self, db: &MySqlPool) -> Result<(), Error> {
+    pub async fn delete(&self, db: &PgPool) -> Result<(), Error> {
         sqlx::query("DELETE FROM invites WHERE code = ?")
             .bind(&self.code)
             .execute(db)
@@ -224,7 +225,7 @@ impl Invite {
             .map_err(Error::SQLX)
     }
 
-    pub async fn join(&mut self, db: &MySqlPool, user: &User) -> Result<(), Error> {
+    pub async fn join(&mut self, db: &PgPool, user: &User) -> Result<(), Error> {
         if let Some(invite_type) = self.invite_type {
             match invite_type {
                 InviteType::Guild => {
@@ -244,18 +245,21 @@ impl Invite {
             // TODO: Some form of handling for invites without an invite type?  maybe just default to guild?
         }
 
-        let max_uses = self.max_uses.unwrap_or(0) as u32;
-        if self.uses.unwrap_or(0) > max_uses && max_uses > 0 {
+        let max_uses = self.max_uses.clone().unwrap_or(PgU8::from(0)).to_uint() as u32;
+        if self.uses.clone().unwrap_or(PgU32::from(0)) > PgU32::from(max_uses) && max_uses > 0 {
             self.delete(db).await?;
         }
 
         Ok(())
     }
 
-    pub async fn increase_uses(&mut self, db: &MySqlPool) -> Result<(), Error> {
-        self.uses = self.uses.map(|uses| uses + 1);
+    pub async fn increase_uses(&mut self, db: &PgPool) -> Result<(), Error> {
+        self.uses = self
+            .uses
+            .as_mut()
+            .map(|uses| PgU32::from(uses.to_uint() + 1));
         sqlx::query("UPDATE invites SET uses = ? WHERE code = ?")
-            .bind(self.uses)
+            .bind(&self.uses)
             .bind(&self.code)
             .execute(db)
             .await
@@ -263,7 +267,7 @@ impl Invite {
             .map_err(Error::SQLX)
     }
 
-    pub async fn populate_relations(&mut self, db: &MySqlPool) -> Result<(), Error> {
+    pub async fn populate_relations(&mut self, db: &PgPool) -> Result<(), Error> {
         // if let Some(guild_id) = self.guild_id {
         //     self.guild = Guild::get_by_id(db, guild_id).await?.map(|guild| GuildInvite::fr);
         // }
@@ -277,7 +281,7 @@ impl Invite {
         Ok(())
     }
 
-    pub async fn set_code(&mut self, db: &MySqlPool, code: &str) -> Result<(), Error> {
+    pub async fn set_code(&mut self, db: &PgPool, code: &str) -> Result<(), Error> {
         sqlx::query("UPDATE invites SET code = ? WHERE code = ?")
             .bind(code)
             .bind(&self.code)
@@ -288,14 +292,14 @@ impl Invite {
         Ok(())
     }
 
-    pub async fn save(&self, db: &MySqlPool) -> Result<(), Error> {
+    pub async fn save(&self, db: &PgPool) -> Result<(), Error> {
         sqlx::query("UPDATE invites SET type = ?, temporary = ?, uses = ?, max_uses = ?, max_age = ?, created_at = ?, expires_at = ?, guild_id = ?, channel_id = ?, inviter_id = ?, target_user_id = ?, target_user_type = ?, vanity_url = ?, flags = ? WHERE code = ?")
             .bind(&self.code)
             .bind(self.invite_type)
             .bind(self.temporary)
-            .bind(self.uses.unwrap_or(0))
-            .bind(self.max_uses)
-            .bind(self.max_age)
+            .bind(self.uses.as_ref().unwrap_or(&0.into()))
+            .bind(&self.max_uses)
+            .bind(&self.max_age)
             .bind(self.created_at)
             .bind(self.expires_at)
             .bind(self.guild_id)

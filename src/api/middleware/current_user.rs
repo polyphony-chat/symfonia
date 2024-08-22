@@ -6,7 +6,7 @@
 
 use chorus::types::jwt::Claims;
 use poem::{Endpoint, Middleware, Request};
-use sqlx::MySqlPool;
+use sqlx::PgPool;
 
 use crate::database::entities::User;
 
@@ -28,7 +28,7 @@ impl<E: Endpoint> Endpoint for CurrentUserMiddlewareImpl<E> {
 
     async fn call(&self, mut req: Request) -> poem::Result<Self::Output> {
         let db = req
-            .data::<MySqlPool>()
+            .data::<PgPool>()
             .expect("Failed to get database connection");
         if let Some(claims) = req.data::<Claims>() {
             if let Some(user) = User::get_by_id(db, claims.id).await? {

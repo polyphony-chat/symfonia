@@ -10,11 +10,11 @@ use chorus::types::jwt::Claims;
 use chorus::types::UserSettings;
 use poem::web::{Data, Json};
 use poem::{handler, IntoResponse};
-use sqlx::MySqlPool;
+use sqlx::PgPool;
 
 #[handler]
 pub async fn get_settings(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
 ) -> poem::Result<impl IntoResponse> {
     let user = User::get_by_id(db, claims.id)
@@ -26,7 +26,7 @@ pub async fn get_settings(
 
 #[handler]
 pub async fn update_settings(
-    Data(db): Data<&MySqlPool>,
+    Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Json(settings): Json<UserSettings>,
 ) -> poem::Result<impl IntoResponse> {
@@ -35,7 +35,7 @@ pub async fn update_settings(
         .ok_or(Error::User(UserError::InvalidUser))?;
 
     user.settings =
-        crate::database::entities::UserSettings::consume(settings, user.settings_index as u64);
+        crate::database::entities::UserSettings::consume(settings, user.settings_index.to_uint());
     // TODO: user.settings.update(db).await.map_err(Error::SQLX)?;
 
     Ok(Json(user.settings))

@@ -3,18 +3,18 @@ create table if not exists invites
     code             varchar(255) not null
         primary key,
     type             smallint     not null,
-    temporary        tinyint      not null,
+    temporary        smallint      not null,
     uses             int          not null,
     max_uses         int          not null,
     max_age          int          not null,
-    created_at       datetime     not null,
-    expires_at       datetime     null,
+    created_at       timestamp     not null,
+    expires_at       timestamp     null,
     guild_id         varchar(255) null,
     channel_id       varchar(255) null,
     inviter_id       varchar(255) null,
     target_user_id   varchar(255) null,
     target_user_type int          null,
-    vanity_url       tinyint      null,
+    vanity_url       smallint      null,
     flags            int          not null,
     constraint FK_11a0d394f8fc649c19ce5f16b59
         foreign key (target_user_id) references users (id)

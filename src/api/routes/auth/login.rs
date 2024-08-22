@@ -17,7 +17,7 @@ use crate::database::entities::{Config, User};
 
 #[handler]
 pub async fn login(
-    Data(db): Data<&sqlx::MySqlPool>,
+    Data(db): Data<&sqlx::PgPool>,
     Data(cfg): Data<&Config>,
     Json(payload): Json<LoginSchema>,
     req: &Request,
