@@ -13,13 +13,15 @@ use std::sync::{Arc, Mutex, Weak};
 use std::thread::sleep;
 use std::time::Duration;
 
-use chorus::types::{GatewayHeartbeat, GatewayHello, GatewayResume, Snowflake};
+use chorus::types::{
+    GatewayHeartbeat, GatewayHello, GatewayIdentifyPayload, GatewayResume, Snowflake,
+};
 use futures::stream::{SplitSink, SplitStream};
 use futures::{SinkExt, StreamExt};
 use log::info;
 use pubserve::Subscriber;
 use serde_json::{from_str, json};
-use sqlx::MySqlPool;
+use sqlx::PgPool;
 use tokio::net::{TcpListener, TcpStream};
 
 use tokio_tungstenite::tungstenite::Message;
@@ -116,7 +118,7 @@ struct NewConnection {
 }
 
 pub async fn start_gateway(
-    db: MySqlPool,
+    db: PgPool,
     publisher_map: SharedEventPublisherMap,
 ) -> Result<(), Error> {
     info!(target: "symfonia::gateway", "Starting gateway server");
