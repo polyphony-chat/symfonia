@@ -141,6 +141,7 @@ pub async fn start_gateway(
             stream,
             db.clone(),
             gateway_users.clone(),
+            config.clone(),
         ))
         .await
         {

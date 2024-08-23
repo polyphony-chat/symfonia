@@ -28,10 +28,12 @@ use crate::{
 mod middleware;
 mod routes;
 
-pub async fn start_api(db: PgPool, publisher_map: SharedEventPublisherMap) -> Result<(), Error> {
+pub async fn start_api(
+    db: PgPool,
+    publisher_map: SharedEventPublisherMap,
+    config: Config,
+) -> Result<(), Error> {
     log::info!(target: "symfonia::api::cfg", "Loading configuration");
-
-    let config = Config::init(&db).await?;
 
     if config.sentry.enabled {
         let _guard = sentry::init((

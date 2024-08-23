@@ -211,12 +211,21 @@ async fn main() {
             .expect("Failed to seed config");
     }
 
+    let symfonia_config = crate::database::entities::Config::init(&db)
+        .await
+        .unwrap_or_default();
+
     let shared_publisher_map = Arc::new(RwLock::new(HashMap::new()));
     let mut tasks = [
-        tokio::spawn(api::start_api(db.clone(), shared_publisher_map.clone())),
+        tokio::spawn(api::start_api(
+            db.clone(),
+            shared_publisher_map.clone(),
+            symfonia_config.clone(),
+        )),
         tokio::spawn(gateway::start_gateway(
             db.clone(),
             shared_publisher_map.clone(),
+            symfonia_config.clone(),
         )),
     ];
     for task in tasks.iter_mut() {
