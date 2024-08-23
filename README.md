@@ -36,7 +36,8 @@ Whether you are using Docker or not, you will need to have the following install
 3. Create a `.env` file in the root of the project with the following contents:
 
 ```env
-DATABASE_URL=[URL to your Postgres database]
+DATABASE_HOST=[ip/domain of your Postgres database]
+DATABASE_PORT=[Postgres port, usually 5432]
 DATABASE_USERNAME=[Your Postgres username]
 DATABASE_PASSWORD=[Your Postgres password]
 DATABASE_NAME=[Your Postgres database name]

@@ -1,0 +1,257 @@
+{
+  "api": {
+    "activeVersions": [
+      "6",
+      "7",
+      "8",
+      "9"
+    ],
+    "defaultVersion": "9",
+    "endpointPublic": null
+  },
+  "cdn": {
+    "endpointClient": null,
+    "endpointPrivate": null,
+    "endpointPublic": null,
+    "imagorServerUrl": null,
+    "resizeHeightMax": 1000,
+    "resizeWidthMax": 1000
+  },
+  "defaults": {
+    "guild": {
+      "afkTimeout": 300,
+      "defaultMessageNotifications": 1,
+      "explicitContentFilter": 0,
+      "maxPresences": 250000,
+      "maxVideoChannelUsers": 200
+    },
+    "user": {
+      "premium": true,
+      "premiumType": 2,
+      "verified": true
+    }
+  },
+  "email": {
+    "mailgun": {
+      "apiKey": null,
+      "domain": null
+    },
+    "mailjet": {
+      "apiKey": null,
+      "apiSecret": null
+    },
+    "provider": null,
+    "sendgrid": {
+      "apiKey": null
+    },
+    "smtp": {
+      "host": null,
+      "password": null,
+      "port": null,
+      "secure": false,
+      "username": null
+    }
+  },
+  "external": {
+    "twitter": null
+  },
+  "gateway": {
+    "endpointClient": null,
+    "endpointPrivate": null,
+    "endpointPublic": null
+  },
+  "general": {
+    "autoCreateBotUsers": false,
+    "correspondenceEmail": null,
+    "correspondenceUserID": null,
+    "frontPage": null,
+    "image": null,
+    "instanceDescription": "This is a Spacebar instance made in the pre-release days",
+    "instanceId": "1160033703750033437",
+    "instanceName": "Spacebar Instance",
+    "tosPage": null
+  },
+  "gif": {
+    "apiKey": "LIVDSRZULELA",
+    "enabled": true,
+    "provider": "tenor"
+  },
+  "guild": {
+    "autoJoin": {
+      "canLeave": true,
+      "enabled": true
+    },
+    "discovery": {
+      "limit": 24,
+      "offset": 0,
+      "showAllGuilds": false,
+      "useRecommendation": false
+    }
+  },
+  "kafka": {
+    "brokers": null
+  },
+  "limits": {
+    "absoluteRate": {
+      "register": {
+        "enabled": true,
+        "limit": 25,
+        "window": 3600000
+      },
+      "sendMessage": {
+        "enabled": true,
+        "limit": 200,
+        "window": 60000
+      }
+    },
+    "channel": {
+      "maxPins": 500,
+      "maxTopic": 1024,
+      "maxWebhooks": 100
+    },
+    "guild": {
+      "maxChannels": 65535,
+      "maxChannelsInCategory": 65535,
+      "maxEmojis": 2000,
+      "maxMembers": 25000000,
+      "maxRoles": 1000
+    },
+    "message": {
+      "maxAttachmentSize": 1073741824,
+      "maxBulkDelete": 1000,
+      "maxCharacters": 1048576,
+      "maxEmbedDownloadSize": 5242880,
+      "maxReactions": 2048,
+      "maxTTSCharacters": 160
+    },
+    "rate": {
+      "enabled": false,
+      "error": {
+        "count": 10,
+        "window": 5
+      },
+      "global": {
+        "count": 250,
+        "window": 5
+      },
+      "ip": {
+        "count": 500,
+        "window": 5
+      },
+      "routes": {
+        "auth": {
+          "login": {
+            "count": 5,
+            "window": 60
+          },
+          "register": {
+            "count": 2,
+            "window": 43200
+          }
+        },
+        "channel": {
+          "count": 10,
+          "window": 5
+        },
+        "guild": {
+          "count": 5,
+          "window": 5
+        },
+        "webhook": {
+          "count": 10,
+          "window": 5
+        }
+      }
+    },
+    "user": {
+      "maxFriends": 5000,
+      "maxGuilds": 1048576,
+      "maxUsername": 32
+    }
+  },
+  "login": {
+    "requireCaptcha": false,
+    "requireVerification": false
+  },
+  "metrics": {
+    "timeout": 30000
+  },
+  "passwordReset": {
+    "requireCaptcha": false
+  },
+  "rabbitmq": {
+    "host": null
+  },
+  "regions": {
+    "available": [
+      {
+        "custom": false,
+        "deprecated": false,
+        "endpoint": "127.0.0.1:3004",
+        "id": "spacebar",
+        "name": "spacebar",
+        "vip": false
+      }
+    ],
+    "default": "spacebar",
+    "useDefaultAsOptimal": true
+  },
+  "register": {
+    "allowMultipleAccounts": true,
+    "allowNewRegistration": true,
+    "blockProxies": true,
+    "dateOfBirth": {
+      "minimum": 13,
+      "required": true
+    },
+    "defaultRights": "875069521787904",
+    "disabled": false,
+    "email": {
+      "allowlist": false,
+      "blocklist": true,
+      "required": false
+    },
+    "guestsRequireInvite": true,
+    "incrementingDiscriminators": false,
+    "password": {
+      "minLength": 8,
+      "minNumbers": 2,
+      "minSymbols": 0,
+      "minUpperCase": 2,
+      "required": false
+    },
+    "requireCaptcha": true,
+    "requireInvite": false
+  },
+  "security": {
+    "autoUpdate": true,
+    "captcha": {
+      "enabled": false,
+      "secret": null,
+      "service": "hcaptcha",
+      "sitekey": null
+    },
+    "defaultRegistrationTokenExpiration": 604800000,
+    "forwardedFor": null,
+    "ipdataApiKey": "eca677b284b3bac29eb72f5e496aa9047f26543605efe99ff2ce35c9",
+    "jwtSecret": "7CYWGvQ8pB9f6B3EkTvbYvZUhA3AwXc8cAsg8KFvHTcH7pN7hK0DSk1w+h+A1bI3WYmdV2UqFWBvFajT3IZ3EqzI8h4Ttq/iNB5PsSC1YPpg4geG58fOFF691Me3aE7MmUAFxDpAfUAMNjG7sX6V3YTEaIWYTfGiDZPr2X6P7QRNlo8sEJ833kXXMCGz0/Zs5uZGlbm7/qFeNNRBCS3QW9hALZqf72rB0rc2zEB7S/I48WW1UTwQOLhqAc/neHz/PTIPYHPxnDvWfReaSzWGVuOXYrP/2YR6DKCwbulzL8/Lt4LdJcSf9ZyVfGoOm4uZ5Ynk3xElYFfuNgCTs0Lujg==",
+    "mfaBackupCodeCount": 10,
+    "requestSignature": "q5AyKYvr6oILJeQJbeEKjAInwahdGhZmr+FGO8RBRuo=",
+    "statsWorldReadable": true,
+    "twoFactor": {
+      "generateBackupCodes": true
+    }
+  },
+  "sentry": {
+    "enabled": false,
+    "endpoint": "https://05e8e3d005f34b7d97e920ae5870a5e5@sentry.thearcanebrony.net/6",
+    "environment": "quartz",
+    "traceSampleRate": 1
+  },
+  "templates": {
+    "allowDiscordTemplates": true,
+    "allowRaws": true,
+    "allowTemplateCreation": true,
+    "enabled": true
+  }
+}
