@@ -15,7 +15,7 @@ services:
     env_file: .env
     build: .
     environment:
-      - DATABASE_URL=db
+      - DATABASE_HOST=db
       - DATABASE_USERNAME=${POSTGRES_USER}
       - DATABASE_PASSWORD=${POSTGRES_PASSWORD}
       - DATABASE_NAME=${POSTGRES_DB}
