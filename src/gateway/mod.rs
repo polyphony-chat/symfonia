@@ -28,10 +28,12 @@ use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{accept_async, WebSocketStream};
 pub use types::*;
 
+use crate::database::entities::Config;
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 use crate::errors::{Error, GatewayError};
+use crate::util::token::check_token;
 use crate::{SharedEventPublisherMap, WebSocketReceive, WebSocketSend};
 
 /* NOTES (bitfl0wer) [These will be removed]
@@ -117,9 +119,13 @@ struct NewConnection {
     client: GatewayClient,
 }
 
+type ResumableClientsStore = Arc<Mutex<BTreeMap<String, DisconnectInfo>>>;
+type GatewayUsersStore = Arc<Mutex<BTreeMap<Snowflake, Arc<Mutex<GatewayUser>>>>>;
+
 pub async fn start_gateway(
     db: PgPool,
     publisher_map: SharedEventPublisherMap,
+    config: Config,
 ) -> Result<(), Error> {
     info!(target: "symfonia::gateway", "Starting gateway server");
 
@@ -127,13 +133,17 @@ pub async fn start_gateway(
     let try_socket = TcpListener::bind(&bind).await;
     let listener = try_socket.expect("Failed to bind to address");
 
-    let gateway_users: Arc<Mutex<BTreeMap<Snowflake, Arc<Mutex<GatewayUser>>>>> =
-        Arc::new(Mutex::new(BTreeMap::new()));
-    let resumeable_clients: Arc<Mutex<BTreeMap<String, DisconnectInfo>>> =
-        Arc::new(Mutex::new(BTreeMap::new()));
+    let gateway_users: GatewayUsersStore = Arc::new(Mutex::new(BTreeMap::new()));
+    let resumeable_clients: ResumableClientsStore = Arc::new(Mutex::new(BTreeMap::new()));
     tokio::task::spawn(async { purge_expired_disconnects(resumeable_clients) });
     while let Ok((stream, _)) = listener.accept().await {
-        let connection_result = match tokio::task::spawn(establish_connection(stream)).await {
+        let connection_result = match tokio::task::spawn(establish_connection(
+            stream,
+            db.clone(),
+            gateway_users.clone(),
+        ))
+        .await
+        {
             Ok(result) => result,
             Err(e) => {
                 log::debug!(target: "symfonia::gateway::establish_connection", "User gateway task died: {e}");
@@ -154,7 +164,7 @@ pub async fn start_gateway(
 /// A disconnected, resumable session can only be resumed within `RESUME_RECONNECT_WINDOW_SECONDS`
 /// seconds after a disconnect occurs. Sessions that can be resumed are stored in a `Map`. The
 /// purpose of this method is to periodically throw out expired sessions from that map.
-fn purge_expired_disconnects(resumeable_clients: Arc<Mutex<BTreeMap<String, DisconnectInfo>>>) {
+fn purge_expired_disconnects(resumeable_clients: ResumableClientsStore) {
     loop {
         sleep(Duration::from_secs(5));
         log::trace!(target: "symfonia::gateway::purge_expired_disconnects", "Removing stale disconnected sessions from list of resumeable sessions");
@@ -185,7 +195,12 @@ fn purge_expired_disconnects(resumeable_clients: Arc<Mutex<BTreeMap<String, Disc
 ///
 /// If successful, returns a [NewConnection] with a new [Arc<Mutex<GatewayUser>>] and a
 /// [GatewayClient], whose `.parent` field contains a [Weak] reference to the new [GatewayUser].
-async fn establish_connection(stream: TcpStream) -> Result<NewConnection, Error> {
+async fn establish_connection(
+    stream: TcpStream,
+    db: PgPool,
+    gateway_users_store: GatewayUsersStore,
+    config: Config,
+) -> Result<NewConnection, Error> {
     let ws_stream = accept_async(stream).await?;
     let mut connection: Connection = ws_stream.split().into();
     connection
@@ -200,7 +215,7 @@ async fn establish_connection(stream: TcpStream) -> Result<NewConnection, Error>
         log::debug!(target: "symfonia::gateway::establish_connection", "[{}] Received GatewayResume. Trying to resume gateway connection", &resume_message.session_id);
         return resume_connection(connection, resume_message).await;
     }
-    let heartbeat_message = from_str::<GatewayHeartbeat>(&raw_message.to_string())
+    let _heartbeat_message = from_str::<GatewayHeartbeat>(&raw_message.to_string()) // TODO: Implement hearbeating and sequence handling
         .map_err(|_| GatewayError::UnexpectedMessage)?;
     log::debug!(target: "symfonia::gateway::establish_connection", "Received GatewayHeartbeat. Continuing to build fresh gateway connection");
     let raw_identify = match connection.receiver.next().await {
@@ -214,19 +229,46 @@ async fn establish_connection(stream: TcpStream) -> Result<NewConnection, Error>
             return Err(GatewayError::UnexpectedMessage.into());
         }
     };
-    // TODO(bitfl0wer):
-    // - extract user id and token claims from identify
-    // - use jwt decode to verify claims of user id and token validity
-    // - if valid, create new gatewayclient
 
-    todo!()
+    // Retrieve the token without the "Bearer " prefix
+    let token = identify.token.trim_start_matches("Bearer ");
+    // Check the token and retrieve the valid claims
+    let claims = check_token(&db, token, &config.security.jwt_secret).await?;
+    let id = claims.id;
+    if let Some(user) = gateway_users_store.lock().unwrap().get(&id) {
+        log::debug!(target: "symfonia::gateway::establish_connection", "User with ID {id} already connected. Adding new client to existing user");
+        let client = GatewayClient {
+            parent: Arc::downgrade(user),
+            connection,
+            session_id: identify.token,
+            last_sequence: 0,
+        };
+        Ok(NewConnection {
+            user: user.clone(),
+            client,
+        })
+    } else {
+        log::debug!(target: "symfonia::gateway::establish_connection", "User with ID {id} not connected yet. Creating new user and client");
+        let user = Arc::new(Mutex::new(GatewayUser {
+            clients: Vec::new(),
+            id,
+            subscriptions: Vec::new(), // TODO: Subscribe to relevant publishers
+        }));
+        let client = GatewayClient {
+            parent: Arc::downgrade(&user),
+            connection,
+            session_id: identify.token,
+            last_sequence: 0,
+        };
+        Ok(NewConnection { user, client })
+    }
 }
 
 async fn resume_connection(
     connection: Connection,
     resume_message: GatewayResume,
 ) -> Result<NewConnection, Error> {
-    todo!()
+    todo!() // TODO Implement resuming connections
 }
 
 /// Adds the contents of a [NewConnection] struct to a `gateway_users` map in a "checked" manner.
