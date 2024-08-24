@@ -3,7 +3,7 @@ create table if not exists stickers
     id          numeric(20, 0) not null constraint chk_id_range check (id >= 0 AND id <= 18446744073709551615) primary key,
     name        varchar(255) not null,
     description varchar(255) null,
-    available   smallint      null,
+    available   boolean       null,
     tags        varchar(255) null,
     pack_id     numeric(20, 0) null constraint chk_pack_id_range check (pack_id >= 0 AND pack_id <= 18446744073709551615),
     guild_id    numeric(20, 0) null constraint chk_guild_id_range check (guild_id >= 0 AND guild_id <= 18446744073709551615),

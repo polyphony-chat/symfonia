@@ -6,7 +6,7 @@ create table if not exists stage_instances
     topic                    varchar(120) not null,
     privacy_level            int not null,
     invite_code              varchar(16) null,
-    discoverable_disabled    smallint not null default 0,
+    discoverable_disabled    boolean  not null default false,
     guild_scheduled_event_id numeric(20, 0) null constraint chk_guild_scheduled_event_id_range check (guild_scheduled_event_id >= 0 AND guild_scheduled_event_id <= 18446744073709551615),
     constraint stage_instances_channels_id_fk
         foreign key (channel_id) references channels (id)

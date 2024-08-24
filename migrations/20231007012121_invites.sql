@@ -1,8 +1,8 @@
 create table if not exists invites
 (
     code             varchar(255) not null primary key,
-    type             smallint     not null,
-    temporary        smallint      not null,
+    type             boolean      not null,
+    temporary        boolean      not null,
     uses             int          not null,
     max_uses         int          not null,
     max_age          int          not null,
@@ -13,7 +13,7 @@ create table if not exists invites
     inviter_id       numeric(20, 0) null constraint chk_inviter_id check (inviter_id >= 0 AND inviter_id <= 18446744073709551615),
     target_user_id   numeric(20, 0) null constraint chk_target_user_id check (target_user_id >= 0 AND target_user_id <= 18446744073709551615),
     target_user_type int          null,
-    vanity_url       smallint      null,
+    vanity_url       boolean       null,
     flags            int          not null,
     constraint FK_11a0d394f8fc649c19ce5f16b59
         foreign key (target_user_id) references users (id)
