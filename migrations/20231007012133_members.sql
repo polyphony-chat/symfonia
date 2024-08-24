@@ -3,8 +3,8 @@ CREATE SEQUENCE members_index_seq;
 create table if not exists members
 (
     index                        numeric(20, 0)     not null default nextval('members_index_seq') constraint chk_index_range check (index >= 0 and index <= 18446744073709551615) primary key,
-    id                           varchar(255)       not null,
-    guild_id                     varchar(255)       not null,
+    id                           numeric(20, 0)     not null constraint chk_id_range check (id >= 0 AND id <= 18446744073709551615),
+    guild_id                     numeric(20, 0)     not null constraint chk_guild_id_range check (guild_id >= 0 AND guild_id <= 18446744073709551615),
     nick                         varchar(255)       null,
     joined_at                    timestamp          not null,
     premium_since                bigint             null,
@@ -12,7 +12,7 @@ create table if not exists members
     mute                         smallint           not null,
     pending                      smallint           not null,
     settings                     text               not null,
-    last_message_id              varchar(255)       null,
+    last_message_id              numeric(20, 0)     null constraint chk_last_message_id_range check (last_message_id >= 0 AND last_message_id <= 18446744073709551615),
     joined_by                    varchar(255)       null,
     avatar                       varchar(255)       null,
     banner                       varchar(255)       null,

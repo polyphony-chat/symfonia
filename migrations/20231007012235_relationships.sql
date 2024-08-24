@@ -1,9 +1,8 @@
 create table if not exists relationships
 (
-    id       varchar(255) not null
-        primary key,
-    from_id  varchar(255) not null,
-    to_id    varchar(255) not null,
+    id       numeric(20, 0) not null constraint chk_id_range check (id >= 0 AND id <= 18446744073709551615) primary key,
+    from_id  numeric(20, 0) not null constraint chk_from_id_range check (from_id >= 0 AND from_id <= 18446744073709551615),
+    to_id    numeric(20, 0) not null constraint chk_to_id_range check (to_id >= 0 AND to_id <= 18446744073709551615),
     nickname varchar(255) null,
     type     int          not null,
     constraint IDX_a0b2ff0a598df0b0d055934a17

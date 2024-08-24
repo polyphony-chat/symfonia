@@ -1,7 +1,7 @@
 create table if not exists message_channel_mentions
 (
-    messagesId varchar(255) not null,
-    channelsId varchar(255) not null,
+    messagesId numeric(20, 0) not null constraint chk_messages_id_range check (messagesId >= 0 AND messagesId <= 18446744073709551615),
+    channelsId numeric(20, 0) not null constraint chk_channels_id_range check (channelsId >= 0 AND channelsId <= 18446744073709551615),
     primary key (messagesId, channelsId),
     constraint FK_2a27102ecd1d81b4582a4360921
         foreign key (messagesId) references messages (id)

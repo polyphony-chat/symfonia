@@ -3,7 +3,7 @@ create table if not exists connected_accounts
     id                  varchar(255) not null
         primary key,
     external_id         varchar(255) not null,
-    user_id             varchar(255) null,
+    user_id             numeric(20, 0)  null constraint chk_user_id_range check (user_id >= 0 AND user_id <= 18446744073709551615),
     friend_sync         smallint      not null,
     name                varchar(255) not null,
     revoked             smallint      not null,
