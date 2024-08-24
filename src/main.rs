@@ -4,6 +4,8 @@
  *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+#![allow(unused)] // TODO: Remove, I just want to clean up my build output
+
 use std::collections::HashMap;
 use std::sync::Arc;
 
