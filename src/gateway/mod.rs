@@ -133,6 +133,8 @@ pub async fn start_gateway(
     let try_socket = TcpListener::bind(&bind).await;
     let listener = try_socket.expect("Failed to bind to address");
 
+    info!(target: "symfonia::gateway", "Gateway server listening on port {bind}");
+
     let gateway_users: GatewayUsersStore = Arc::new(Mutex::new(BTreeMap::new()));
     let resumeable_clients: ResumableClientsStore = Arc::new(Mutex::new(BTreeMap::new()));
     tokio::task::spawn(async { purge_expired_disconnects(resumeable_clients) });
@@ -236,6 +238,7 @@ async fn establish_connection(
     // Check the token and retrieve the valid claims
     let claims = check_token(&db, token, &config.security.jwt_secret).await?;
     let id = claims.id;
+    // Check if the user is already connected. If so, add the new client to the existing user
     if let Some(user) = gateway_users_store.lock().unwrap().get(&id) {
         log::debug!(target: "symfonia::gateway::establish_connection", "User with ID {id} already connected. Adding new client to existing user");
         let client = GatewayClient {

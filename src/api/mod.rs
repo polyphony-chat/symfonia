@@ -84,9 +84,19 @@ pub async fn start_api(
         .catch_all_error(custom_error);
 
     let bind = std::env::var("API_BIND").unwrap_or_else(|_| String::from("localhost:3001"));
+    let bind_clone = bind.clone();
 
     log::info!(target: "symfonia::api", "Starting HTTP Server");
-    Server::new(TcpListener::bind(bind)).run(v9_api).await?;
+
+    tokio::task::spawn(async move {
+        Server::new(TcpListener::bind(bind_clone))
+            .run(v9_api)
+            .await
+            .expect("Failed to start HTTP server");
+        log::info!(target: "symfonia::api", "HTTP Server stopped");
+    });
+
+    log::info!(target: "symfonia::api", "HTTP Server listening on {bind}");
     Ok(())
 }
 
