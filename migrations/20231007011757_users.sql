@@ -1,7 +1,6 @@
 create table if not exists users
 (
-    id                  varchar(255)       not null
-        primary key,
+    id                  numeric(20, 0)     not null constraint chk_id_range check (id >= 0 AND id <= 18446744073709551615) primary key,
     username            varchar(255)       not null,
     discriminator       varchar(255)       not null,
     avatar              varchar(255)       null,
