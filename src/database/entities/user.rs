@@ -78,7 +78,7 @@ impl User {
         let user = Self {
             inner: chorus::types::User {
                 username: username.to_string(),
-                discriminator: "0001".to_string(),
+                discriminator: "0000".to_string(),
                 email: email.clone(),
                 premium: cfg.defaults.user.premium.into(),
                 premium_type: Some(cfg.defaults.user.premium_type.into()),
@@ -92,19 +92,19 @@ impl User {
             }),
             fingerprints: fingerprint.unwrap_or_default(),
             rights: cfg.register.default_rights,
-            settings_index: user_settings.index.clone().into(),
+            settings_index: user_settings.index.clone(),
             extended_settings: sqlx::types::Json(Value::Object(Map::default())),
             settings: user_settings.clone(),
             ..Default::default()
         };
 
-        sqlx::query("INSERT INTO users (id, username, email, data, fingerprints, discriminator, desktop, mobile, premium, premium_type, bot, bio, system, nsfw_allowed, mfa_enabled, created_at, verified, disabled, deleted, flags, public_flags, purchased_flags, premium_usage_flags, rights, extended_settings, settingsIndex) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, '', 0, ?, 0, NOW(), 0, 0, 0, ?, 0, 0, 0, ?, '{}', ?)")
+        sqlx::query("INSERT INTO users (id, username, email, data, fingerprints, discriminator, desktop, mobile, premium, premium_type, bot, bio, system, nsfw_allowed, mfa_enabled, created_at, verified, disabled, deleted, flags, public_flags, purchased_flags, premium_usage_flags, rights, extended_settings, settingsIndex) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 0, 0, $9, '', 0, $10, 0, NOW(), 0, 0, 0, $11, 0, 0, 0, $12, '{}', $13)")
             .bind(user.id)
             .bind(username)
             .bind(email)
             .bind(&user.data)
             .bind(&user.fingerprints)
-            .bind("0001")
+            .bind("0000")
             .bind(true)
             .bind(false)
             .bind(bot)
@@ -124,7 +124,7 @@ impl User {
     }
 
     pub async fn get_by_id(db: &PgPool, id: Snowflake) -> Result<Option<Self>, Error> {
-        sqlx::query_as("SELECT * FROM users WHERE id = ?")
+        sqlx::query_as("SELECT * FROM users WHERE id = $1")
             .bind(id)
             .fetch_optional(db)
             .await
@@ -145,10 +145,10 @@ impl User {
         separated.push_unseparated(") ");
 
         if let Some(after) = after {
-            separated.push_unseparated("AND id > ? ");
+            separated.push_unseparated("AND id > $1 ");
             separated.push_bind_unseparated(after);
         }
-        separated.push_unseparated("LIMIT ?");
+        separated.push_unseparated("LIMIT $2");
         separated.push_bind_unseparated(limit);
 
         let query = query_builder.build();
@@ -168,7 +168,7 @@ impl User {
         user: &str,
         discrim: &str,
     ) -> Result<Option<Self>, Error> {
-        sqlx::query_as("SELECT * FROM users WHERE username = ? AND discriminator = ?")
+        sqlx::query_as("SELECT * FROM users WHERE username = $1 AND discriminator = $2")
             .bind(user)
             .bind(discrim)
             .fetch_optional(db)
@@ -181,7 +181,7 @@ impl User {
         email: &str,
         phone: &str,
     ) -> Result<Option<Self>, Error> {
-        sqlx::query_as("SELECT * FROM users WHERE email = ? OR phone = ? LIMIT 1")
+        sqlx::query_as("SELECT * FROM users WHERE email = $1 OR phone = $2 LIMIT 1")
             .bind(email)
             .bind(phone)
             .fetch_optional(db)
