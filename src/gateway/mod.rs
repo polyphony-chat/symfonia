@@ -140,6 +140,7 @@ pub async fn start_gateway(
     let resumeable_clients: ResumableClientsStore = Arc::new(Mutex::new(BTreeMap::new()));
     tokio::task::spawn(async { purge_expired_disconnects(resumeable_clients) });
     while let Ok((stream, _)) = listener.accept().await {
+        log::trace!(target: "symfonia::gateway", "New connection received");
         let connection_result = match tokio::task::spawn(establish_connection(
             stream,
             db.clone(),
@@ -173,7 +174,7 @@ fn purge_expired_disconnects(resumeable_clients: ResumableClientsStore) {
     let mut removed_elements_last_minute: u128 = 0;
     loop {
         sleep(Duration::from_secs(5));
-        log::trace!(target: "symfonia::gateway::purge_expired_disconnects", "Removing stale disconnected sessions from list of resumeable sessions");
+        // log::trace!(target: "symfonia::gateway::purge_expired_disconnects", "Removing stale disconnected sessions from list of resumeable sessions");
         let current_unix_timestamp = std::time::SystemTime::now()
             .duration_since(std::time::SystemTime::UNIX_EPOCH)
             .expect("Check the clock/time settings on the host machine")
@@ -221,17 +222,19 @@ async fn establish_connection(
         .sender
         .send(Message::Text(json!(GatewayHello::default()).to_string()))
         .await?;
-    let raw_message = match connection.receiver.next().await {
+    let raw_message_result = match connection.receiver.next().await {
         Some(next) => next,
         None => return Err(GatewayError::Timeout.into()),
-    }?;
+    };
+    log::trace!(target: "symfonia::gateway::establish_connection", "Received first message: {:?}", &raw_message_result);
+    let raw_message = raw_message_result?;
     if let Ok(resume_message) = from_str::<GatewayResume>(&raw_message.to_string()) {
-        log::debug!(target: "symfonia::gateway::establish_connection", "[{}] Received GatewayResume. Trying to resume gateway connection", &resume_message.session_id);
+        log::trace!(target: "symfonia::gateway::establish_connection", "[{}] Received GatewayResume. Trying to resume gateway connection", &resume_message.session_id);
         return resume_connection(connection, resume_message).await;
     }
     let _heartbeat_message = from_str::<GatewayHeartbeat>(&raw_message.to_string()) // TODO: Implement hearbeating and sequence handling
         .map_err(|_| GatewayError::UnexpectedMessage)?;
-    log::debug!(target: "symfonia::gateway::establish_connection", "Received GatewayHeartbeat. Continuing to build fresh gateway connection");
+    log::trace!(target: "symfonia::gateway::establish_connection", "Received GatewayHeartbeat. Continuing to build fresh gateway connection");
     let raw_identify = match connection.receiver.next().await {
         Some(next) => next,
         None => return Err(GatewayError::Timeout.into()),
