@@ -168,6 +168,7 @@ pub async fn start_gateway(
 /// seconds after a disconnect occurs. Sessions that can be resumed are stored in a `Map`. The
 /// purpose of this method is to periodically throw out expired sessions from that map.
 fn purge_expired_disconnects(resumeable_clients: ResumableClientsStore) {
+    let mut minutely_log_timer = 0;
     loop {
         sleep(Duration::from_secs(5));
         log::trace!(target: "symfonia::gateway::purge_expired_disconnects", "Removing stale disconnected sessions from list of resumeable sessions");
@@ -189,7 +190,11 @@ fn purge_expired_disconnects(resumeable_clients: ResumableClientsStore) {
             lock.remove(session_id);
         }
         drop(lock);
-        log::trace!(target: "symfonia::gateway::purge_expired_disconnects", "Removed {} stale sessions", len);
+        minutely_log_timer += 1;
+        if minutely_log_timer % 60 == 0 {
+            log::info!(target: "symfonia::gateway::purge_expired_disconnects", "Removed {} stale sessions", len);
+            minutely_log_timer = 0;
+        }
     }
 }
 
