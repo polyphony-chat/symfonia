@@ -191,7 +191,7 @@ fn purge_expired_disconnects(resumeable_clients: ResumableClientsStore) {
         }
         drop(lock);
         minutely_log_timer += 1;
-        if minutely_log_timer % 60 == 0 {
+        if minutely_log_timer == 12 {
             log::info!(target: "symfonia::gateway::purge_expired_disconnects", "Removed {} stale sessions", len);
             minutely_log_timer = 0;
         }
