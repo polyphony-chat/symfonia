@@ -169,6 +169,7 @@ pub async fn start_gateway(
 /// purpose of this method is to periodically throw out expired sessions from that map.
 fn purge_expired_disconnects(resumeable_clients: ResumableClientsStore) {
     let mut minutely_log_timer = 0;
+    let mut removed_elements_last_minute: u128 = 0;
     loop {
         sleep(Duration::from_secs(5));
         log::trace!(target: "symfonia::gateway::purge_expired_disconnects", "Removing stale disconnected sessions from list of resumeable sessions");
@@ -186,14 +187,18 @@ fn purge_expired_disconnects(resumeable_clients: ResumableClientsStore) {
             }
         }
         let len = to_remove.len();
+        removed_elements_last_minute = removed_elements_last_minute
+            .checked_add(len as u128)
+            .unwrap_or(u128::MAX);
         for session_id in to_remove.iter() {
             lock.remove(session_id);
         }
         drop(lock);
         minutely_log_timer += 1;
         if minutely_log_timer == 12 {
-            log::info!(target: "symfonia::gateway::purge_expired_disconnects", "Removed {} stale sessions", len);
+            log::debug!(target: "symfonia::gateway::purge_expired_disconnects", "Removed {} stale sessions in the last 60 seconds", removed_elements_last_minute);
             minutely_log_timer = 0;
+            removed_elements_last_minute = 0;
         }
     }
 }
