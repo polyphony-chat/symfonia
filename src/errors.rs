@@ -58,6 +58,9 @@ pub enum Error {
 
     #[error(transparent)]
     Gateway(#[from] GatewayError),
+
+    #[error(transparent)]
+    SqlxPgUint(#[from] sqlx_pg_uint::Error),
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -234,6 +237,7 @@ impl ResponseError for Error {
                 GatewayError::UnexpectedMessage => StatusCode::BAD_REQUEST,
                 GatewayError::Timeout => StatusCode::BAD_REQUEST,
             },
+            Error::SqlxPgUint(_) => StatusCode::BAD_REQUEST,
         }
     }
 
