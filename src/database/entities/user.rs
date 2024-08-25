@@ -6,6 +6,7 @@
 
 use super::*;
 
+use std::str::FromStr;
 use std::{
     default::Default,
     ops::{Deref, DerefMut},
@@ -14,7 +15,7 @@ use std::{
 use chorus::types::{PublicUser, Rights, Snowflake, UserData};
 use chrono::{NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::{Map, Value};
+use serde_json::{from_str, Map, Value};
 use sqlx::{FromRow, PgPool, Row};
 use sqlx_pg_uint::{PgU32, PgU64};
 
@@ -57,6 +58,7 @@ impl DerefMut for User {
 }
 
 impl User {
+    #[allow(clippy::too_many_arguments)]
     pub async fn create(
         db: &PgPool,
         cfg: &Config,
@@ -98,20 +100,21 @@ impl User {
             ..Default::default()
         };
 
-        sqlx::query("INSERT INTO users (id, username, email, data, fingerprints, discriminator, desktop, mobile, premium, premium_type, bot, bio, system, nsfw_allowed, mfa_enabled, created_at, verified, disabled, deleted, flags, public_flags, purchased_flags, premium_usage_flags, rights, extended_settings, settingsIndex) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 0, 0, $9, '', 0, $10, 0, NOW(), 0, 0, 0, $11, 0, 0, 0, $12, '{}', $13)")
-            .bind(user.id)
-            .bind(username)
-            .bind(email)
-            .bind(&user.data)
-            .bind(&user.fingerprints)
-            .bind("0000")
-            .bind(true)
-            .bind(false)
-            .bind(bot)
-            .bind(false) // TODO: Base nsfw off date of birth
-            .bind(PgU32::from(0)) // TODO: flags
-            .bind(Rights::default())
-            .bind(PgU64::from(user.settings.index.clone()))
+        let data: Value = from_str(&user.data.encode_to_string()?)?;
+        let rights = PgU64::from(Rights::default().bits())
+            .as_big_decimal()
+            .to_owned();
+
+        sqlx::query!("INSERT INTO users (id, username, discriminator, email, data, fingerprints, premium, premium_type, created_at, flags, public_flags, purchased_flags, premium_usage_flags, rights, extended_settings, settings_index) VALUES ($1, $2, $3, $4, $5, $6, false, 0, $7, 0, 0, 0, 0, $8, '{}', $9)",
+            bigdecimal::BigDecimal::from(user.id.to_string().parse::<u64>().unwrap()),
+            username,
+            "0000",
+            email,
+            data,
+            &user.fingerprints,
+            Utc::now().naive_local(),
+            Some(rights),
+            user.settings_index.clone().as_big_decimal().to_owned())
             .execute(db)
             .await?;
 

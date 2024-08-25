@@ -7,7 +7,7 @@
 use std::ops::{Deref, DerefMut};
 
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
+use sqlx::{FromRow, PgPool};
 use sqlx_pg_uint::PgU64;
 
 use crate::errors::Error;
@@ -50,15 +50,15 @@ impl UserSettings {
             index: PgU64::from(0),
         };
 
-        let res = sqlx::query("INSERT INTO user_settings (locale) VALUES (?)")
+        let res = sqlx::query("INSERT INTO user_settings (locale) VALUES ($1) RETURNING index")
             .bind(locale)
-            .execute(db)
+            .fetch_one(db)
             .await?;
-
-        // todo!("settings.index = res.last_insert_id(); Does not work!");
-        // TODO(bitfl0wer) Why do we even need the index? :thinking:
-        // settings.index = res.last_insert_id(); // FIXME: Does not exist for Postgres
-
+        log::trace!(target: "symfonia::db::entities::user_settings::create", "Creation query yielded {:?}", res);
+        let index = PgU64::from_row(&res);
+        log::trace!(target: "symfonia::db::entities::user_settings::create", "Index is {:?}", index);
+        let index = index?;
+        settings.index = index;
         Ok(settings)
     }
 
