@@ -32,7 +32,6 @@ pub struct User {
     pub data: sqlx::types::Json<UserData>,
     pub deleted: bool,
     pub fingerprints: String, // TODO: Simple-array, should actually be a vec
-    #[sqlx(rename = "settingsIndex")]
     pub settings_index: PgU64,
     pub rights: Rights,
     #[sqlx(skip)]
