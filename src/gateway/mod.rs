@@ -127,6 +127,7 @@ pub async fn start_gateway(
     publisher_map: SharedEventPublisherMap,
     config: Config,
 ) -> Result<(), Error> {
+    // TODO(bitfl0wer): Add log messages throughout the method for debugging the gateway
     info!(target: "symfonia::gateway", "Starting gateway server");
 
     let bind = std::env::var("GATEWAY_BIND").unwrap_or_else(|_| String::from("localhost:3003"));
