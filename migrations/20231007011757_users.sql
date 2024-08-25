@@ -13,7 +13,7 @@ create table if not exists users (
     premium             boolean            not null,
     premium_type        numeric(5, 0)      not null constraint chk_smallint_unsigned check (premium_type >= 0 and premium_type <= 65535),
     bot                 boolean            not null default false,
-    bio                 varchar(255)       not null,
+    bio                 varchar(255)       not null default '',
     system              boolean            not null default false,
     nsfw_allowed        boolean            not null default false,
     mfa_enabled         boolean            not null default false,
@@ -30,11 +30,11 @@ create table if not exists users (
     public_flags        numeric(10, 0)     not null constraint chk_int_unsigned check (public_flags >= 0 and public_flags <= 4294967295),
     purchased_flags     int                not null,
     premium_usage_flags int                not null,
-    rights              bigint             not null,
-    data                text               not null,
+    rights              numeric(20, 0)     not null constraint chk_rights_range check (rights >= 0 AND rights <= 18446744073709551615),
+    data                json               not null,
     fingerprints        text               not null,
     extended_settings   text               not null,
-    settingsIndex       numeric(20, 0)     null constraint chk_settingsIndex_range check (settingsIndex >= 0 AND settingsIndex <= 18446744073709551615),
-    constraint users_settingsIndex_uindex unique (settingsIndex),
-    constraint users_user_settings_index_fk foreign key (settingsIndex) references user_settings (index)
+    settings_index       numeric(20, 0)     null constraint chk_settings_index_range check (settings_index >= 0 AND settings_index <= 18446744073709551615),
+    constraint users_settings_index_uindex unique (settings_index),
+    constraint users_user_settings_index_fk foreign key (settings_index) references user_settings (index)
 );
