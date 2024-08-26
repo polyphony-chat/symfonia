@@ -53,7 +53,7 @@ pub async fn register(
 
     let token = generate_token(
         &user.id,
-        user.email.clone().unwrap(),
+        user.email.clone().unwrap().as_str(),
         &cfg.security.jwt_secret,
     );
 
