@@ -216,6 +216,13 @@ async fn establish_connection(
     gateway_users_store: GatewayUsersStore,
     config: Config,
 ) -> Result<NewConnection, Error> {
+    /* TODO(bitfl0wer)
+    - The first heartbeat only needs to be received $HEARTBEAT_INTERVAL seconds after the hello
+      event has been sent. Heartbeat task is a good idea.
+    - Identify or resume is mandatory, though. If we don't receive one of those, we should close
+      the connection.
+     */
+
     let ws_stream = accept_async(stream).await?;
     let mut connection: Connection = ws_stream.split().into();
     connection
