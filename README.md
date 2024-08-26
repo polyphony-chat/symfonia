@@ -31,7 +31,7 @@ Whether you are using Docker or not, you will need to have the following install
 
 ### Non-Docker
 
-1. Install [PostgreSQL](https://www.postgresql.org/download/)
+1. Install and host a [PostgreSQL database](https://www.postgresql.org/download/)
 2. Create a new database, and a user that has full access to that database
 3. Create a `.env` file in the root of the project with the following contents:
 
@@ -43,7 +43,9 @@ DATABASE_PASSWORD=[Your Postgres password]
 DATABASE_NAME=[Your Postgres database name]
 ```
 
-4. Run the project with `cargo run`.
+4. Install the sqlx CLI with `cargo install sqlx-cli`
+5. Run `cargo sqlx migrate run` from within the project directory to run the migrations
+6. Run the project with `cargo run`.
 
 ### Docker
 
