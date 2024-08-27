@@ -6,6 +6,9 @@
 
 static RESUME_RECONNECT_WINDOW_SECONDS: u8 = 90;
 
+mod establish_connection;
+mod gateway_task;
+mod resume_connection;
 mod types;
 
 use std::collections::BTreeMap;
@@ -64,29 +67,32 @@ GatewayUser is subscribed to
 /// time.
 struct GatewayUser {
     /// Sessions a User is connected with.
-    pub clients: Vec<Arc<Mutex<GatewayClient>>>,
+    clients: Vec<Arc<Mutex<GatewayClient>>>,
     /// The Snowflake ID of the User.
-    pub id: Snowflake,
+    id: Snowflake,
     /// A collection of [Subscribers](Subscriber) to [Event] [Publishers](pubserve::Publisher).
     ///
     /// A GatewayUser may have many [GatewayClients](GatewayClient), but he only gets subscribed to
     /// all relevant [Publishers](pubserve::Publisher) *once* to save resources.
-    pub subscriptions: Vec<Box<dyn Subscriber<Event>>>,
+    subscriptions: Vec<Box<dyn Subscriber<Event>>>,
 }
 
 /// A concrete session, that a [GatewayUser] is connected to the Gateway with.
 struct GatewayClient {
+    connection: Arc<Mutex<Connection>>,
     /// A [Weak] reference to the [GatewayUser] this client belongs to.
-    pub parent: Weak<Mutex<GatewayUser>>,
-    /// The [SplitSink] and [SplitStream] for this clients' WebSocket session
-    pub connection: Connection,
-    pub session_id: String,
-    pub last_sequence: u64,
+    parent: Weak<Mutex<GatewayUser>>,
+    // Handle to the main Gateway task for this client
+    main_task_handle: tokio::task::JoinHandle<Result<(), Error>>,
+    // Handle to the heartbeat task for this client
+    heartbeat_task_handle: tokio::task::JoinHandle<Result<(), Error>>,
+    // Kill switch to disconnect the client
+    kill_send: tokio::sync::broadcast::Sender<()>,
 }
 
 struct Connection {
-    pub sender: WebSocketSend,
-    pub receiver: WebSocketReceive,
+    sender: WebSocketSend,
+    receiver: WebSocketReceive,
 }
 
 struct DisconnectInfo {
@@ -116,7 +122,7 @@ impl
 
 struct NewConnection {
     user: Arc<Mutex<GatewayUser>>,
-    client: GatewayClient,
+    client: Arc<Mutex<GatewayClient>>,
 }
 
 type ResumableClientsStore = Arc<Mutex<BTreeMap<String, DisconnectInfo>>>;
@@ -141,12 +147,9 @@ pub async fn start_gateway(
     tokio::task::spawn(async { purge_expired_disconnects(resumeable_clients) });
     while let Ok((stream, _)) = listener.accept().await {
         log::trace!(target: "symfonia::gateway", "New connection received");
-        let connection_result = match tokio::task::spawn(establish_connection(
-            stream,
-            db.clone(),
-            gateway_users.clone(),
-            config.clone(),
-        ))
+        let connection_result = match tokio::task::spawn(
+            establish_connection::establish_connection(stream, db.clone(), config.clone()),
+        )
         .await
         {
             Ok(result) => result,
@@ -205,97 +208,6 @@ fn purge_expired_disconnects(resumeable_clients: ResumableClientsStore) {
     }
 }
 
-/// `establish_connection` is the entrypoint method that gets called when a client tries to connect
-/// to the WebSocket server.
-///
-/// If successful, returns a [NewConnection] with a new [Arc<Mutex<GatewayUser>>] and a
-/// [GatewayClient], whose `.parent` field contains a [Weak] reference to the new [GatewayUser].
-async fn establish_connection(
-    stream: TcpStream,
-    db: PgPool,
-    gateway_users_store: GatewayUsersStore,
-    config: Config,
-) -> Result<NewConnection, Error> {
-    /* TODO(bitfl0wer)
-    - The first heartbeat only needs to be received $HEARTBEAT_INTERVAL seconds after the hello
-      event has been sent. Heartbeat task is a good idea.
-    - Identify or resume is mandatory, though. If we don't receive one of those, we should close
-      the connection.
-     */
-
-    let ws_stream = accept_async(stream).await?;
-    let mut connection: Connection = ws_stream.split().into();
-    connection
-        .sender
-        .send(Message::Text(json!(GatewayHello::default()).to_string()))
-        .await?;
-    let raw_message_result = match connection.receiver.next().await {
-        Some(next) => next,
-        None => return Err(GatewayError::Timeout.into()),
-    };
-    log::trace!(target: "symfonia::gateway::establish_connection", "Received first message: {:?}", &raw_message_result);
-    let raw_message = raw_message_result?;
-    if let Ok(resume_message) = from_str::<GatewayResume>(&raw_message.to_string()) {
-        log::trace!(target: "symfonia::gateway::establish_connection", "[{}] Received GatewayResume. Trying to resume gateway connection", &resume_message.session_id);
-        return resume_connection(connection, resume_message).await;
-    }
-    let _heartbeat_message = from_str::<GatewayHeartbeat>(&raw_message.to_string()) // TODO: Implement hearbeating and sequence handling
-        .map_err(|_| GatewayError::UnexpectedMessage)?;
-    log::trace!(target: "symfonia::gateway::establish_connection", "Received GatewayHeartbeat. Continuing to build fresh gateway connection");
-    let raw_identify = match connection.receiver.next().await {
-        Some(next) => next,
-        None => return Err(GatewayError::Timeout.into()),
-    }?;
-    let identify = match from_str::<GatewayIdentifyPayload>(&raw_identify.to_string()) {
-        Ok(identify) => identify,
-        Err(e) => {
-            log::debug!(target: "symfonia::gateway::establish_connection", "Expected GatewayIdentifyPayload, received wrong data: {e}");
-            return Err(GatewayError::UnexpectedMessage.into());
-        }
-    };
-
-    // Retrieve the token without the "Bearer " prefix
-    let token = identify.token.trim_start_matches("Bearer ");
-    // Check the token and retrieve the valid claims
-    let claims = check_token(&db, token, &config.security.jwt_secret).await?;
-    let id = claims.id;
-    // Check if the user is already connected. If so, add the new client to the existing user
-    if let Some(user) = gateway_users_store.lock().unwrap().get(&id) {
-        log::debug!(target: "symfonia::gateway::establish_connection", "User with ID {id} already connected. Adding new client to existing user");
-        let client = GatewayClient {
-            parent: Arc::downgrade(user),
-            connection,
-            session_id: identify.token,
-            last_sequence: 0,
-        };
-        Ok(NewConnection {
-            user: user.clone(),
-            client,
-        })
-    } else {
-        log::debug!(target: "symfonia::gateway::establish_connection", "User with ID {id} not connected yet. Creating new user and client");
-        let user = Arc::new(Mutex::new(GatewayUser {
-            clients: Vec::new(),
-            id,
-            subscriptions: Vec::new(), // TODO: Subscribe to relevant publishers
-        }));
-        let client = GatewayClient {
-            parent: Arc::downgrade(&user),
-            connection,
-            session_id: identify.token,
-            last_sequence: 0,
-        };
-        Ok(NewConnection { user, client })
-    }
-}
-
-async fn resume_connection(
-    connection: Connection,
-    resume_message: GatewayResume,
-) -> Result<NewConnection, Error> {
-    todo!() // TODO Implement resuming connections
-}
-
 /// Adds the contents of a [NewConnection] struct to a `gateway_users` map in a "checked" manner.
 ///
 /// If the `NewConnection` contains a [GatewayUser] which is already in `gateway_users`, then
@@ -319,12 +231,12 @@ fn checked_add_new_connection(
     // the `clients` field of our existing user.
     if locked_map.contains_key(&new_connection_user.id) {
         let existing_user = locked_map.get(&new_connection_user.id).unwrap();
-        new_connection.client.parent = Arc::downgrade(existing_user);
+        new_connection.client.lock().unwrap().parent = Arc::downgrade(existing_user);
         existing_user
             .lock()
             .unwrap()
             .clients
-            .push(Arc::new(Mutex::new(new_connection.client)));
+            .push(new_connection.client);
     } else {
         // We cannot do `locked_map.insert(id, new_connection.user)` if new_connection is still
         // locked. Just bind the id we need to a new variable, then drop the lock.
