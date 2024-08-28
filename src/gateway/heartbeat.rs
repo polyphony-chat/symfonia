@@ -1,11 +1,12 @@
 use std::sync::Arc;
 
-use chorus::types::GatewayHeartbeat;
+use chorus::types::{GatewayHeartbeat, GatewayHeartbeatAck};
 use futures::SinkExt;
+use rand::seq;
 use serde_json::json;
 use tokio::sync::Mutex;
 
-use super::Connection;
+use super::{Connection, GatewayClient};
 
 struct HeartbeatHandler {
     connection: Arc<Mutex<Connection>>,
@@ -13,6 +14,8 @@ struct HeartbeatHandler {
     kill_send: tokio::sync::broadcast::Sender<()>,
     message_receive: tokio::sync::mpsc::Receiver<GatewayHeartbeat>,
     last_heartbeat: std::time::Instant,
+    /// The current sequence number of the gateway connection.
+    sequence_number: Arc<Mutex<u64>>,
 }
 
 impl HeartbeatHandler {
@@ -49,6 +52,7 @@ impl HeartbeatHandler {
         kill_receive: tokio::sync::broadcast::Receiver<()>,
         kill_send: tokio::sync::broadcast::Sender<()>,
         message_receive: tokio::sync::mpsc::Receiver<GatewayHeartbeat>,
+        sequence_number: Arc<Mutex<u64>>,
     ) -> Self {
         Self {
             connection,
@@ -56,6 +60,7 @@ impl HeartbeatHandler {
             kill_send,
             message_receive,
             last_heartbeat: std::time::Instant::now(),
+            sequence_number,
         }
     }
 
@@ -98,15 +103,31 @@ impl HeartbeatHandler {
     ///     handler.run();
     /// });
     /// ```
-    pub(super) async fn run(&mut self) {
+    pub(super) async fn run(&mut self, client: Arc<Mutex<GatewayClient>>) {
+        let mut sequence = 0u64;
         loop {
             tokio::select! {
                 _ = self.kill_receive.recv() => {
                     break;
                 }
                 Some(heartbeat) = self.message_receive.recv() => {
+                    if let Some(received_sequence_number) = heartbeat.d {
+                        let mut sequence = self.sequence_number.lock().await;
+                        // TODO: ..wait do we actually even *receive* sequence numbers, or do we just send them?
+                        match *sequence + 1 == received_sequence_number {
+                            true => {
+                                *sequence = received_sequence_number;
+                            }
+                            false => {
+                                // TODO Send disconnect message
+                                self.connection.lock().await.sender.send().await.unwrap();
+                                self.kill_send.send(()).unwrap();
+                                break;
+                            }
+                        }
+                    }
                     self.last_heartbeat = std::time::Instant::now();
-                    self.connection.lock().await.sender.send(tokio_tungstenite::tungstenite::Message::Text(json!(heartbeat).to_string())).await.unwrap();
+                    self.connection.lock().await.sender.send(tokio_tungstenite::tungstenite::Message::Text(json!(GatewayHeartbeatAck::default()).to_string())).await.unwrap();
                 }
                 else => {
                     let elapsed = std::time::Instant::now() - self.last_heartbeat;
