@@ -86,7 +86,7 @@ struct GatewayClient {
     // Handle to the main Gateway task for this client
     main_task_handle: tokio::task::JoinHandle<Result<(), Error>>,
     // Handle to the heartbeat task for this client
-    heartbeat_task_handle: tokio::task::JoinHandle<Result<(), Error>>,
+    heartbeat_task_handle: tokio::task::JoinHandle<()>,
     // Kill switch to disconnect the client
     kill_send: tokio::sync::broadcast::Sender<()>,
 }
