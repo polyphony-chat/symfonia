@@ -2,13 +2,18 @@ use std::sync::Arc;
 
 use chorus::types::{GatewayHeartbeat, GatewayHeartbeatAck};
 use futures::SinkExt;
+use log::*;
 use rand::seq;
 use serde_json::json;
 use tokio::sync::Mutex;
+use tokio_tungstenite::tungstenite::Message;
 
 use super::{Connection, GatewayClient};
 
-struct HeartbeatHandler {
+static HEARTBEAT_INTERVAL: std::time::Duration = std::time::Duration::from_secs(45);
+static LATENCY_BUFFER: std::time::Duration = std::time::Duration::from_secs(5);
+
+pub(super) struct HeartbeatHandler {
     connection: Arc<Mutex<Connection>>,
     kill_receive: tokio::sync::broadcast::Receiver<()>,
     kill_send: tokio::sync::broadcast::Sender<()>,
@@ -47,7 +52,7 @@ impl HeartbeatHandler {
     ///
     /// let heartbeat_handler = HeartbeatHandler::new(connection, kill_receive, kill_send, message_receive).await;
     /// ```
-    pub(super) async fn new(
+    pub(super) fn new(
         connection: Arc<Mutex<Connection>>,
         kill_receive: tokio::sync::broadcast::Receiver<()>,
         kill_send: tokio::sync::broadcast::Sender<()>,
@@ -103,14 +108,17 @@ impl HeartbeatHandler {
     ///     handler.run();
     /// });
     /// ```
-    pub(super) async fn run(&mut self, client: Arc<Mutex<GatewayClient>>) {
+    pub(super) async fn run(&mut self) {
+        // TODO: On death of this task, create and store disconnect info in gateway client object
         let mut sequence = 0u64;
         loop {
             tokio::select! {
                 _ = self.kill_receive.recv() => {
+                    trace!("Received kill signal in heartbeat_handler. Stopping heartbeat handler");
                     break;
                 }
                 Some(heartbeat) = self.message_receive.recv() => {
+                    trace!("Received heartbeat message in heartbeat_handler");
                     if let Some(received_sequence_number) = heartbeat.d {
                         let mut sequence = self.sequence_number.lock().await;
                         // TODO: ..wait do we actually even *receive* sequence numbers, or do we just send them?
@@ -127,12 +135,25 @@ impl HeartbeatHandler {
                         }
                     }
                     self.last_heartbeat = std::time::Instant::now();
-                    self.connection.lock().await.sender.send(tokio_tungstenite::tungstenite::Message::Text(json!(GatewayHeartbeatAck::default()).to_string())).await.unwrap();
+                    self.connection
+                .lock()
+                .await
+                .sender
+                .send(Message::Text(
+                    json!(GatewayHeartbeatAck::default()).to_string(),
+                ))
+                .await.unwrap_or_else(|_| {
+                    trace!("Failed to send heartbeat ack in heartbeat_handler. Stopping gateway_task and heartbeat_handler");
+                    self.kill_send.send(()).expect("Failed to send kill signal in heartbeat_handler");
+                    return;
+                }
+                );
                 }
                 else => {
                     let elapsed = std::time::Instant::now() - self.last_heartbeat;
                     if elapsed > std::time::Duration::from_secs(45) {
-                        self.kill_send.send(()).unwrap();
+                        trace!("Heartbeat timed out in heartbeat_handler. Stopping gateway_task and heartbeat_handler");
+                        self.kill_send.send(()).expect("Failed to send kill signal in heartbeat_handler");;
                         break;
                     }
                 }
