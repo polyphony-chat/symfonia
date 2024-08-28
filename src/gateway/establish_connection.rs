@@ -2,18 +2,22 @@ use std::sync::Arc;
 
 use chorus::types::{
     GatewayHeartbeat, GatewayHeartbeatAck, GatewayHello, GatewayIdentifyPayload, GatewayResume,
+    Snowflake,
 };
 use futures::{SinkExt, StreamExt};
 use serde_json::{from_str, json};
 use sqlx::PgPool;
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
+use tokio::task::JoinHandle;
 use tokio_tungstenite::accept_async;
 use tokio_tungstenite::tungstenite::Message;
 
 use crate::database::entities::Config;
 use crate::errors::{Error, GatewayError};
+use crate::gateway::heartbeat::HeartbeatHandler;
 use crate::gateway::resume_connection::resume_connection;
+use crate::gateway::GatewayUser;
 
 use super::{Connection, GatewayClient, NewConnection};
 
@@ -39,6 +43,21 @@ pub(super) async fn establish_connection(
 
     let mut received_identify_or_resume = false;
 
+    let (kill_send, kill_receive) = tokio::sync::broadcast::channel(1);
+    let (message_send, message_receive) = tokio::sync::mpsc::channel(4);
+    let sequence_number = Arc::new(Mutex::new(0u64));
+    let mut heartbeat_handler = HeartbeatHandler::new(
+        connection.clone(),
+        kill_receive.resubscribe(),
+        kill_send.clone(),
+        message_receive,
+        sequence_number.clone(),
+    );
+
+    // This JoinHandle `.is_some()` if we receive a heartbeat message *before* we receive an
+    // identify or resume message.
+    let heartbeat_handler_handle: Option<JoinHandle<()>>;
+
     loop {
         if received_identify_or_resume {
             break;
@@ -51,14 +70,7 @@ pub(super) async fn establish_connection(
 
         if let Ok(heartbeat) = from_str::<GatewayHeartbeat>(&raw_message.to_string()) {
             log::trace!(target: "symfonia::gateway::establish_connection", "Received heartbeat");
-            connection
-                .lock()
-                .await
-                .sender
-                .send(Message::Text(
-                    json!(GatewayHeartbeatAck::default()).to_string(),
-                ))
-                .await?;
+            heartbeat_handler_handle = Some(tokio::spawn(heartbeat_handler.run()));
         } else if let Ok(identify) = from_str::<GatewayIdentifyPayload>(&raw_message.to_string()) {
             received_identify_or_resume = true;
             log::trace!(target: "symfonia::gateway::establish_connection", "Received identify payload");
