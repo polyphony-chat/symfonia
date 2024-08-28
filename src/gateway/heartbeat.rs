@@ -73,6 +73,12 @@ impl HeartbeatHandler {
     /// - A shutdown signal is received through `kill_receive`.
     /// - An error occurs during WebSocket communication or channel reception.
     ///
+    /// Termination is signaled by sending a message through `kill_send` to the main task. This
+    /// `kill_send` channel is created by the main task and passed to the `HeartbeatHandler` during
+    /// initialization. The corresponding `kill_receive` can be used by other tasks to signal that
+    /// the Gateway connection should be closed. In the context of symfonia, this is being done to
+    /// close the [GatewayTask].
+    ///
     ///
     /// ## Example
     /// ```rust
@@ -89,7 +95,7 @@ impl HeartbeatHandler {
     ///
     /// let mut handler = HeartbeatHandler::new(connection, kill_receive, kill_send, message_receive).await;
     /// tokio::spawn(async move {
-    ///     handler.run().await;
+    ///     handler.run();
     /// });
     /// ```
     pub(super) async fn run(&mut self) {
