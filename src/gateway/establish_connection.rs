@@ -44,19 +44,13 @@ pub(super) async fn establish_connection(
     let mut received_identify_or_resume = false;
 
     let (kill_send, kill_receive) = tokio::sync::broadcast::channel(1);
-    let (message_send, message_receive) = tokio::sync::mpsc::channel(4);
+    let (message_send, message_receive) = tokio::sync::broadcast::channel(4);
     let sequence_number = Arc::new(Mutex::new(0u64));
-    let mut heartbeat_handler = HeartbeatHandler::new(
-        connection.clone(),
-        kill_receive.resubscribe(),
-        kill_send.clone(),
-        message_receive,
-        sequence_number.clone(),
-    );
+    let (session_id_send, session_id_receive) = tokio::sync::broadcast::channel(1);
 
     // This JoinHandle `.is_some()` if we receive a heartbeat message *before* we receive an
     // identify or resume message.
-    let heartbeat_handler_handle: Option<JoinHandle<()>>;
+    let mut heartbeat_handler_handle: Option<JoinHandle<()>> = None;
 
     loop {
         if received_identify_or_resume {
@@ -70,7 +64,35 @@ pub(super) async fn establish_connection(
 
         if let Ok(heartbeat) = from_str::<GatewayHeartbeat>(&raw_message.to_string()) {
             log::trace!(target: "symfonia::gateway::establish_connection", "Received heartbeat");
-            heartbeat_handler_handle = Some(tokio::spawn(heartbeat_handler.run()));
+            match heartbeat_handler_handle {
+                None => {
+                    // This only happens *once*. You will find that we have to `.resubscribe()` to
+                    // the channels to make the borrow checker happy, because the channels are otherwise
+                    // moved into the spawned task, which, *technically* could occur multiple times,
+                    // due to the loop {} construct. However, this is not the case, because this code
+                    // executes only if heartbeat_handler_handle is None, which is only true once,
+                    // as we set it to Some(_) in this block. We could perhaps make this a little
+                    // nicer by using unsafe rust magic, which would also allow us to use more appropriate
+                    // channel types such as `oneshot` for the session_id_receive channel. However,
+                    // I don't see that this is needed at the moment.
+                    heartbeat_handler_handle = Some(tokio::spawn({
+                        let mut heartbeat_handler = HeartbeatHandler::new(
+                            connection.clone(),
+                            kill_receive.resubscribe(),
+                            kill_send.clone(),
+                            message_receive.resubscribe(),
+                            sequence_number.clone(),
+                            session_id_receive.resubscribe(),
+                        );
+                        async move {
+                            heartbeat_handler.run().await;
+                        }
+                    }))
+                }
+                Some(_) => {
+                    message_send.send(heartbeat);
+                }
+            }
         } else if let Ok(identify) = from_str::<GatewayIdentifyPayload>(&raw_message.to_string()) {
             received_identify_or_resume = true;
             log::trace!(target: "symfonia::gateway::establish_connection", "Received identify payload");
