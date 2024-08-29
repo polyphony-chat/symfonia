@@ -112,6 +112,12 @@ impl HeartbeatHandler {
         // TODO: On death of this task, create and store disconnect info in gateway client object
         let mut sequence = 0u64;
         loop {
+            // When receiving heartbeats, we need to consider the following cases:
+            // - Heartbeat sequence number is correct
+            // - Heartbeat sequence number is slightly off, likely because a new packet was sent before the heartbeat was received
+            // - Heartbeat sequence number is way off, likely because the connection has high latency or is unstable
+            //
+            // I would consider "way off" to be a difference of more than or equal to 3.
             tokio::select! {
                 _ = self.kill_receive.recv() => {
                     trace!("Received kill signal in heartbeat_handler. Stopping heartbeat handler");
