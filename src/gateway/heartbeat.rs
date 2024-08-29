@@ -1,12 +1,16 @@
 use std::sync::Arc;
 
-use chorus::types::{GatewayHeartbeat, GatewayHeartbeatAck};
+use chorus::types::{GatewayHeartbeat, GatewayHeartbeatAck, GatewayReconnect};
 use futures::SinkExt;
 use log::*;
 use rand::seq;
 use serde_json::json;
 use tokio::sync::Mutex;
+use tokio_tungstenite::tungstenite::protocol::frame::coding::OpCode;
+use tokio_tungstenite::tungstenite::protocol::CloseFrame;
 use tokio_tungstenite::tungstenite::Message;
+
+use crate::gateway::DisconnectInfo;
 
 use super::{Connection, GatewayClient};
 
@@ -17,10 +21,11 @@ pub(super) struct HeartbeatHandler {
     connection: Arc<Mutex<Connection>>,
     kill_receive: tokio::sync::broadcast::Receiver<()>,
     kill_send: tokio::sync::broadcast::Sender<()>,
-    message_receive: tokio::sync::mpsc::Receiver<GatewayHeartbeat>,
+    message_receive: tokio::sync::broadcast::Receiver<GatewayHeartbeat>,
     last_heartbeat: std::time::Instant,
     /// The current sequence number of the gateway connection.
     sequence_number: Arc<Mutex<u64>>,
+    session_id_receive: tokio::sync::broadcast::Receiver<String>,
 }
 
 impl HeartbeatHandler {
@@ -33,6 +38,10 @@ impl HeartbeatHandler {
     /// - `kill_receive`: A channel receiver for signaling the shutdown of the heartbeat handler.
     /// - `kill_send`: A channel sender for sending signals to shut down the heartbeat handler.
     /// - `message_receive`: An MPSC (Multiple Producer Single Consumer) channel receiver for receiving heartbeat messages.
+    /// - `session_id_receive`: A oneshot channel receiver for receiving the session ID. The heartbeat handler may start
+    ///    running before an identify or resume message with a session ID is received, so this channel is used to wait for
+    ///    the session ID. If a session ID has been received, the heartbeat handler can use it to store a DisconnectInfo
+    ///    object in the appropriate `GatewayClient` when the connection is closed.
     ///
     /// # Returns
     /// The newly created `HeartbeatHandler` instance.
@@ -56,8 +65,9 @@ impl HeartbeatHandler {
         connection: Arc<Mutex<Connection>>,
         kill_receive: tokio::sync::broadcast::Receiver<()>,
         kill_send: tokio::sync::broadcast::Sender<()>,
-        message_receive: tokio::sync::mpsc::Receiver<GatewayHeartbeat>,
-        sequence_number: Arc<Mutex<u64>>,
+        message_receive: tokio::sync::broadcast::Receiver<GatewayHeartbeat>,
+        last_sequence_number: Arc<Mutex<u64>>,
+        session_id_receive: tokio::sync::broadcast::Receiver<String>,
     ) -> Self {
         Self {
             connection,
@@ -65,7 +75,8 @@ impl HeartbeatHandler {
             kill_send,
             message_receive,
             last_heartbeat: std::time::Instant::now(),
-            sequence_number,
+            sequence_number: last_sequence_number,
+            session_id_receive,
         }
     }
 
@@ -128,15 +139,25 @@ impl HeartbeatHandler {
                     if let Some(received_sequence_number) = heartbeat.d {
                         let mut sequence = self.sequence_number.lock().await;
                         // TODO: ..wait do we actually even *receive* sequence numbers, or do we just send them?
-                        match *sequence + 1 == received_sequence_number {
-                            true => {
+                        // TODO: Actually send Acks
+                        match Self::compare_sequence_numbers(*sequence, received_sequence_number) {
+                            SequenceNumberComparison::Correct => {
                                 *sequence = received_sequence_number;
                             }
-                            false => {
-                                // TODO Send disconnect message
-                                self.connection.lock().await.sender.send().await.unwrap();
-                                self.kill_send.send(()).unwrap();
-                                break;
+                            SequenceNumberComparison::SlightlyOff(diff) => {
+                                *sequence = received_sequence_number;
+                                trace!(target: "symfonia::gateway::heartbeat_handler", "Received heartbeat sequence number is slightly off by {}. This may be due to latency or a new packet being sent before the current one got received.", diff);
+                            }
+                            SequenceNumberComparison::WayOff(diff) => {
+                                *sequence = received_sequence_number;
+                                trace!(target: "symfonia::gateway::heartbeat_handler", "Received heartbeat sequence number is way off by {}. This may be due to latency.", diff);
+                                self.connection.lock().await.sender.send(Message::Text(json!(GatewayReconnect::default()).to_string())).await.unwrap_or_else(|_| {
+                                    trace!("Failed to send reconnect message in heartbeat_handler. Stopping gateway_task and heartbeat_handler");
+                                    self.kill_send.send(()).expect("Failed to send kill signal in heartbeat_handler");
+                                    return;
+                                });
+                                self.kill_send.send(()).expect("Failed to send kill signal in heartbeat_handler");
+                                return;
                             }
                         }
                     }
@@ -166,4 +187,20 @@ impl HeartbeatHandler {
             }
         }
     }
+
+    fn compare_sequence_numbers(one: u64, two: u64) -> SequenceNumberComparison {
+        let max = std::cmp::max(one, two);
+        let min = std::cmp::min(one, two);
+        match max - min {
+            0 => SequenceNumberComparison::Correct,
+            1..2 => SequenceNumberComparison::SlightlyOff(max - min),
+            _ => SequenceNumberComparison::WayOff(max - min),
+        }
+    }
+}
+
+enum SequenceNumberComparison {
+    Correct,
+    SlightlyOff(u64),
+    WayOff(u64),
 }
