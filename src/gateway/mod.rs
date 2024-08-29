@@ -98,8 +98,8 @@ struct Connection {
 
 struct DisconnectInfo {
     session_id: String,
-    disconnected_at: u64,
-    with_opcode: u16,
+    disconnected_at_sequence: u64,
+    with_opcode: u32,
 }
 
 impl
