@@ -187,6 +187,7 @@ impl HeartbeatHandler {
         }
     }
 
+    /// Compares two sequence numbers and returns a comparison result of type [SequenceNumberComparison].
     fn compare_sequence_numbers(one: u64, two: u64) -> SequenceNumberComparison {
         let max = std::cmp::max(one, two);
         let min = std::cmp::min(one, two);
@@ -197,6 +198,7 @@ impl HeartbeatHandler {
         }
     }
 
+    /// Shorthand for sending a heartbeat ack message.
     async fn send_ack(&self) {
         self.connection.lock().await.sender.send(Message::Text(json!(GatewayHeartbeatAck::default()).to_string())).await.unwrap_or_else(|_| {
             trace!("Failed to send heartbeat ack in heartbeat_handler. Stopping gateway_task and heartbeat_handler");
@@ -205,8 +207,12 @@ impl HeartbeatHandler {
     }
 }
 
+/// Granular comparison of two sequence numbers.
 enum SequenceNumberComparison {
+    /// The sequence numbers are identical.
     Correct,
+    /// The sequence numbers have a difference of more than 0 and less than 3.
     SlightlyOff(u64),
+    // The sequence numbers have a difference of 3 or more.
     WayOff(u64),
 }
