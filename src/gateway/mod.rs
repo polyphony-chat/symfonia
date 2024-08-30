@@ -89,6 +89,8 @@ struct GatewayClient {
     heartbeat_task_handle: tokio::task::JoinHandle<()>,
     // Kill switch to disconnect the client
     kill_send: tokio::sync::broadcast::Sender<()>,
+    // Disconnect info for resuming the session
+    disconnect_info: Option<DisconnectInfo>,
 }
 
 struct Connection {
@@ -126,7 +128,7 @@ struct NewConnection {
     client: Arc<Mutex<GatewayClient>>,
 }
 
-type ResumableClientsStore = Arc<Mutex<BTreeMap<String, DisconnectInfo>>>;
+type ResumableClientsStore = Arc<Mutex<BTreeMap<String, GatewayClient>>>;
 type GatewayUsersStore = Arc<Mutex<BTreeMap<Snowflake, Arc<Mutex<GatewayUser>>>>>;
 
 pub async fn start_gateway(
@@ -184,9 +186,17 @@ fn purge_expired_disconnects(resumeable_clients: ResumableClientsStore) {
             .expect("Check the clock/time settings on the host machine")
             .as_secs();
         let mut to_remove = Vec::new();
-        let mut lock = resumeable_clients.lock().unwrap();
-        for (disconnected_session_id, disconnected_session_info) in lock.iter() {
-            if current_unix_timestamp - disconnected_session_info.disconnected_at
+        let mut resumeable_clients_lock = resumeable_clients.lock().unwrap();
+        for (disconnected_session_id, disconnected_session) in resumeable_clients_lock.iter() {
+            let disconnect_info = match disconnected_session.disconnect_info.as_ref() {
+                Some(d) => d,
+                None => {
+                    // This shouldn't happen, but if it does, remove the session from the list
+                    to_remove.push(disconnected_session_id.clone());
+                    continue;
+                }
+            };
+            if current_unix_timestamp - disconnect_info.disconnected_at_sequence
                 > RESUME_RECONNECT_WINDOW_SECONDS as u64
             {
                 to_remove.push(disconnected_session_id.clone());
@@ -197,9 +207,9 @@ fn purge_expired_disconnects(resumeable_clients: ResumableClientsStore) {
             .checked_add(len as u128)
             .unwrap_or(u128::MAX);
         for session_id in to_remove.iter() {
-            lock.remove(session_id);
+            resumeable_clients_lock.remove(session_id);
         }
-        drop(lock);
+        drop(resumeable_clients_lock);
         minutely_log_timer += 1;
         if minutely_log_timer == 12 {
             log::debug!(target: "symfonia::gateway::purge_expired_disconnects", "Removed {} stale sessions in the last 60 seconds", removed_elements_last_minute);
