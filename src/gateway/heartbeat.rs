@@ -138,7 +138,6 @@ impl HeartbeatHandler {
                     trace!("Received heartbeat message in heartbeat_handler");
                     if let Some(received_sequence_number) = heartbeat.d {
                         let mut sequence = self.sequence_number.lock().await;
-                        // TODO: Actually send Acks
                         match Self::compare_sequence_numbers(*sequence, received_sequence_number) {
                             SequenceNumberComparison::Correct => {
                                 self.send_ack().await;
@@ -148,6 +147,8 @@ impl HeartbeatHandler {
                                 self.send_ack().await;
                             }
                             SequenceNumberComparison::WayOff(diff) => {
+                                // TODO: We could potentially send a heartbeat to the client, prompting it to send a new heartbeat.
+                                // This would require more logic though.
                                 trace!(target: "symfonia::gateway::heartbeat_handler", "Received heartbeat sequence number is way off by {}. This may be due to latency.", diff);
                                 self.connection.lock().await.sender.send(Message::Text(json!(GatewayReconnect::default()).to_string())).await.unwrap_or_else(|_| {
                                     trace!("Failed to send reconnect message in heartbeat_handler. Stopping gateway_task and heartbeat_handler");
@@ -173,6 +174,8 @@ impl HeartbeatHandler {
                 );
                 }
                 else => {
+                    // TODO: We could potentially send a heartbeat if we haven't received one in ~40 seconds,
+                    // to try and keep the session from disconnecting.
                     let elapsed = std::time::Instant::now() - self.last_heartbeat;
                     if elapsed > std::time::Duration::from_secs(45) {
                         trace!("Heartbeat timed out in heartbeat_handler. Stopping gateway_task and heartbeat_handler");
@@ -198,7 +201,6 @@ impl HeartbeatHandler {
         self.connection.lock().await.sender.send(Message::Text(json!(GatewayHeartbeatAck::default()).to_string())).await.unwrap_or_else(|_| {
             trace!("Failed to send heartbeat ack in heartbeat_handler. Stopping gateway_task and heartbeat_handler");
             self.kill_send.send(()).expect("Failed to send kill signal in heartbeat_handler");
-            return;
         });
     }
 }
