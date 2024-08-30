@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use chorus::types::{GatewayHeartbeat, GatewayHeartbeatAck, GatewayReconnect};
-use futures::SinkExt;
+use futures::{SinkExt, TryFutureExt};
 use log::*;
 use rand::seq;
 use serde_json::json;
@@ -134,22 +134,20 @@ impl HeartbeatHandler {
                     trace!("Received kill signal in heartbeat_handler. Stopping heartbeat handler");
                     break;
                 }
-                Some(heartbeat) = self.message_receive.recv() => {
+                Ok(heartbeat) = self.message_receive.recv() => {
                     trace!("Received heartbeat message in heartbeat_handler");
                     if let Some(received_sequence_number) = heartbeat.d {
                         let mut sequence = self.sequence_number.lock().await;
-                        // TODO: ..wait do we actually even *receive* sequence numbers, or do we just send them?
                         // TODO: Actually send Acks
                         match Self::compare_sequence_numbers(*sequence, received_sequence_number) {
                             SequenceNumberComparison::Correct => {
-                                *sequence = received_sequence_number;
+                                self.send_ack().await;
                             }
                             SequenceNumberComparison::SlightlyOff(diff) => {
-                                *sequence = received_sequence_number;
                                 trace!(target: "symfonia::gateway::heartbeat_handler", "Received heartbeat sequence number is slightly off by {}. This may be due to latency or a new packet being sent before the current one got received.", diff);
+                                self.send_ack().await;
                             }
                             SequenceNumberComparison::WayOff(diff) => {
-                                *sequence = received_sequence_number;
                                 trace!(target: "symfonia::gateway::heartbeat_handler", "Received heartbeat sequence number is way off by {}. This may be due to latency.", diff);
                                 self.connection.lock().await.sender.send(Message::Text(json!(GatewayReconnect::default()).to_string())).await.unwrap_or_else(|_| {
                                     trace!("Failed to send reconnect message in heartbeat_handler. Stopping gateway_task and heartbeat_handler");
@@ -196,6 +194,14 @@ impl HeartbeatHandler {
             1..2 => SequenceNumberComparison::SlightlyOff(max - min),
             _ => SequenceNumberComparison::WayOff(max - min),
         }
+    }
+
+    async fn send_ack(&self) {
+        self.connection.lock().await.sender.send(Message::Text(json!(GatewayHeartbeatAck::default()).to_string())).await.unwrap_or_else(|_| {
+            trace!("Failed to send heartbeat ack in heartbeat_handler. Stopping gateway_task and heartbeat_handler");
+            self.kill_send.send(()).expect("Failed to send kill signal in heartbeat_handler");
+            return;
+        });
     }
 }
 
