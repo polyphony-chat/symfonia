@@ -152,7 +152,6 @@ impl HeartbeatHandler {
                                 self.connection.lock().await.sender.send(Message::Text(json!(GatewayReconnect::default()).to_string())).await.unwrap_or_else(|_| {
                                     trace!("Failed to send reconnect message in heartbeat_handler. Stopping gateway_task and heartbeat_handler");
                                     self.kill_send.send(()).expect("Failed to send kill signal in heartbeat_handler");
-                                    return;
                                 });
                                 self.kill_send.send(()).expect("Failed to send kill signal in heartbeat_handler");
                                 return;
@@ -170,7 +169,6 @@ impl HeartbeatHandler {
                 .await.unwrap_or_else(|_| {
                     trace!("Failed to send heartbeat ack in heartbeat_handler. Stopping gateway_task and heartbeat_handler");
                     self.kill_send.send(()).expect("Failed to send kill signal in heartbeat_handler");
-                    return;
                 }
                 );
                 }
