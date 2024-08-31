@@ -18,8 +18,9 @@ use crate::errors::{Error, GatewayError};
 use crate::gateway::heartbeat::HeartbeatHandler;
 use crate::gateway::resume_connection::resume_connection;
 use crate::gateway::GatewayUser;
+use crate::util::token::check_token;
 
-use super::{Connection, GatewayClient, NewConnection};
+use super::{Connection, GatewayClient, GatewayUsersStore, NewConnection};
 
 /// `establish_connection` is the entrypoint method that gets called when a client tries to connect
 /// to the WebSocket server.
@@ -30,6 +31,7 @@ pub(super) async fn establish_connection(
     stream: TcpStream,
     db: PgPool, // TODO: Do we need db here?
     config: Config,
+    gateway_users_store: GatewayUsersStore,
 ) -> Result<NewConnection, Error> {
     let ws_stream = accept_async(stream).await?;
     let mut connection: Connection = ws_stream.split().into();
@@ -56,7 +58,8 @@ pub(super) async fn establish_connection(
         _ = kill_receive.recv() => {
             return Err(GatewayError::Closed.into());
         }
-        _ = tokio::time::sleep(std::time::Duration::from_secs(10)) => {
+        // If we do not receive an identifying or resuming message within 30 seconds, we close the connection.
+        _ = tokio::time::sleep(std::time::Duration::from_secs(30)) => {
             return Err(GatewayError::Timeout.into());
         }
         else => {
@@ -105,6 +108,15 @@ pub(super) async fn establish_connection(
                     received_identify_or_resume = true;
                     log::trace!(target: "symfonia::gateway::establish_connection", "Received identify payload");
                     // TODO: Verify token, build NewConnection
+                    let claims = match check_token(&db, &identify.token, &config.security.jwt_secret).await {
+                        Ok(claims) => claims,
+                        Err(e) => {
+                            log::trace!(target: "symfonia::gateway::establish_connection", "Failed to verify token: {}", e);
+                            kill_send.send(()).expect("Failed to send kill signal");
+                            return Err(crate::errors::UserError::InvalidToken.into());
+                        }
+                    };
+                    let gateway_user = get_or_new_gateway_user(claims.id, gateway_users_store.clone()).await;
                 } else if let Ok(resume) = from_str::<GatewayResume>(&raw_message.to_string()) {
                     received_identify_or_resume = true;
                     log::trace!(target: "symfonia::gateway::establish_connection", "Received resume payload");
@@ -117,4 +129,23 @@ pub(super) async fn establish_connection(
     }
 
     todo!()
+}
+
+/// `get_or_new_gateway_user` is a helper function that retrieves a [GatewayUser] from the store if it exists,
+/// or creates a new user, stores it in the store and then returns it, if it does not exist.
+async fn get_or_new_gateway_user(
+    user_id: Snowflake,
+    store: GatewayUsersStore,
+) -> Arc<tokio::sync::Mutex<GatewayUser>> {
+    let mut store = store.lock().await;
+    if let Some(user) = store.get(&user_id) {
+        return user.clone();
+    }
+    let user = Arc::new(Mutex::new(GatewayUser {
+        id: user_id,
+        clients: Vec::new(),
+        subscriptions: Vec::new(),
+    }));
+    store.insert(user_id, user.clone());
+    user
 }
