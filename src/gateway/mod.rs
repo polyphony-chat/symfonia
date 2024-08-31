@@ -13,7 +13,7 @@ mod resume_connection;
 mod types;
 
 use std::collections::BTreeMap;
-use std::sync::{Arc, Mutex, Weak};
+use std::sync::{Arc, Weak};
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -27,6 +27,7 @@ use pubserve::Subscriber;
 use serde_json::{from_str, json};
 use sqlx::PgPool;
 use tokio::net::{TcpListener, TcpStream};
+use tokio::sync::Mutex;
 
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{accept_async, WebSocketStream};
@@ -91,6 +92,8 @@ struct GatewayClient {
     kill_send: tokio::sync::broadcast::Sender<()>,
     // Disconnect info for resuming the session
     disconnect_info: Option<DisconnectInfo>,
+    /// [blake3] token hash of the session token used for this connection
+    session_token_hash_blake3: String,
 }
 
 struct Connection {
@@ -152,11 +155,16 @@ pub async fn start_gateway(
 
     let gateway_users: GatewayUsersStore = Arc::new(Mutex::new(BTreeMap::new()));
     let resumeable_clients: ResumableClientsStore = Arc::new(Mutex::new(BTreeMap::new()));
-    tokio::task::spawn(async { purge_expired_disconnects(resumeable_clients) });
+    tokio::task::spawn(async { purge_expired_disconnects(resumeable_clients).await });
     while let Ok((stream, _)) = listener.accept().await {
         log::trace!(target: "symfonia::gateway", "New connection received");
         let connection_result = match tokio::task::spawn(
-            establish_connection::establish_connection(stream, db.clone(), config.clone()),
+            establish_connection::establish_connection(
+                stream,
+                db.clone(),
+                config.clone(),
+                gateway_users.clone(),
+            ),
         )
         .await
         {
@@ -167,7 +175,9 @@ pub async fn start_gateway(
             }
         };
         match connection_result {
-            Ok(new_connection) => checked_add_new_connection(gateway_users.clone(), new_connection),
+            Ok(new_connection) => {
+                checked_add_new_connection(gateway_users.clone(), new_connection).await
+            }
             Err(e) => {
                 log::debug!(target: "symfonia::gateway::establish_connection", "User gateway connection could not be established: {e}");
                 continue;
@@ -180,7 +190,7 @@ pub async fn start_gateway(
 /// A disconnected, resumable session can only be resumed within `RESUME_RECONNECT_WINDOW_SECONDS`
 /// seconds after a disconnect occurs. Sessions that can be resumed are stored in a `Map`. The
 /// purpose of this method is to periodically throw out expired sessions from that map.
-fn purge_expired_disconnects(resumeable_clients: ResumableClientsStore) {
+async fn purge_expired_disconnects(resumeable_clients: ResumableClientsStore) {
     let mut minutely_log_timer = 0;
     let mut removed_elements_last_minute: u128 = 0;
     loop {
@@ -191,7 +201,7 @@ fn purge_expired_disconnects(resumeable_clients: ResumableClientsStore) {
             .expect("Check the clock/time settings on the host machine")
             .as_secs();
         let mut to_remove = Vec::new();
-        let mut resumeable_clients_lock = resumeable_clients.lock().unwrap();
+        let mut resumeable_clients_lock = resumeable_clients.lock().await;
         for (disconnected_session_id, disconnected_session) in resumeable_clients_lock.iter() {
             let disconnect_info = match disconnected_session.disconnect_info.as_ref() {
                 Some(d) => d,
@@ -232,7 +242,7 @@ fn purge_expired_disconnects(resumeable_clients: ResumableClientsStore) {
 /// `gateway_users``.
 ///
 /// Else, add the [new GatewayUser] and the new [GatewayClient] into `gateway_users` as-is.
-fn checked_add_new_connection(
+async fn checked_add_new_connection(
     gateway_users: Arc<Mutex<BTreeMap<Snowflake, Arc<Mutex<GatewayUser>>>>>,
     new_connection: NewConnection,
 ) {
@@ -240,17 +250,17 @@ fn checked_add_new_connection(
     let mut new_connection = new_connection;
     // To avoid having to get the lock a lot of times, lock once here and hold this lock for most
     // of the way through this method
-    let new_connection_user = new_connection.user.lock().unwrap();
-    let mut locked_map = gateway_users.lock().unwrap();
+    let new_connection_user = new_connection.user.lock().await;
+    let mut locked_map = gateway_users.lock().await;
     // If our map contains the user from `new_connection` already, modify the `parent` of the `client`
     // of `new_connection` to point to the user already in our map, then insert that `client` into
     // the `clients` field of our existing user.
     if locked_map.contains_key(&new_connection_user.id) {
         let existing_user = locked_map.get(&new_connection_user.id).unwrap();
-        new_connection.client.lock().unwrap().parent = Arc::downgrade(existing_user);
+        new_connection.client.lock().await.parent = Arc::downgrade(existing_user);
         existing_user
             .lock()
-            .unwrap()
+            .await
             .clients
             .push(new_connection.client);
     } else {
