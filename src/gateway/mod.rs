@@ -92,8 +92,8 @@ struct GatewayClient {
     kill_send: tokio::sync::broadcast::Sender<()>,
     // Disconnect info for resuming the session
     disconnect_info: Option<DisconnectInfo>,
-    /// [blake3] token hash of the session token used for this connection
-    session_token_hash_blake3: String,
+    /// Token of the session token used for this connection
+    session_token: String,
 }
 
 struct Connection {
@@ -102,9 +102,8 @@ struct Connection {
 }
 
 struct DisconnectInfo {
-    // TODO: Token stored in memory must be hashed!!
-    /// [blake3] hash of the session token that was used for this connection
-    session_token_hash_blake3: String,
+    /// session token that was used for this connection
+    session_token: String,
     disconnected_at_sequence: u64,
     with_opcode: u32,
 }
@@ -133,8 +132,7 @@ struct NewConnection {
     client: Arc<Mutex<GatewayClient>>,
 }
 
-// TODO: If the string is supposed to be a token, the token must be hashed before storing it in memory!!
-/// A thread-shareable map of resumable clients. The key is a [blake3] hash of the session token used
+/// A thread-shareable map of resumable clients. The key is the session token used
 /// for the connection. The value is a [GatewayClient] that can be resumed.
 type ResumableClientsStore = Arc<Mutex<BTreeMap<String, GatewayClient>>>;
 type GatewayUsersStore = Arc<Mutex<BTreeMap<Snowflake, Arc<Mutex<GatewayUser>>>>>;
