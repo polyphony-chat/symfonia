@@ -69,6 +69,7 @@ impl HeartbeatHandler {
         last_sequence_number: Arc<Mutex<u64>>,
         session_id_receive: tokio::sync::broadcast::Receiver<String>,
     ) -> Self {
+        trace!(target: "symfonia::gateway::heartbeat_handler", "New heartbeat handler created");
         Self {
             connection,
             kill_receive,
@@ -120,6 +121,7 @@ impl HeartbeatHandler {
     /// });
     /// ```
     pub(super) async fn run(&mut self) {
+        trace!(target: "symfonia::gateway::heartbeat_handler", "Starting heartbeat handler");
         // TODO: On death of this task, create and store disconnect info in gateway client object
         let mut sequence = 0u64;
         loop {
