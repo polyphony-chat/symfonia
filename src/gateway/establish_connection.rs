@@ -5,7 +5,7 @@ use chorus::types::{
     Snowflake,
 };
 use futures::{SinkExt, StreamExt};
-use log::trace;
+use log::{debug, trace};
 use rand::seq;
 use serde_json::{from_str, json};
 use sqlx::PgPool;
@@ -20,7 +20,7 @@ use crate::database::entities::Config;
 use crate::errors::{Error, GatewayError};
 use crate::gateway::heartbeat::HeartbeatHandler;
 use crate::gateway::resume_connection::resume_connection;
-use crate::gateway::{gateway_task, GatewayUser};
+use crate::gateway::{gateway_task, GatewayPayload, GatewayUser};
 use crate::util::token::check_token;
 
 use super::{Connection, GatewayClient, GatewayUsersStore, NewConnection};
@@ -36,16 +36,16 @@ pub(super) async fn establish_connection(
     config: Config,
     gateway_users_store: GatewayUsersStore,
 ) -> Result<NewConnection, Error> {
-    trace!(target: "symfonia::gateway::establish_connection", "Beginning process to establish connection (handshake)");
+    trace!(target: "symfonia::gateway::establish_connection::establish_connection", "Beginning process to establish connection (handshake)");
     let ws_stream = accept_async(stream).await?;
     let mut connection: Connection = ws_stream.split().into();
-    trace!(target: "symfonia::gateway::establish_connection", "Sending hello message");
+    trace!(target: "symfonia::gateway::establish_connection::establish_connection", "Sending hello message");
     // Hello message
     connection
         .sender
         .send(Message::Text(json!(GatewayHello::default()).to_string()))
         .await?;
-    trace!(target: "symfonia::gateway::establish_connection", "Sent hello message");
+    trace!(target: "symfonia::gateway::establish_connection::establish_connection", "Sent hello message");
 
     let connection = Arc::new(Mutex::new(connection));
 
@@ -60,18 +60,20 @@ pub(super) async fn establish_connection(
     // identify or resume message.
     let mut heartbeat_handler_handle: Option<JoinHandle<()>> = None;
 
-    trace!(target: "symfonia::gateway::establish_connection", "Waiting for next message, timeout or kill signal...");
+    trace!(target: "symfonia::gateway::establish_connection::establish_connection", "Waiting for next message, timeout or kill signal...");
     let mut second_kill_receive = kill_receive.resubscribe();
     tokio::select! {
         _ = second_kill_receive.recv() => {
-            trace!(target: "symfonia::gateway::establish_connection", "Connection was closed before we could establish it");
+            debug!(target: "symfonia::gateway::establish_connection::establish_connection", "Connection was closed before we could establish it");
             return Err(GatewayError::Closed.into());
         }
         // If we do not receive an identifying or resuming message within 30 seconds, we close the connection.
         _ = tokio::time::sleep(std::time::Duration::from_secs(30)) => {
-            trace!(target: "symfonia::gateway::establish_connection", "Connection timed out: No message received within 30 seconds");
+            debug!(target: "symfonia::gateway::establish_connection::establish_connection", "Connection timed out: No message received within 30 seconds");
             return Err(GatewayError::Timeout.into());
         }
+        // Since async closures are not yet stable, we have to use a dedicated function to handle the
+        // connection establishment process. :(
         new_connection = finish_connecting(
             connection.clone(),
             heartbeat_handler_handle,
@@ -111,6 +113,11 @@ async fn get_or_new_gateway_user(
     user
 }
 
+/// `finish_connecting` is the second part of the connection establishment process. It picks up after
+/// the initial `Hello` message has been sent to the client. It then waits on the next message from
+/// the client, which should be either a `Heartbeat`, `Identify` or `Resume` message, handling each
+/// case accordingly.
+#[allow(clippy::too_many_arguments)]
 async fn finish_connecting(
     connection: Arc<Mutex<Connection>>,
     mut heartbeat_handler_handle: Option<JoinHandle<()>>,
@@ -125,16 +132,15 @@ async fn finish_connecting(
     gateway_users_store: GatewayUsersStore,
 ) -> Result<NewConnection, Error> {
     loop {
-        trace!(target: "symfonia::gateway::establish_connection", "No resume or identify message received yet, waiting for next message...");
-        trace!(target: "symfonia::gateway::establish_connection", "Waiting for next message...");
+        trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Waiting for next message...");
         let raw_message = match connection.lock().await.receiver.next().await {
             Some(next) => next,
             None => return Err(GatewayError::Timeout.into()),
         }?;
-        trace!(target: "symfonia::gateway::establish_connection", "Received message: {:?}", raw_message);
+        debug!(target: "symfonia::gateway::establish_connection::finish_connecting", "Received message");
 
         if let Ok(heartbeat) = from_str::<GatewayHeartbeat>(&raw_message.to_string()) {
-            log::trace!(target: "symfonia::gateway::establish_connection", "Received heartbeat");
+            log::trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Received heartbeat");
             match heartbeat_handler_handle {
                 None => {
                     // This only happens *once*. You will find that we have to `.resubscribe()` to
@@ -164,13 +170,23 @@ async fn finish_connecting(
                     message_send.send(heartbeat);
                 }
             }
-        } else if let Ok(identify) = from_str::<GatewayIdentifyPayload>(&raw_message.to_string()) {
-            log::trace!(target: "symfonia::gateway::establish_connection", "Received identify payload");
-            let claims = match check_token(&db, &identify.token, &config.security.jwt_secret).await
+        } else if let Ok(identify) =
+            from_str::<GatewayPayload<GatewayIdentifyPayload>>(&raw_message.to_string())
+        {
+            log::trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Received identify payload");
+            let claims = match check_token(
+                &db,
+                &identify.event_data.token,
+                &config.security.jwt_secret,
+            )
+            .await
             {
-                Ok(claims) => claims,
+                Ok(claims) => {
+                    trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Token verified");
+                    claims
+                }
                 Err(_) => {
-                    log::trace!(target: "symfonia::gateway::establish_connection", "Failed to verify token");
+                    log::trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Failed to verify token");
                     kill_send.send(()).expect("Failed to send kill signal");
                     return Err(crate::errors::UserError::InvalidToken.into());
                 }
@@ -199,7 +215,7 @@ async fn finish_connecting(
                 },
                 kill_send,
                 disconnect_info: None,
-                session_token: identify.token,
+                session_token: identify.event_data.token,
             };
             let gateway_client_arc_mutex = Arc::new(Mutex::new(gateway_client));
             gateway_user
@@ -212,10 +228,11 @@ async fn finish_connecting(
                 client: gateway_client_arc_mutex.clone(),
             });
         } else if let Ok(resume) = from_str::<GatewayResume>(&raw_message.to_string()) {
-            log::trace!(target: "symfonia::gateway::establish_connection", "Received resume payload");
+            log::trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Received resume payload");
             return resume_connection(connection, db, config.to_owned(), resume).await;
         } else {
-            trace!(target: "symfonia::gateway::establish_connection", "Received unexpected message: {:?}", raw_message);
+            debug!(target: "symfonia::gateway::establish_connection::finish_connecting", "Message could not be decoded as resume, heartbeat or identify.");
+
             return Err(GatewayError::UnexpectedMessage.into());
         }
     }
