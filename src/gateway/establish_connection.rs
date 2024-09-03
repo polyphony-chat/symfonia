@@ -23,7 +23,7 @@ use crate::gateway::resume_connection::resume_connection;
 use crate::gateway::{gateway_task, GatewayPayload, GatewayUser};
 use crate::util::token::check_token;
 
-use super::{Connection, GatewayClient, GatewayUsersStore, NewConnection};
+use super::{Connection, GatewayClient, GatewayUsersStore, NewConnection, ResumableClientsStore};
 
 /// `establish_connection` is the entrypoint method that gets called when a client tries to connect
 /// to the WebSocket server.
@@ -35,6 +35,7 @@ pub(super) async fn establish_connection(
     db: PgPool, // TODO: Do we need db here?
     config: Config,
     gateway_users_store: GatewayUsersStore,
+    resumeable_clients_store: ResumableClientsStore,
 ) -> Result<NewConnection, Error> {
     trace!(target: "symfonia::gateway::establish_connection::establish_connection", "Beginning process to establish connection (handshake)");
     let ws_stream = accept_async(stream).await?;
@@ -53,7 +54,7 @@ pub(super) async fn establish_connection(
 
     let (kill_send, mut kill_receive) = tokio::sync::broadcast::channel::<()>(1);
     let (message_send, message_receive) = tokio::sync::broadcast::channel::<GatewayHeartbeat>(4);
-    let sequence_number = Arc::new(Mutex::new(0u64));
+    let sequence_number = Arc::new(Mutex::new(0u64)); // TODO: Actually use this, as in: Increment it when needed. Currently, this is not being done.
     let (session_id_send, session_id_receive) = tokio::sync::broadcast::channel::<String>(1);
 
     // This JoinHandle `.is_some()` if we receive a heartbeat message *before* we receive an
@@ -65,12 +66,12 @@ pub(super) async fn establish_connection(
     tokio::select! {
         _ = second_kill_receive.recv() => {
             debug!(target: "symfonia::gateway::establish_connection::establish_connection", "Connection was closed before we could establish it");
-            return Err(GatewayError::Closed.into());
+            Err(GatewayError::Closed.into())
         }
         // If we do not receive an identifying or resuming message within 30 seconds, we close the connection.
         _ = tokio::time::sleep(std::time::Duration::from_secs(30)) => {
             debug!(target: "symfonia::gateway::establish_connection::establish_connection", "Connection timed out: No message received within 30 seconds");
-            return Err(GatewayError::Timeout.into());
+            Err(GatewayError::Timeout.into())
         }
         // Since async closures are not yet stable, we have to use a dedicated function to handle the
         // connection establishment process. :(
@@ -86,12 +87,11 @@ pub(super) async fn establish_connection(
             db,
             &config,
             gateway_users_store.clone(),
+            resumeable_clients_store.clone(),
         ) => {
-            return new_connection;
+            new_connection
         }
     }
-
-    todo!()
 }
 
 /// `get_or_new_gateway_user` is a helper function that retrieves a [GatewayUser] from the store if it exists,
@@ -99,6 +99,7 @@ pub(super) async fn establish_connection(
 async fn get_or_new_gateway_user(
     user_id: Snowflake,
     store: GatewayUsersStore,
+    resumeable_clients_store: ResumableClientsStore,
 ) -> Arc<tokio::sync::Mutex<GatewayUser>> {
     let mut store = store.lock().await;
     if let Some(user) = store.get(&user_id) {
@@ -108,6 +109,7 @@ async fn get_or_new_gateway_user(
         id: user_id,
         clients: Vec::new(),
         subscriptions: Vec::new(),
+        resumeable_clients_store: Arc::downgrade(&resumeable_clients_store),
     }));
     store.insert(user_id, user.clone());
     user
@@ -130,6 +132,7 @@ async fn finish_connecting(
     db: PgPool,
     config: &Config,
     gateway_users_store: GatewayUsersStore,
+    resumeable_clients_store: ResumableClientsStore,
 ) -> Result<NewConnection, Error> {
     loop {
         trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Waiting for next message...");
@@ -191,8 +194,12 @@ async fn finish_connecting(
                     return Err(crate::errors::UserError::InvalidToken.into());
                 }
             };
-            let mut gateway_user =
-                get_or_new_gateway_user(claims.id, gateway_users_store.clone()).await;
+            let mut gateway_user = get_or_new_gateway_user(
+                claims.id,
+                gateway_users_store.clone(),
+                resumeable_clients_store.clone(),
+            )
+            .await;
             let gateway_client = GatewayClient {
                 parent: Arc::downgrade(&gateway_user),
                 connection: connection.clone(),
@@ -216,6 +223,7 @@ async fn finish_connecting(
                 kill_send,
                 disconnect_info: None,
                 session_token: identify.event_data.token,
+                last_sequence: sequence_number.clone(),
             };
             let gateway_client_arc_mutex = Arc::new(Mutex::new(gateway_client));
             gateway_user

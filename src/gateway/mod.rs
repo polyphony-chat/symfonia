@@ -77,6 +77,8 @@ struct GatewayUser {
     /// A GatewayUser may have many [GatewayClients](GatewayClient), but he only gets subscribed to
     /// all relevant [Publishers](pubserve::Publisher) *once* to save resources.
     subscriptions: Vec<Box<dyn Subscriber<Event>>>,
+    /// [Weak] reference to the [ResumableClientsStore].
+    resumeable_clients_store: Weak<Mutex<BTreeMap<String, GatewayClient>>>,
 }
 
 /// A concrete session, that a [GatewayUser] is connected to the Gateway with.
@@ -85,7 +87,7 @@ struct GatewayClient {
     /// A [Weak] reference to the [GatewayUser] this client belongs to.
     parent: Weak<Mutex<GatewayUser>>,
     // Handle to the main Gateway task for this client
-    main_task_handle: tokio::task::JoinHandle<Result<(), Error>>,
+    main_task_handle: tokio::task::JoinHandle<()>,
     // Handle to the heartbeat task for this client
     heartbeat_task_handle: tokio::task::JoinHandle<()>,
     // Kill switch to disconnect the client
@@ -94,6 +96,20 @@ struct GatewayClient {
     disconnect_info: Option<DisconnectInfo>,
     /// Token of the session token used for this connection
     session_token: String,
+    /// The last sequence number received from the client. Shared between the main task, heartbeat
+    /// task, and this struct.
+    last_sequence: Arc<Mutex<u64>>,
+}
+
+impl GatewayClient {
+    pub async fn die(&mut self) {
+        self.kill_send.send(()).unwrap();
+        let disconnect_info = DisconnectInfo {
+            session_token: self.session_token.clone(),
+            disconnected_at_sequence: *self.last_sequence.lock().await,
+        };
+        // TODO: Remove self from parent's clients, add disconnect info to resumeable_clients
+    }
 }
 
 struct Connection {
@@ -105,7 +121,6 @@ struct DisconnectInfo {
     /// session token that was used for this connection
     session_token: String,
     disconnected_at_sequence: u64,
-    with_opcode: u32,
 }
 
 impl
@@ -153,7 +168,8 @@ pub async fn start_gateway(
 
     let gateway_users: GatewayUsersStore = Arc::new(Mutex::new(BTreeMap::new()));
     let resumeable_clients: ResumableClientsStore = Arc::new(Mutex::new(BTreeMap::new()));
-    tokio::task::spawn(async { purge_expired_disconnects(resumeable_clients).await });
+    let resumeable_clients_clone = resumeable_clients.clone();
+    tokio::task::spawn(async { purge_expired_disconnects(resumeable_clients_clone).await });
     while let Ok((stream, _)) = listener.accept().await {
         log::trace!(target: "symfonia::gateway", "New connection received");
         let connection_result = match tokio::task::spawn(
@@ -162,6 +178,7 @@ pub async fn start_gateway(
                 db.clone(),
                 config.clone(),
                 gateway_users.clone(),
+                resumeable_clients.clone(),
             ),
         )
         .await
