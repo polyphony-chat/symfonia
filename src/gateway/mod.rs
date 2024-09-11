@@ -12,7 +12,7 @@ mod heartbeat;
 mod resume_connection;
 mod types;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Weak};
 use std::thread::sleep;
 use std::time::Duration;
@@ -68,8 +68,8 @@ GatewayUser is subscribed to
 /// A single identifiable User connected to the Gateway - possibly using many clients at the same
 /// time.
 struct GatewayUser {
-    /// Sessions a User is connected with.
-    clients: Vec<Arc<Mutex<GatewayClient>>>,
+    /// Sessions a User is connected with. HashMap of SessionToken -> GatewayClient
+    clients: HashMap<String, Arc<Mutex<GatewayClient>>>,
     /// The Snowflake ID of the User.
     id: Snowflake,
     /// A collection of [Subscribers](Subscriber) to [Event] [Publishers](pubserve::Publisher).
@@ -266,6 +266,7 @@ async fn checked_add_new_connection(
     // To avoid having to get the lock a lot of times, lock once here and hold this lock for most
     // of the way through this method
     let new_connection_user = new_connection.user.lock().await;
+    let new_connection_token = new_connection.client.lock().await.session_token.clone();
     let mut locked_map = gateway_users.lock().await;
     // If our map contains the user from `new_connection` already, modify the `parent` of the `client`
     // of `new_connection` to point to the user already in our map, then insert that `client` into
@@ -277,7 +278,7 @@ async fn checked_add_new_connection(
             .lock()
             .await
             .clients
-            .push(new_connection.client);
+            .insert(new_connection_token, new_connection.client);
     } else {
         // We cannot do `locked_map.insert(id, new_connection.user)` if new_connection is still
         // locked. Just bind the id we need to a new variable, then drop the lock.

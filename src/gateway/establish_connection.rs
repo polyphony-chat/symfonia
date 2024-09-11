@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use chorus::types::{
@@ -32,7 +33,7 @@ use super::{Connection, GatewayClient, GatewayUsersStore, NewConnection, Resumab
 /// [GatewayClient], whose `.parent` field contains a [Weak] reference to the new [GatewayUser].
 pub(super) async fn establish_connection(
     stream: TcpStream,
-    db: PgPool, // TODO: Do we need db here?
+    db: PgPool,
     config: Config,
     gateway_users_store: GatewayUsersStore,
     resumeable_clients_store: ResumableClientsStore,
@@ -107,7 +108,7 @@ async fn get_or_new_gateway_user(
     }
     let user = Arc::new(Mutex::new(GatewayUser {
         id: user_id,
-        clients: Vec::new(),
+        clients: HashMap::new(),
         subscriptions: Vec::new(),
         resumeable_clients_store: Arc::downgrade(&resumeable_clients_store),
     }));
@@ -226,11 +227,10 @@ async fn finish_connecting(
                 last_sequence: sequence_number.clone(),
             };
             let gateway_client_arc_mutex = Arc::new(Mutex::new(gateway_client));
-            gateway_user
-                .lock()
-                .await
-                .clients
-                .push(gateway_client_arc_mutex.clone());
+            gateway_user.lock().await.clients.insert(
+                gateway_client_arc_mutex.lock().await.session_token.clone(),
+                gateway_client_arc_mutex.clone(),
+            );
             return Ok(NewConnection {
                 user: gateway_user,
                 client: gateway_client_arc_mutex.clone(),
