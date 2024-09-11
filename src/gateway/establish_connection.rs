@@ -222,7 +222,6 @@ async fn finish_connecting(
                     }),
                 },
                 kill_send,
-                disconnect_info: None,
                 session_token: identify.event_data.token,
                 last_sequence: sequence_number.clone(),
             };

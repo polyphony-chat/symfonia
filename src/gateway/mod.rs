@@ -92,8 +92,6 @@ struct GatewayClient {
     heartbeat_task_handle: tokio::task::JoinHandle<()>,
     // Kill switch to disconnect the client
     kill_send: tokio::sync::broadcast::Sender<()>,
-    // Disconnect info for resuming the session
-    disconnect_info: Option<DisconnectInfo>,
     /// Token of the session token used for this connection
     session_token: String,
     /// The last sequence number received from the client. Shared between the main task, heartbeat
@@ -102,13 +100,24 @@ struct GatewayClient {
 }
 
 impl GatewayClient {
-    pub async fn die(&mut self) {
+    pub async fn die(mut self, resumeable_clients: ResumableClientsStore) {
         self.kill_send.send(()).unwrap();
         let disconnect_info = DisconnectInfo {
             session_token: self.session_token.clone(),
             disconnected_at_sequence: *self.last_sequence.lock().await,
         };
         // TODO: Remove self from parent's clients, add disconnect info to resumeable_clients
+        self.parent
+            .upgrade()
+            .unwrap()
+            .lock()
+            .await
+            .clients
+            .remove(&self.session_token);
+        resumeable_clients
+            .lock()
+            .await
+            .insert(self.session_token.clone(), self);
     }
 }
 
@@ -121,6 +130,7 @@ struct DisconnectInfo {
     /// session token that was used for this connection
     session_token: String,
     disconnected_at_sequence: u64,
+    parent: Weak<Mutex<GatewayUser>>,
 }
 
 impl
@@ -149,7 +159,9 @@ struct NewConnection {
 
 /// A thread-shareable map of resumable clients. The key is the session token used
 /// for the connection. The value is a [GatewayClient] that can be resumed.
-type ResumableClientsStore = Arc<Mutex<BTreeMap<String, GatewayClient>>>;
+// TODO: this is stupid. it should be a map of string and DisconnectInfo. there is no need to store
+// the whole GatewayClient, nor would it make sense to do so.
+type ResumableClientsStore = Arc<Mutex<BTreeMap<String, DisconnectInfo>>>;
 type GatewayUsersStore = Arc<Mutex<BTreeMap<Snowflake, Arc<Mutex<GatewayUser>>>>>;
 
 pub async fn start_gateway(
