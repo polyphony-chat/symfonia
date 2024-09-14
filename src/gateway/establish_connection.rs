@@ -97,6 +97,7 @@ pub(super) async fn establish_connection(
 
 /// `get_or_new_gateway_user` is a helper function that retrieves a [GatewayUser] from the store if it exists,
 /// or creates a new user, stores it in the store and then returns it, if it does not exist.
+// TODO: Refactor this function according to the new `ResumeableClientsStore` definition.
 async fn get_or_new_gateway_user(
     user_id: Snowflake,
     store: GatewayUsersStore,
