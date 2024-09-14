@@ -105,8 +105,8 @@ impl GatewayClient {
         let disconnect_info = DisconnectInfo {
             session_token: self.session_token.clone(),
             disconnected_at_sequence: *self.last_sequence.lock().await,
+            parent: self.parent.clone(),
         };
-        // TODO: Remove self from parent's clients, add disconnect info to resumeable_clients
         self.parent
             .upgrade()
             .unwrap()
@@ -117,7 +117,7 @@ impl GatewayClient {
         resumeable_clients
             .lock()
             .await
-            .insert(self.session_token.clone(), self);
+            .insert(self.session_token.clone(), disconnect_info);
     }
 }
 
@@ -230,15 +230,8 @@ async fn purge_expired_disconnects(resumeable_clients: ResumableClientsStore) {
         let mut to_remove = Vec::new();
         let mut resumeable_clients_lock = resumeable_clients.lock().await;
         for (disconnected_session_id, disconnected_session) in resumeable_clients_lock.iter() {
-            let disconnect_info = match disconnected_session.disconnect_info.as_ref() {
-                Some(d) => d,
-                None => {
-                    // This shouldn't happen, but if it does, remove the session from the list
-                    to_remove.push(disconnected_session_id.clone());
-                    continue;
-                }
-            };
-            if current_unix_timestamp - disconnect_info.disconnected_at_sequence
+            // TODO(bitfl0wer): What are we calculating here? At least, this should be commented
+            if current_unix_timestamp - disconnected_session.disconnected_at_sequence
                 > RESUME_RECONNECT_WINDOW_SECONDS as u64
             {
                 to_remove.push(disconnected_session_id.clone());
