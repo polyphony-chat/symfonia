@@ -248,7 +248,7 @@ async fn finish_connecting(
                 .await
                 .sender
                 .send(Message::Close(Some(CloseFrame {
-                    code: CloseCode::from(4000u16),
+                    code: CloseCode::from(4007u16),
                     reason: "Resuming connections is not yet implemented. Please identify instead."
                         .into(),
                 })))
