@@ -6,9 +6,10 @@ use log::*;
 use rand::seq;
 use serde_json::json;
 use tokio::sync::Mutex;
-use tokio_tungstenite::tungstenite::protocol::frame::coding::OpCode;
-use tokio_tungstenite::tungstenite::protocol::CloseFrame;
-use tokio_tungstenite::tungstenite::Message;
+use tokio_tungstenite::tungstenite::{
+    protocol::{frame::coding::OpCode, CloseFrame},
+    Message,
+};
 
 use crate::gateway::DisconnectInfo;
 
@@ -195,7 +196,7 @@ impl HeartbeatHandler {
         let min = std::cmp::min(one, two);
         match max - min {
             0 => SequenceNumberComparison::Correct,
-            1..2 => SequenceNumberComparison::SlightlyOff(max - min),
+            1..=2 => SequenceNumberComparison::SlightlyOff(max - min),
             _ => SequenceNumberComparison::WayOff(max - min),
         }
     }

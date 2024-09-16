@@ -9,37 +9,43 @@ static RESUME_RECONNECT_WINDOW_SECONDS: u8 = 90;
 mod establish_connection;
 mod gateway_task;
 mod heartbeat;
-mod resume_connection;
 mod types;
 
-use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, Weak};
-use std::thread::sleep;
-use std::time::Duration;
+use std::{
+    collections::{BTreeMap, HashMap},
+    sync::{Arc, Weak},
+    thread::sleep,
+    time::Duration,
+};
 
 use chorus::types::{
     GatewayHeartbeat, GatewayHello, GatewayIdentifyPayload, GatewayResume, Snowflake,
 };
-use futures::stream::{SplitSink, SplitStream};
-use futures::{SinkExt, StreamExt};
+use futures::{
+    stream::{SplitSink, SplitStream},
+    SinkExt, StreamExt,
+};
 use log::info;
 use pubserve::Subscriber;
 use serde_json::{from_str, json};
 use sqlx::PgPool;
-use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::Mutex;
+use tokio::{
+    net::{TcpListener, TcpStream},
+    sync::Mutex,
+};
 
-use tokio_tungstenite::tungstenite::Message;
-use tokio_tungstenite::{accept_async, WebSocketStream};
+use tokio_tungstenite::{accept_async, tungstenite::Message, WebSocketStream};
 pub use types::*;
 
 use crate::database::entities::Config;
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
-use crate::errors::{Error, GatewayError};
-use crate::util::token::check_token;
-use crate::{SharedEventPublisherMap, WebSocketReceive, WebSocketSend};
+use crate::{
+    errors::{Error, GatewayError},
+    util::token::check_token,
+    SharedEventPublisherMap, WebSocketReceive, WebSocketSend,
+};
 
 /* NOTES (bitfl0wer) [These will be removed]
 The gateway is supposed to be highly concurrent. It will be handling a lot of connections at once.
@@ -78,7 +84,7 @@ struct GatewayUser {
     /// all relevant [Publishers](pubserve::Publisher) *once* to save resources.
     subscriptions: Vec<Box<dyn Subscriber<Event>>>,
     /// [Weak] reference to the [ResumableClientsStore].
-    resumeable_clients_store: Weak<Mutex<BTreeMap<String, GatewayClient>>>,
+    resumeable_clients_store: Weak<Mutex<BTreeMap<String, DisconnectInfo>>>,
 }
 
 /// A concrete session, that a [GatewayUser] is connected to the Gateway with.

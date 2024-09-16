@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use chorus::types::{
     GatewayHeartbeat, GatewayHeartbeatAck, GatewayHello, GatewayIdentifyPayload, GatewayResume,
@@ -10,19 +9,25 @@ use log::{debug, trace};
 use rand::seq;
 use serde_json::{from_str, json};
 use sqlx::PgPool;
-use tokio::net::TcpStream;
-use tokio::sync::broadcast::Sender;
-use tokio::sync::Mutex;
-use tokio::task::JoinHandle;
-use tokio_tungstenite::accept_async;
-use tokio_tungstenite::tungstenite::Message;
+use tokio::{
+    net::TcpStream,
+    sync::{broadcast::Sender, Mutex},
+    task::JoinHandle,
+};
+use tokio_tungstenite::{
+    accept_async,
+    tungstenite::{
+        protocol::{frame::coding::CloseCode, CloseFrame},
+        Message,
+    },
+};
 
-use crate::database::entities::Config;
-use crate::errors::{Error, GatewayError};
-use crate::gateway::heartbeat::HeartbeatHandler;
-use crate::gateway::resume_connection::resume_connection;
-use crate::gateway::{gateway_task, GatewayPayload, GatewayUser};
-use crate::util::token::check_token;
+use crate::{
+    database::entities::Config,
+    errors::{Error, GatewayError},
+    gateway::{gateway_task, heartbeat::HeartbeatHandler, GatewayPayload, GatewayUser},
+    util::token::check_token,
+};
 
 use super::{Connection, GatewayClient, GatewayUsersStore, NewConnection, ResumableClientsStore};
 
@@ -237,7 +242,18 @@ async fn finish_connecting(
             });
         } else if let Ok(resume) = from_str::<GatewayResume>(&raw_message.to_string()) {
             log::trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Received resume payload");
-            return resume_connection(connection, db, config.to_owned(), resume).await;
+            log::warn!(target: "symfonia::gateway::establish_connection::finish_connecting", "Resuming connections is not yet implemented. Telling client to identify instead.");
+            connection
+                .lock()
+                .await
+                .sender
+                .send(Message::Close(Some(CloseFrame {
+                    code: CloseCode::from(4000u16),
+                    reason: "Resuming connections is not yet implemented. Please identify instead."
+                        .into(),
+                })))
+                .await?;
+            kill_send.send(()).expect("Failed to send kill signal");
         } else {
             debug!(target: "symfonia::gateway::establish_connection::finish_connecting", "Message could not be decoded as resume, heartbeat or identify.");
 
