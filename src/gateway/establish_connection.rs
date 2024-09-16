@@ -31,6 +31,23 @@ use crate::{
 
 use super::{Connection, GatewayClient, GatewayUsersStore, NewConnection, ResumableClientsStore};
 
+/// Internal use only state struct to pass around data to the `finish_connecting` function.
+struct State {
+    connection: Arc<Mutex<Connection>>,
+    db: PgPool,
+    config: Config,
+    gateway_users_store: GatewayUsersStore,
+    resumeable_clients_store: ResumableClientsStore,
+    sequence_number: Arc<Mutex<u64>>,
+    kill_send: Sender<()>,
+    kill_receive: tokio::sync::broadcast::Receiver<()>,
+    /// Receiver for heartbeat messages. The `HeartbeatHandler` will receive messages from this channel.
+    heartbeat_receive: tokio::sync::broadcast::Receiver<GatewayHeartbeat>,
+    /// Sender for heartbeat messages. The main gateway task will send messages to this channel for the `HeartbeatHandler` to receive and handle.
+    heartbeat_send: tokio::sync::broadcast::Sender<GatewayHeartbeat>,
+    session_id_receive: tokio::sync::broadcast::Receiver<String>,
+}
+
 /// `establish_connection` is the entrypoint method that gets called when a client tries to connect
 /// to the WebSocket server.
 ///
@@ -44,6 +61,7 @@ pub(super) async fn establish_connection(
     resumeable_clients_store: ResumableClientsStore,
 ) -> Result<NewConnection, Error> {
     trace!(target: "symfonia::gateway::establish_connection::establish_connection", "Beginning process to establish connection (handshake)");
+    // Accept the connection and split it into its sender and receiver halves.
     let ws_stream = accept_async(stream).await?;
     let mut connection: Connection = ws_stream.split().into();
     trace!(target: "symfonia::gateway::establish_connection::establish_connection", "Sending hello message");
@@ -54,14 +72,42 @@ pub(super) async fn establish_connection(
         .await?;
     trace!(target: "symfonia::gateway::establish_connection::establish_connection", "Sent hello message");
 
+    // Wrap the connection in an Arc<Mutex<Connection>> to allow for shared ownership and mutation.
+    // For example, the `HeartbeatHandler` and `GatewayClient` tasks will need to access the connection
+    // to send messages.
     let connection = Arc::new(Mutex::new(connection));
 
     let mut received_identify_or_resume = false;
 
     let (kill_send, mut kill_receive) = tokio::sync::broadcast::channel::<()>(1);
+    // Inter-task communication channels. The main gateway task will send received heartbeat related messages
+    // to the `HeartbeatHandler` task via the `message_send` channel, which the `HeartbeatHandler` task will
+    // then receive and handle.
+    //
+    // TODO: The HeartbeatHandler theoretically does not need a full connection object, but either only the sender
+    // or just these message_* channels. Using the latter approach, the HeartbeatHandler could send Heartbeat
+    // responses to the main gateway task, which in turn would send them to the client. This way, the
+    // connection object might not need to be wraped in an `Arc<Mutex<Connection>>`.
     let (message_send, message_receive) = tokio::sync::broadcast::channel::<GatewayHeartbeat>(4);
+
     let sequence_number = Arc::new(Mutex::new(0u64)); // TODO: Actually use this, as in: Increment it when needed. Currently, this is not being done.
+
+    // Used to inform the `HeartbeatHandler` task of the session_id of the client, if we receive it after a heartbeat handler task has been spawned.
     let (session_id_send, session_id_receive) = tokio::sync::broadcast::channel::<String>(1);
+
+    let state = State {
+        connection: connection.clone(),
+        db: db.clone(),
+        config: config.clone(),
+        gateway_users_store: gateway_users_store.clone(),
+        resumeable_clients_store: resumeable_clients_store.clone(),
+        sequence_number: sequence_number.clone(),
+        kill_send: kill_send.clone(),
+        kill_receive: kill_receive.resubscribe(),
+        heartbeat_receive: message_receive.resubscribe(),
+        heartbeat_send: message_send.clone(),
+        session_id_receive: session_id_receive.resubscribe(),
+    };
 
     // This JoinHandle `.is_some()` if we receive a heartbeat message *before* we receive an
     // identify or resume message.
@@ -69,6 +115,7 @@ pub(super) async fn establish_connection(
 
     trace!(target: "symfonia::gateway::establish_connection::establish_connection", "Waiting for next message, timeout or kill signal...");
     let mut second_kill_receive = kill_receive.resubscribe();
+    // Either we time out, the connection is killed, or we receive succesful output from `finish_connecting`.
     tokio::select! {
         _ = second_kill_receive.recv() => {
             debug!(target: "symfonia::gateway::establish_connection::establish_connection", "Connection was closed before we could establish it");
@@ -81,20 +128,8 @@ pub(super) async fn establish_connection(
         }
         // Since async closures are not yet stable, we have to use a dedicated function to handle the
         // connection establishment process. :(
-        new_connection = finish_connecting(
-            connection.clone(),
-            heartbeat_handler_handle,
-            kill_receive,
-            kill_send,
-            message_receive,
-            message_send,
-            sequence_number,
-            session_id_receive,
-            db,
-            &config,
-            gateway_users_store.clone(),
-            resumeable_clients_store.clone(),
-        ) => {
+        new_connection = finish_connecting(heartbeat_handler_handle, state)
+         => {
             new_connection
         }
     }
@@ -128,22 +163,12 @@ async fn get_or_new_gateway_user(
 /// case accordingly.
 #[allow(clippy::too_many_arguments)]
 async fn finish_connecting(
-    connection: Arc<Mutex<Connection>>,
     mut heartbeat_handler_handle: Option<JoinHandle<()>>,
-    kill_receive: tokio::sync::broadcast::Receiver<()>,
-    kill_send: tokio::sync::broadcast::Sender<()>,
-    message_receive: tokio::sync::broadcast::Receiver<GatewayHeartbeat>,
-    message_send: tokio::sync::broadcast::Sender<GatewayHeartbeat>,
-    sequence_number: Arc<Mutex<u64>>,
-    session_id_receive: tokio::sync::broadcast::Receiver<String>,
-    db: PgPool,
-    config: &Config,
-    gateway_users_store: GatewayUsersStore,
-    resumeable_clients_store: ResumableClientsStore,
+    state: State,
 ) -> Result<NewConnection, Error> {
     loop {
         trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Waiting for next message...");
-        let raw_message = match connection.lock().await.receiver.next().await {
+        let raw_message = match state.connection.lock().await.receiver.next().await {
             Some(next) => next,
             None => return Err(GatewayError::Timeout.into()),
         }?;
@@ -164,12 +189,12 @@ async fn finish_connecting(
                     // I don't see that this is needed at the moment.
                     heartbeat_handler_handle = Some(tokio::spawn({
                         let mut heartbeat_handler = HeartbeatHandler::new(
-                            connection.clone(),
-                            kill_receive.resubscribe(),
-                            kill_send.clone(),
-                            message_receive.resubscribe(),
-                            sequence_number.clone(),
-                            session_id_receive.resubscribe(),
+                            state.connection.clone(),
+                            state.kill_receive.resubscribe(),
+                            state.kill_send.clone(),
+                            state.heartbeat_receive.resubscribe(),
+                            state.sequence_number.clone(),
+                            state.session_id_receive.resubscribe(),
                         );
                         async move {
                             heartbeat_handler.run().await;
@@ -177,7 +202,7 @@ async fn finish_connecting(
                     }))
                 }
                 Some(_) => {
-                    message_send.send(heartbeat);
+                    state.heartbeat_send.send(heartbeat);
                 }
             }
         } else if let Ok(identify) =
@@ -185,9 +210,9 @@ async fn finish_connecting(
         {
             log::trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Received identify payload");
             let claims = match check_token(
-                &db,
+                &state.db,
                 &identify.event_data.token,
-                &config.security.jwt_secret,
+                &state.config.security.jwt_secret,
             )
             .await
             {
@@ -197,39 +222,44 @@ async fn finish_connecting(
                 }
                 Err(_) => {
                     log::trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Failed to verify token");
-                    kill_send.send(()).expect("Failed to send kill signal");
+                    state
+                        .kill_send
+                        .send(())
+                        .expect("Failed to send kill signal");
                     return Err(crate::errors::UserError::InvalidToken.into());
                 }
             };
             let mut gateway_user = get_or_new_gateway_user(
                 claims.id,
-                gateway_users_store.clone(),
-                resumeable_clients_store.clone(),
+                state.gateway_users_store.clone(),
+                state.resumeable_clients_store.clone(),
             )
             .await;
             let gateway_client = GatewayClient {
                 parent: Arc::downgrade(&gateway_user),
-                connection: connection.clone(),
-                main_task_handle: tokio::spawn(gateway_task::gateway_task(connection.clone())),
+                connection: state.connection.clone(),
+                main_task_handle: tokio::spawn(gateway_task::gateway_task(
+                    state.connection.clone(),
+                )),
                 heartbeat_task_handle: match heartbeat_handler_handle {
                     Some(handle) => handle,
                     None => tokio::spawn({
                         let mut heartbeat_handler = HeartbeatHandler::new(
-                            connection.clone(),
-                            kill_receive.resubscribe(),
-                            kill_send.clone(),
-                            message_receive.resubscribe(),
-                            sequence_number.clone(),
-                            session_id_receive.resubscribe(),
+                            state.connection.clone(),
+                            state.kill_receive.resubscribe(),
+                            state.kill_send.clone(),
+                            state.heartbeat_receive.resubscribe(),
+                            state.sequence_number.clone(),
+                            state.session_id_receive.resubscribe(),
                         );
                         async move {
                             heartbeat_handler.run().await;
                         }
                     }),
                 },
-                kill_send,
+                kill_send: state.kill_send.clone(),
                 session_token: identify.event_data.token,
-                last_sequence: sequence_number.clone(),
+                last_sequence: state.sequence_number.clone(),
             };
             let gateway_client_arc_mutex = Arc::new(Mutex::new(gateway_client));
             gateway_user.lock().await.clients.insert(
@@ -243,7 +273,8 @@ async fn finish_connecting(
         } else if let Ok(resume) = from_str::<GatewayResume>(&raw_message.to_string()) {
             log::trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Received resume payload");
             log::warn!(target: "symfonia::gateway::establish_connection::finish_connecting", "Resuming connections is not yet implemented. Telling client to identify instead.");
-            connection
+            state
+                .connection
                 .lock()
                 .await
                 .sender
@@ -253,7 +284,10 @@ async fn finish_connecting(
                         .into(),
                 })))
                 .await?;
-            kill_send.send(()).expect("Failed to send kill signal");
+            state
+                .kill_send
+                .send(())
+                .expect("Failed to send kill signal");
         } else {
             debug!(target: "symfonia::gateway::establish_connection::finish_connecting", "Message could not be decoded as resume, heartbeat or identify.");
 
