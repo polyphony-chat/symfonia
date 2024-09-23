@@ -29,15 +29,14 @@ use crate::{
     util::token::check_token,
 };
 
-use super::{Connection, GatewayClient, GatewayUsersStore, NewConnection, ResumableClientsStore};
+use super::{ConnectedUsers, Connection, GatewayClient, NewConnection, ResumableClientsStore};
 
 /// Internal use only state struct to pass around data to the `finish_connecting` function.
 struct State {
     connection: Arc<Mutex<Connection>>,
     db: PgPool,
     config: Config,
-    gateway_users_store: GatewayUsersStore,
-    resumeable_clients_store: ResumableClientsStore,
+    connected_users: ConnectedUsers,
     sequence_number: Arc<Mutex<u64>>,
     kill_send: Sender<()>,
     kill_receive: tokio::sync::broadcast::Receiver<()>,
@@ -57,8 +56,7 @@ pub(super) async fn establish_connection(
     stream: TcpStream,
     db: PgPool,
     config: Config,
-    gateway_users_store: GatewayUsersStore,
-    resumeable_clients_store: ResumableClientsStore,
+    connected_users: ConnectedUsers,
 ) -> Result<NewConnection, Error> {
     trace!(target: "symfonia::gateway::establish_connection::establish_connection", "Beginning process to establish connection (handshake)");
     // Accept the connection and split it into its sender and receiver halves.
@@ -99,8 +97,7 @@ pub(super) async fn establish_connection(
         connection: connection.clone(),
         db: db.clone(),
         config: config.clone(),
-        gateway_users_store: gateway_users_store.clone(),
-        resumeable_clients_store: resumeable_clients_store.clone(),
+        connected_users: connected_users.clone(),
         sequence_number: sequence_number.clone(),
         kill_send: kill_send.clone(),
         kill_receive: kill_receive.resubscribe(),
@@ -133,28 +130,6 @@ pub(super) async fn establish_connection(
             new_connection
         }
     }
-}
-
-/// `get_or_new_gateway_user` is a helper function that retrieves a [GatewayUser] from the store if it exists,
-/// or creates a new user, stores it in the store and then returns it, if it does not exist.
-// TODO: Refactor this function according to the new `ResumeableClientsStore` definition.
-async fn get_or_new_gateway_user(
-    user_id: Snowflake,
-    store: GatewayUsersStore,
-    resumeable_clients_store: ResumableClientsStore,
-) -> Arc<tokio::sync::Mutex<GatewayUser>> {
-    let mut store = store.lock().await;
-    if let Some(user) = store.get(&user_id) {
-        return user.clone();
-    }
-    let user = Arc::new(Mutex::new(GatewayUser {
-        id: user_id,
-        clients: HashMap::new(),
-        subscriptions: Vec::new(),
-        resumeable_clients_store: Arc::downgrade(&resumeable_clients_store),
-    }));
-    store.insert(user_id, user.clone());
-    user
 }
 
 /// `finish_connecting` is the second part of the connection establishment process. It picks up after

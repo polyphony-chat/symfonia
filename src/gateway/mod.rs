@@ -11,6 +11,9 @@ mod gateway_task;
 mod heartbeat;
 mod types;
 
+use std::collections::HashSet;
+use std::hash::Hash;
+use std::ops::{Deref, DerefMut};
 use std::{
     collections::{BTreeMap, HashMap},
     sync::{Arc, Weak},
@@ -66,14 +69,102 @@ Handling a connection involves the following steps:
 
 Handling disconnects and session resumes is for later and not considered at this exact moment.
 
-From there on, run a task that takes ownership of the GatewayClient struct. This task will be what
-is sending the events that the (to be implemented) Subscribers receive from the Publishers that the
-GatewayUser is subscribed to
+From there on, run a task that takes ownership of the Ga
+
+It is important to make a distinction between the user and the client. A user can potentially
+be connected with many devices at once. They are still just one user. Respecting this fact
+will likely save a lot of computational power.
+
+Handling a connection involves the following steps:
+
+1. Accepting the connection
+2. Sending a hello event back
+3. Receiving a Heartbeat event
+4. Returning a Heartbeat ACK event
+5. Receiving an Identify payload <- "GatewayUser" and/or "GatewayClient" are instantiated here.
+6. Responding with a Ready event
+
+Handling disconnects and session resumes is for late
 */
+
+#[derive(Default, Clone)]
+pub struct ConnectedUsers {
+    store: Arc<Mutex<ConnectedUsersInner>>,
+}
+
+/// A mapping of Snowflake IDs to the "inbox" of a [GatewayUser].
+///
+/// An "inbox" is a [tokio::sync::mpsc::Sender] that can be used to send [Event]s to all connected
+/// clients of a [GatewayUser].
+#[derive(Default)]
+pub struct ConnectedUsersInner {
+    pub inboxes: HashMap<Snowflake, tokio::sync::broadcast::Sender<Event>>,
+    pub users: HashMap<Snowflake, Arc<Mutex<GatewayUser>>>,
+    pub resumeable_clients_store: ResumableClientsStore,
+}
+
+impl ConnectedUsers {
+    /// Create a new, empty [ConnectedUsers] instance.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn inner(&self) -> Arc<Mutex<ConnectedUsersInner>> {
+        self.store.clone()
+    }
+
+    /// Register a new [GatewayUser] with the [ConnectedUsers] instance.
+    async fn register(&self, user: GatewayUser) -> Arc<Mutex<GatewayUser>> {
+        self.store
+            .lock()
+            .await
+            .inboxes
+            .insert(user.id, user.outbox.clone());
+        let id = user.id;
+        let arc = Arc::new(Mutex::new(user));
+        self.store.lock().await.users.insert(id, arc.clone());
+        arc
+    }
+
+    /// Deregister a [GatewayUser] from the [ConnectedUsers] instance.
+    pub async fn deregister(&self, user: &GatewayUser) {
+        self.store.lock().await.inboxes.remove(&user.id);
+        self.store.lock().await.users.remove(&user.id);
+    }
+
+    /// Get the "inbox" of a [GatewayUser] by its Snowflake ID.
+    pub async fn inbox(&self, id: Snowflake) -> Option<tokio::sync::broadcast::Sender<Event>> {
+        self.store.lock().await.inboxes.get(&id).cloned()
+    }
+
+    pub async fn new_user(
+        &self,
+        clients: HashMap<String, Arc<Mutex<GatewayClient>>>,
+        id: Snowflake,
+        subscriptions: Vec<Box<dyn Subscriber<Event>>>,
+    ) -> Arc<Mutex<GatewayUser>> {
+        let channel = tokio::sync::broadcast::channel(20);
+        let user = GatewayUser {
+            inbox: channel.1,
+            outbox: channel.0.clone(),
+            clients,
+            id,
+            subscriptions,
+            connected_users: self.clone(),
+        };
+        self.register(user).await
+    }
+}
 
 /// A single identifiable User connected to the Gateway - possibly using many clients at the same
 /// time.
 struct GatewayUser {
+    /// The "inbox" of a [GatewayUser]. This is a [tokio::sync::mpsc::Receiver]. Events sent to
+    /// this inbox will be sent to all connected clients of this user.
+    pub inbox: tokio::sync::broadcast::Receiver<Event>,
+    /// The "outbox" of a [GatewayUser]. This is a [tokio::sync::mpsc::Sender]. From this outbox,
+    /// more inboxes can be created.
+    pub(super) outbox: tokio::sync::broadcast::Sender<Event>,
     /// Sessions a User is connected with. HashMap of SessionToken -> GatewayClient
     clients: HashMap<String, Arc<Mutex<GatewayClient>>>,
     /// The Snowflake ID of the User.
@@ -83,9 +174,23 @@ struct GatewayUser {
     /// A GatewayUser may have many [GatewayClients](GatewayClient), but he only gets subscribed to
     /// all relevant [Publishers](pubserve::Publisher) *once* to save resources.
     subscriptions: Vec<Box<dyn Subscriber<Event>>>,
-    /// [Weak] reference to the [ResumableClientsStore].
-    resumeable_clients_store: Weak<Mutex<BTreeMap<String, DisconnectInfo>>>,
+    /// [Weak] reference to the [ConnectedUsers] store.
+    connected_users: ConnectedUsers,
 }
+
+impl Hash for GatewayUser {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
+}
+
+impl PartialEq for GatewayUser {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Eq for GatewayUser {}
 
 /// A concrete session, that a [GatewayUser] is connected to the Gateway with.
 struct GatewayClient {
@@ -132,6 +237,7 @@ struct Connection {
     receiver: WebSocketReceive,
 }
 
+#[derive(Clone)]
 struct DisconnectInfo {
     /// session token that was used for this connection
     session_token: String,
@@ -163,16 +269,15 @@ struct NewConnection {
     client: Arc<Mutex<GatewayClient>>,
 }
 
-/// A thread-shareable map of resumable clients. The key is the session token used
+/// A map of resumable clients. The key is the session token used
 /// for the connection. The value is a [GatewayClient] that can be resumed.
 // TODO: this is stupid. it should be a map of string and DisconnectInfo. there is no need to store
 // the whole GatewayClient, nor would it make sense to do so.
-type ResumableClientsStore = Arc<Mutex<BTreeMap<String, DisconnectInfo>>>;
-type GatewayUsersStore = Arc<Mutex<BTreeMap<Snowflake, Arc<Mutex<GatewayUser>>>>>;
+type ResumableClientsStore = HashMap<String, DisconnectInfo>;
 
 pub async fn start_gateway(
     db: PgPool,
-    publisher_map: SharedEventPublisherMap,
+    connected_users: ConnectedUsers,
     config: Config,
 ) -> Result<(), Error> {
     // TODO(bitfl0wer): Add log messages throughout the method for debugging the gateway
@@ -184,10 +289,9 @@ pub async fn start_gateway(
 
     info!(target: "symfonia::gateway", "Gateway server listening on port {bind}");
 
-    let gateway_users: GatewayUsersStore = Arc::new(Mutex::new(BTreeMap::new()));
-    let resumeable_clients: ResumableClientsStore = Arc::new(Mutex::new(BTreeMap::new()));
-    let resumeable_clients_clone = resumeable_clients.clone();
-    tokio::task::spawn(async { purge_expired_disconnects(resumeable_clients_clone).await });
+    let resumeable_clients: ResumableClientsStore = HashMap::new();
+    let connected_users = ConnectedUsers::new();
+    tokio::task::spawn(async { purge_expired_disconnects(connected_users.clone()).await });
     while let Ok((stream, _)) = listener.accept().await {
         log::trace!(target: "symfonia::gateway", "New connection received");
         let connection_result = match tokio::task::spawn(
@@ -195,8 +299,7 @@ pub async fn start_gateway(
                 stream,
                 db.clone(),
                 config.clone(),
-                gateway_users.clone(),
-                resumeable_clients.clone(),
+                connected_users.clone(),
             ),
         )
         .await
@@ -209,7 +312,7 @@ pub async fn start_gateway(
         };
         match connection_result {
             Ok(new_connection) => {
-                checked_add_new_connection(gateway_users.clone(), new_connection).await
+                checked_add_new_connection(connected_users.clone(), new_connection).await
             }
             Err(e) => {
                 log::debug!(target: "symfonia::gateway::establish_connection", "User gateway connection could not be established: {e}");
@@ -223,7 +326,7 @@ pub async fn start_gateway(
 /// A disconnected, resumable session can only be resumed within `RESUME_RECONNECT_WINDOW_SECONDS`
 /// seconds after a disconnect occurs. Sessions that can be resumed are stored in a `Map`. The
 /// purpose of this method is to periodically throw out expired sessions from that map.
-async fn purge_expired_disconnects(resumeable_clients: ResumableClientsStore) {
+async fn purge_expired_disconnects(connected_users: ConnectedUsers) {
     let mut minutely_log_timer = 0;
     let mut removed_elements_last_minute: u128 = 0;
     loop {
@@ -234,8 +337,10 @@ async fn purge_expired_disconnects(resumeable_clients: ResumableClientsStore) {
             .expect("Check the clock/time settings on the host machine")
             .as_secs();
         let mut to_remove = Vec::new();
-        let mut resumeable_clients_lock = resumeable_clients.lock().await;
-        for (disconnected_session_id, disconnected_session) in resumeable_clients_lock.iter() {
+        let mut _inner = connected_users.inner();
+        let mut lock = _inner.lock().await;
+        for (disconnected_session_id, disconnected_session) in lock.resumeable_clients_store.iter()
+        {
             // TODO(bitfl0wer): What are we calculating here? At least, this should be commented
             if current_unix_timestamp - disconnected_session.disconnected_at_sequence
                 > RESUME_RECONNECT_WINDOW_SECONDS as u64
@@ -248,9 +353,9 @@ async fn purge_expired_disconnects(resumeable_clients: ResumableClientsStore) {
             .checked_add(len as u128)
             .unwrap_or(u128::MAX);
         for session_id in to_remove.iter() {
-            resumeable_clients_lock.remove(session_id);
+            lock.resumeable_clients_store.remove(session_id);
         }
-        drop(resumeable_clients_lock);
+        drop(lock);
         minutely_log_timer += 1;
         if minutely_log_timer == 12 {
             log::debug!(target: "symfonia::gateway::purge_expired_disconnects", "Removed {} stale sessions in the last 60 seconds", removed_elements_last_minute);
@@ -269,7 +374,7 @@ async fn purge_expired_disconnects(resumeable_clients: ResumableClientsStore) {
 ///
 /// Else, add the [new GatewayUser] and the new [GatewayClient] into `gateway_users` as-is.
 async fn checked_add_new_connection(
-    gateway_users: Arc<Mutex<BTreeMap<Snowflake, Arc<Mutex<GatewayUser>>>>>,
+    connected_users: ConnectedUsers,
     new_connection: NewConnection,
 ) {
     // Make `new_connection` mutable
@@ -278,12 +383,12 @@ async fn checked_add_new_connection(
     // of the way through this method
     let new_connection_user = new_connection.user.lock().await;
     let new_connection_token = new_connection.client.lock().await.session_token.clone();
-    let mut locked_map = gateway_users.lock().await;
+    let mut lock = connected_users.inner().lock().await;
     // If our map contains the user from `new_connection` already, modify the `parent` of the `client`
     // of `new_connection` to point to the user already in our map, then insert that `client` into
     // the `clients` field of our existing user.
-    if locked_map.contains_key(&new_connection_user.id) {
-        let existing_user = locked_map.get(&new_connection_user.id).unwrap();
+    if lock.inner.contains_key(&new_connection_user.id) {
+        let existing_user = lock.inner.get(&new_connection_user.id).unwrap();
         new_connection.client.lock().await.parent = Arc::downgrade(existing_user);
         existing_user
             .lock()

@@ -13,6 +13,7 @@ use poem::{
 use serde_json::json;
 use sqlx::PgPool;
 
+use crate::gateway::ConnectedUsers;
 use crate::SharedEventPublisherMap;
 use crate::{
     api::{
@@ -30,7 +31,7 @@ mod routes;
 
 pub async fn start_api(
     db: PgPool,
-    publisher_map: SharedEventPublisherMap,
+    connected_users: ConnectedUsers,
     config: Config,
 ) -> Result<(), Error> {
     log::info!(target: "symfonia::api::cfg", "Loading configuration");
@@ -79,7 +80,7 @@ pub async fn start_api(
         .nest("/api/v9", routes)
         .data(db)
         .data(config)
-        .data(publisher_map)
+        .data(connected_users)
         .with(NormalizePath::new(TrailingSlash::Trim))
         .catch_all_error(custom_error);
 

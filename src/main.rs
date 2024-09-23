@@ -6,13 +6,13 @@
 
 #![allow(unused)] // TODO: Remove, I just want to clean up my build output
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use chorus::types::Snowflake;
 use clap::Parser;
 
-use gateway::Event;
+use gateway::{ConnectedUsers, Event};
 use log::LevelFilter;
 use log4rs::{
     append::{
@@ -31,6 +31,7 @@ use log4rs::{
 };
 use parking_lot::RwLock;
 use pubserve::Publisher;
+use tokio::sync::Mutex;
 
 mod api;
 mod cdn;
@@ -217,16 +218,17 @@ async fn main() {
         .await
         .unwrap_or_default();
 
-    let shared_publisher_map = Arc::new(RwLock::new(HashMap::new()));
+    let connected_users = ConnectedUsers::default();
+
     let mut tasks = [
         tokio::spawn(api::start_api(
             db.clone(),
-            shared_publisher_map.clone(),
+            connected_users.clone(),
             symfonia_config.clone(),
         )),
         tokio::spawn(gateway::start_gateway(
             db.clone(),
-            shared_publisher_map.clone(),
+            connected_users.clone(),
             symfonia_config.clone(),
         )),
     ];
