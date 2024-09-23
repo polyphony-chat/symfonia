@@ -211,7 +211,7 @@ struct GatewayClient {
 }
 
 impl GatewayClient {
-    pub async fn die(mut self, resumeable_clients: ResumableClientsStore) {
+    pub async fn die(mut self, connected_users: ConnectedUsers) {
         self.kill_send.send(()).unwrap();
         let disconnect_info = DisconnectInfo {
             session_token: self.session_token.clone(),
@@ -225,9 +225,14 @@ impl GatewayClient {
             .await
             .clients
             .remove(&self.session_token);
-        resumeable_clients
+        connected_users
+            .deregister(self.parent.upgrade().unwrap().lock().await.deref())
+            .await;
+        connected_users
+            .store
             .lock()
             .await
+            .resumeable_clients_store
             .insert(self.session_token.clone(), disconnect_info);
     }
 }
