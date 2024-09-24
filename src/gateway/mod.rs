@@ -169,7 +169,7 @@ impl ConnectedUsers {
 
 /// A single identifiable User connected to the Gateway - possibly using many clients at the same
 /// time.
-struct GatewayUser {
+pub struct GatewayUser {
     /// The "inbox" of a [GatewayUser]. This is a [tokio::sync::mpsc::Receiver]. Events sent to
     /// this inbox will be sent to all connected clients of this user.
     pub inbox: tokio::sync::broadcast::Receiver<Event>,
@@ -204,18 +204,18 @@ impl PartialEq for GatewayUser {
 impl Eq for GatewayUser {}
 
 /// A concrete session, that a [GatewayUser] is connected to the Gateway with.
-struct GatewayClient {
+pub struct GatewayClient {
     connection: Arc<Mutex<Connection>>,
     /// A [Weak] reference to the [GatewayUser] this client belongs to.
-    parent: Weak<Mutex<GatewayUser>>,
+    pub parent: Weak<Mutex<GatewayUser>>,
     // Handle to the main Gateway task for this client
     main_task_handle: tokio::task::JoinHandle<()>,
     // Handle to the heartbeat task for this client
     heartbeat_task_handle: tokio::task::JoinHandle<()>,
     // Kill switch to disconnect the client
-    kill_send: tokio::sync::broadcast::Sender<()>,
+    pub kill_send: tokio::sync::broadcast::Sender<()>,
     /// Token of the session token used for this connection
-    session_token: String,
+    pub session_token: String,
     /// The last sequence number received from the client. Shared between the main task, heartbeat
     /// task, and this struct.
     last_sequence: Arc<Mutex<u64>>,
@@ -254,11 +254,11 @@ struct Connection {
 }
 
 #[derive(Clone)]
-struct DisconnectInfo {
+pub struct DisconnectInfo {
     /// session token that was used for this connection
-    session_token: String,
-    disconnected_at_sequence: u64,
-    parent: Weak<Mutex<GatewayUser>>,
+    pub session_token: String,
+    pub disconnected_at_sequence: u64,
+    pub parent: Weak<Mutex<GatewayUser>>,
 }
 
 impl
@@ -289,7 +289,7 @@ struct NewConnection {
 /// for the connection. The value is a [GatewayClient] that can be resumed.
 // TODO: this is stupid. it should be a map of string and DisconnectInfo. there is no need to store
 // the whole GatewayClient, nor would it make sense to do so.
-type ResumableClientsStore = HashMap<String, DisconnectInfo>;
+pub type ResumableClientsStore = HashMap<String, DisconnectInfo>;
 
 pub async fn start_gateway(
     db: PgPool,
@@ -306,7 +306,6 @@ pub async fn start_gateway(
     info!(target: "symfonia::gateway", "Gateway server listening on port {bind}");
 
     let resumeable_clients: ResumableClientsStore = HashMap::new();
-    let connected_users = ConnectedUsers::new();
     let connected_users_clone = connected_users.clone();
     tokio::task::spawn(async { purge_expired_disconnects(connected_users_clone).await });
     while let Ok((stream, _)) = listener.accept().await {
