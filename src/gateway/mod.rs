@@ -146,6 +146,60 @@ impl RoleUserMap {
 }
 
 #[derive(Default, Clone)]
+pub struct BulkMessageBuilder {
+    users: Vec<Snowflake>,
+    roles: Vec<Snowflake>,
+    message: Option<Event>,
+}
+
+impl BulkMessageBuilder {
+    /// Add the given list of user snowflake IDs to the list of recipients.
+    pub async fn add_user_recipients(&mut self, users: &[Snowflake]) {
+        self.users.extend_from_slice(users);
+    }
+
+    /// Add all members which have the given role snowflake IDs to the list of recipients.
+    pub async fn add_role_recipients(&mut self, roles: &[Snowflake]) {
+        self.roles.extend_from_slice(roles);
+    }
+
+    /// Set the message to be sent to the recipients.
+    pub async fn set_message(&mut self, message: Event) {
+        self.message = Some(message);
+    }
+
+    /// Send the message to all recipients.
+    pub async fn send(self, connected_users: ConnectedUsers) -> Result<(), Error> {
+        if self.message.is_none() {
+            return Err(Error::Custom("No message to send".to_string()));
+        }
+        let mut recipients = HashSet::new();
+        let lock = connected_users.role_user_map.lock().await;
+        for role in self.roles.iter() {
+            if let Some(users) = lock.get(role) {
+                for user in users.iter() {
+                    recipients.insert(*user);
+                }
+            }
+            for user in self.users.iter() {
+                recipients.insert(*user);
+            }
+        }
+        if recipients.is_empty() {
+            return Ok(());
+        }
+        for recipient in recipients.iter() {
+            if let Some(inbox) = connected_users.inbox(*recipient).await {
+                inbox
+                    .send(self.message.clone().unwrap())
+                    .map_err(|e| Error::Custom(format!("tokio broadcast error: {}", e)))?;
+            }
+        }
+        Ok(())
+    }
+}
+
+#[derive(Default, Clone)]
 pub struct ConnectedUsers {
     pub store: Arc<Mutex<ConnectedUsersInner>>,
     pub role_user_map: Arc<Mutex<RoleUserMap>>,
@@ -168,6 +222,18 @@ impl ConnectedUsers {
         Self::default()
     }
 
+    pub fn bulk_message_builder(&self) -> BulkMessageBuilder {
+        BulkMessageBuilder::default()
+    }
+
+    /// Initialize the [RoleUserMap] with data from the database.
+    ///
+    /// This method will query the database for all roles and all users that have these roles.
+    /// The data will then populate the map.
+    ///
+    /// Due to the possibly large number of roles and users returned by the database, this method
+    /// should only be executed once. The [RoleUserMap] should be kept synchronized with the database
+    /// through means that do not involve this method.
     pub async fn init_role_user_map(&self, db: &PgPool) -> Result<(), Error> {
         self.role_user_map.lock().await.init(db).await
     }
