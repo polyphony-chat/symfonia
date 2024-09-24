@@ -32,6 +32,7 @@ use log::info;
 use pubserve::Subscriber;
 use serde_json::{from_str, json};
 use sqlx::PgPool;
+use sqlx_pg_uint::PgU64;
 use tokio::sync::MutexGuard;
 use tokio::{
     net::{TcpListener, TcpStream},
@@ -88,9 +89,45 @@ Handling a connection involves the following steps:
 Handling disconnects and session resumes is for late
 */
 
+/// Represents all Roles that exist on the Discord server and the Users that have them.
+#[derive(Default)]
+pub struct RoleUserMap {
+    /// Map Role Snowflake ID to a list of User Snowflake IDs
+    map: HashMap<Snowflake, HashSet<Snowflake>>,
+}
+
+impl RoleUserMap {
+    /// Initialize the RoleUserMap with data from the database.
+    pub async fn init(&mut self, db: &PgPool) -> Result<(), Error> {
+        // First, get all role ids from the roles table and insert them into the map
+        let all_role_ids: Vec<PgU64> = sqlx::query_as("SELECT id FROM roles")
+            .fetch_all(db)
+            .await
+            .map_err(Error::SQLX)?;
+        for role_id in all_role_ids.iter() {
+            self.map
+                .insert(Snowflake::from(role_id.to_uint()), HashSet::new());
+        }
+        // Then, query member_roles and insert the user ids into the map
+        let all_member_roles: Vec<(PgU64, PgU64)> =
+            sqlx::query_as("SELECT index, role_id FROM roles")
+                .fetch_all(db)
+                .await
+                .map_err(Error::SQLX)?;
+        for (user_id, role_id) in all_member_roles.iter() {
+            // Unwrapping is fine here, as the member_roles table has a foreign key constraint
+            // which states that role_id must be a valid id in the roles table.
+            let users_for_role_id = self.map.get_mut(&role_id.to_uint().into()).unwrap();
+            users_for_role_id.insert(user_id.to_uint().into());
+        }
+        Ok(())
+    }
+}
+
 #[derive(Default, Clone)]
 pub struct ConnectedUsers {
-    store: Arc<Mutex<ConnectedUsersInner>>,
+    pub store: Arc<Mutex<ConnectedUsersInner>>,
+    role_user_map: Arc<Mutex<RoleUserMap>>,
 }
 
 /// A mapping of Snowflake IDs to the "inbox" of a [GatewayUser].
