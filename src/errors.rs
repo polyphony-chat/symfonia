@@ -5,6 +5,7 @@
  */
 
 use std::error::Error as StdError;
+use std::fmt::Display;
 
 use chorus::types::{APIError, AuthError, Rights};
 use poem::{error::ResponseError, http::StatusCode, Response};
@@ -61,6 +62,9 @@ pub enum Error {
 
     #[error(transparent)]
     SqlxPgUint(#[from] sqlx_pg_uint::Error),
+
+    #[error("{0}")]
+    Custom(String),
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -241,6 +245,7 @@ impl ResponseError for Error {
                 GatewayError::Closed => StatusCode::BAD_REQUEST,
             },
             Error::SqlxPgUint(_) => StatusCode::BAD_REQUEST,
+            Error::Custom(_) => StatusCode::BAD_REQUEST,
         }
     }
 
