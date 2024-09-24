@@ -89,15 +89,36 @@ Handling a connection involves the following steps:
 Handling disconnects and session resumes is for late
 */
 
-/// Represents all Roles that exist on the Discord server and the Users that have them.
 #[derive(Default)]
+/// Represents all existing roles on the server and the users that have these roles.
 pub struct RoleUserMap {
     /// Map Role Snowflake ID to a list of User Snowflake IDs
     map: HashMap<Snowflake, HashSet<Snowflake>>,
 }
 
+impl Deref for RoleUserMap {
+    type Target = HashMap<Snowflake, HashSet<Snowflake>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.map
+    }
+}
+
+impl DerefMut for RoleUserMap {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.map
+    }
+}
+
 impl RoleUserMap {
-    /// Initialize the RoleUserMap with data from the database.
+    /// Initialize the [RoleUserMap] with data from the database.
+    ///
+    /// This method will query the database for all roles and all users that have these roles.
+    /// The data will then populate the map.
+    ///
+    /// Due to the possibly large number of roles and users returned by the database, this method
+    /// should only be executed once. The [RoleUserMap] should be kept synchronized with the database
+    /// through means that do not involve this method.
     pub async fn init(&mut self, db: &PgPool) -> Result<(), Error> {
         // First, get all role ids from the roles table and insert them into the map
         let all_role_ids: Vec<PgU64> = sqlx::query_as("SELECT id FROM roles")
@@ -110,7 +131,7 @@ impl RoleUserMap {
         }
         // Then, query member_roles and insert the user ids into the map
         let all_member_roles: Vec<(PgU64, PgU64)> =
-            sqlx::query_as("SELECT index, role_id FROM roles")
+            sqlx::query_as("SELECT index, role_id FROM member_roles")
                 .fetch_all(db)
                 .await
                 .map_err(Error::SQLX)?;
@@ -127,7 +148,7 @@ impl RoleUserMap {
 #[derive(Default, Clone)]
 pub struct ConnectedUsers {
     pub store: Arc<Mutex<ConnectedUsersInner>>,
-    role_user_map: Arc<Mutex<RoleUserMap>>,
+    pub role_user_map: Arc<Mutex<RoleUserMap>>,
 }
 
 /// A mapping of Snowflake IDs to the "inbox" of a [GatewayUser].
@@ -145,6 +166,10 @@ impl ConnectedUsers {
     /// Create a new, empty [ConnectedUsers] instance.
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub async fn init_role_user_map(&self, db: &PgPool) -> Result<(), Error> {
+        self.role_user_map.lock().await.init(db).await
     }
 
     pub async fn get_user_or_new(&self, id: Snowflake) -> Arc<Mutex<GatewayUser>> {
