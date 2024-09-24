@@ -219,6 +219,12 @@ async fn main() {
         .unwrap_or_default();
 
     let connected_users = ConnectedUsers::default();
+    log::debug!(target: "symfonia", "Initializing Role->User map...");
+    connected_users
+        .init_role_user_map(&db)
+        .await
+        .expect("Failed to init role user map");
+    log::trace!(target: "symfonia", "Role->User map initialized with {} entries", connected_users.role_user_map.lock().await.len());
 
     let mut tasks = [
         tokio::spawn(api::start_api(
