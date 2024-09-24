@@ -32,6 +32,7 @@ use log::info;
 use pubserve::Subscriber;
 use serde_json::{from_str, json};
 use sqlx::PgPool;
+use tokio::sync::MutexGuard;
 use tokio::{
     net::{TcpListener, TcpStream},
     sync::Mutex,
@@ -107,6 +108,16 @@ impl ConnectedUsers {
     /// Create a new, empty [ConnectedUsers] instance.
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub async fn get_user_or_new(&self, id: Snowflake) -> Arc<Mutex<GatewayUser>> {
+        let inner = self.store.clone();
+        let mut lock = inner.lock().await;
+        if let Some(user) = lock.users.get(&id) {
+            user.clone()
+        } else {
+            self.new_user(HashMap::new(), id, Vec::new()).await
+        }
     }
 
     pub fn inner(&self) -> Arc<Mutex<ConnectedUsersInner>> {
@@ -296,7 +307,8 @@ pub async fn start_gateway(
 
     let resumeable_clients: ResumableClientsStore = HashMap::new();
     let connected_users = ConnectedUsers::new();
-    tokio::task::spawn(async { purge_expired_disconnects(connected_users.clone()).await });
+    let connected_users_clone = connected_users.clone();
+    tokio::task::spawn(async { purge_expired_disconnects(connected_users_clone).await });
     while let Ok((stream, _)) = listener.accept().await {
         log::trace!(target: "symfonia::gateway", "New connection received");
         let connection_result = match tokio::task::spawn(
@@ -388,12 +400,13 @@ async fn checked_add_new_connection(
     // of the way through this method
     let new_connection_user = new_connection.user.lock().await;
     let new_connection_token = new_connection.client.lock().await.session_token.clone();
-    let mut lock = connected_users.inner().lock().await;
+    let inner = connected_users.inner();
+    let mut lock = inner.lock().await;
     // If our map contains the user from `new_connection` already, modify the `parent` of the `client`
     // of `new_connection` to point to the user already in our map, then insert that `client` into
     // the `clients` field of our existing user.
-    if lock.inner.contains_key(&new_connection_user.id) {
-        let existing_user = lock.inner.get(&new_connection_user.id).unwrap();
+    if lock.users.contains_key(&new_connection_user.id) {
+        let existing_user = lock.users.get(&new_connection_user.id).unwrap();
         new_connection.client.lock().await.parent = Arc::downgrade(existing_user);
         existing_user
             .lock()
@@ -405,6 +418,6 @@ async fn checked_add_new_connection(
         // locked. Just bind the id we need to a new variable, then drop the lock.
         let id = new_connection_user.id;
         drop(new_connection_user);
-        locked_map.insert(id, new_connection.user);
+        lock.users.insert(id, new_connection.user);
     }
 }

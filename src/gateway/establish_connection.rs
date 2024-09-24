@@ -204,12 +204,7 @@ async fn finish_connecting(
                     return Err(crate::errors::UserError::InvalidToken.into());
                 }
             };
-            let mut gateway_user = get_or_new_gateway_user(
-                claims.id,
-                state.gateway_users_store.clone(),
-                state.resumeable_clients_store.clone(),
-            )
-            .await;
+            let mut gateway_user = state.connected_users.get_user_or_new(claims.id).await;
             let gateway_client = GatewayClient {
                 parent: Arc::downgrade(&gateway_user),
                 connection: state.connection.clone(),
