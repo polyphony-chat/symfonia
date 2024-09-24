@@ -140,7 +140,7 @@ impl Guild {
         user.add_to_guild(db, guild.id).await?;
         guild.owner = Some(true);
 
-        guild.roles = vec![everyone.to_inner()];
+        guild.roles = vec![everyone.into_inner()];
 
         let channels = if channels.is_empty() {
             vec![

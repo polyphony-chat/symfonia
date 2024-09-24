@@ -48,10 +48,6 @@ impl DerefMut for Role {
 }
 
 impl Role {
-    pub fn to_inner(self) -> chorus::types::RoleObject {
-        self.inner
-    }
-
     pub async fn create(
         db: &PgPool,
         shared_event_publisher_map: SharedEventPublisherMap,
