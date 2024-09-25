@@ -47,6 +47,7 @@ struct State {
     heartbeat_receive: tokio::sync::broadcast::Receiver<GatewayHeartbeat>,
     /// Sender for heartbeat messages. The main gateway task will send messages to this channel for the `HeartbeatHandler` to receive and handle.
     heartbeat_send: tokio::sync::broadcast::Sender<GatewayHeartbeat>,
+    session_id_send: tokio::sync::broadcast::Sender<String>,
     session_id_receive: tokio::sync::broadcast::Receiver<String>,
 }
 
@@ -106,6 +107,7 @@ pub(super) async fn establish_connection(
         kill_receive: kill_receive.resubscribe(),
         heartbeat_receive: message_receive.resubscribe(),
         heartbeat_send: message_send.clone(),
+        session_id_send: session_id_send.clone(),
         session_id_receive: session_id_receive.resubscribe(),
     };
 
@@ -213,7 +215,13 @@ async fn finish_connecting(
                 .new_client(
                     gateway_user.clone(),
                     state.connection.clone(),
-                    tokio::spawn(gateway_task::gateway_task(state.connection.clone())),
+                    tokio::spawn(gateway_task::gateway_task(
+                        state.connection.clone(),
+                        gateway_user.lock().await.inbox.resubscribe(),
+                        state.kill_receive.resubscribe(),
+                        state.kill_send.clone(),
+                        state.sequence_number.clone(),
+                    )),
                     match heartbeat_handler_handle {
                         Some(handle) => handle,
                         None => tokio::spawn({
@@ -235,7 +243,17 @@ async fn finish_connecting(
                     state.sequence_number.clone(),
                 )
                 .await;
-
+            match state.session_id_send.send(identify.event_data.token) {
+                Ok(_) => (),
+                Err(_) => {
+                    log::error!(target: "symfonia::gateway::establish_connection::finish_connecting", "Failed to send session_id to heartbeat handler");
+                    state
+                        .kill_send
+                        .send(())
+                        .expect("Failed to send kill signal");
+                    return Err(GatewayError::Internal.into());
+                }
+            }
             return Ok(NewWebSocketConnection {
                 user: gateway_user,
                 client: gateway_client.clone(),
