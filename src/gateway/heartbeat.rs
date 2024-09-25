@@ -13,13 +13,13 @@ use tokio_tungstenite::tungstenite::{
 
 use crate::gateway::DisconnectInfo;
 
-use super::{Connection, GatewayClient};
+use super::{WebSocketConnection, GatewayClient};
 
 static HEARTBEAT_INTERVAL: std::time::Duration = std::time::Duration::from_secs(45);
 static LATENCY_BUFFER: std::time::Duration = std::time::Duration::from_secs(5);
 
 pub(super) struct HeartbeatHandler {
-    connection: Arc<Mutex<Connection>>,
+    connection: Arc<Mutex<WebSocketConnection>>,
     kill_receive: tokio::sync::broadcast::Receiver<()>,
     kill_send: tokio::sync::broadcast::Sender<()>,
     message_receive: tokio::sync::broadcast::Receiver<GatewayHeartbeat>,
@@ -63,7 +63,7 @@ impl HeartbeatHandler {
     /// let heartbeat_handler = HeartbeatHandler::new(connection, kill_receive, kill_send, message_receive).await;
     /// ```
     pub(super) fn new(
-        connection: Arc<Mutex<Connection>>,
+        connection: Arc<Mutex<WebSocketConnection>>,
         kill_receive: tokio::sync::broadcast::Receiver<()>,
         kill_send: tokio::sync::broadcast::Sender<()>,
         message_receive: tokio::sync::broadcast::Receiver<GatewayHeartbeat>,

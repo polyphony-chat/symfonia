@@ -29,11 +29,13 @@ use crate::{
     util::token::check_token,
 };
 
-use super::{ConnectedUsers, Connection, GatewayClient, NewConnection, ResumableClientsStore};
+use super::{
+    ConnectedUsers, GatewayClient, NewConnection, ResumableClientsStore, WebSocketConnection,
+};
 
 /// Internal use only state struct to pass around data to the `finish_connecting` function.
 struct State {
-    connection: Arc<Mutex<Connection>>,
+    connection: Arc<Mutex<WebSocketConnection>>,
     db: PgPool,
     config: Config,
     connected_users: ConnectedUsers,
@@ -61,7 +63,7 @@ pub(super) async fn establish_connection(
     trace!(target: "symfonia::gateway::establish_connection::establish_connection", "Beginning process to establish connection (handshake)");
     // Accept the connection and split it into its sender and receiver halves.
     let ws_stream = accept_async(stream).await?;
-    let mut connection: Connection = ws_stream.split().into();
+    let mut connection: WebSocketConnection = ws_stream.split().into();
     trace!(target: "symfonia::gateway::establish_connection::establish_connection", "Sending hello message");
     // Hello message
     connection
