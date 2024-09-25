@@ -24,21 +24,23 @@ async fn handle_event(event: Event, connection: Arc<Mutex<super::WebSocketConnec
 }
 
 async fn process_inbox(
+    connection: Arc<Mutex<super::WebSocketConnection>>,
     mut inbox: tokio::sync::broadcast::Receiver<Event>,
     mut kill_receive: tokio::sync::broadcast::Receiver<()>,
-) -> Result<(), Error> {
-    tokio::select! {
-        _ = kill_receive.recv() => {
-            Ok(())
-        }
-        event = inbox.recv() => {
-            match event {
-                Ok(event) => {
-                    // TODO
-                    todo!()
-                }
-                Err(_) => {
-                    Ok(())
+) {
+    loop {
+        tokio::select! {
+            _ = kill_receive.recv() => {
+                return;
+            }
+            event = inbox.recv() => {
+                match event {
+                    Ok(event) => {
+                        handle_event(event, connection.clone()).await;
+                    }
+                    Err(_) => {
+                        return;
+                    }
                 }
             }
         }
