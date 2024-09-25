@@ -216,7 +216,7 @@ impl Guild {
             .bind(id)
             .fetch_optional(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     // Helper functions start
@@ -242,7 +242,7 @@ impl Guild {
             .bind(user_id)
             .fetch_optional(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
             .map(|r: Option<GuildMember>| r.is_some())
     }
 
@@ -282,7 +282,7 @@ impl Guild {
         sqlx::query("SELECT COUNT(*) FROM guilds")
             .fetch_one(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
             .map(|r| r.get::<i32, _>(0))
     }
 
@@ -338,7 +338,7 @@ impl Guild {
                 .bind(highest_role)
                 .fetch_all(db)
                 .await
-                .map_err(Error::SQLX)
+                .map_err(Error::Sqlx)
         } else {
             let mut builder = QueryBuilder::new("SELECT gm.* FROM members gm JOIN member_roles mr ON gm.index = mr.index JOIN roles r ON r.id = mr.role_id WHERE gm.guild_id = ? AND (gm.last_message_id < ? OR gm.last_message_id IS NULL) AND r.position < ? AND mr.role_id IN (");
 
@@ -387,7 +387,7 @@ impl Guild {
             .execute(db)
             .await
             .map(|_| ())
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn delete(self, db: &PgPool) -> Result<(), Error> {
@@ -395,7 +395,7 @@ impl Guild {
             .bind(self.id)
             .execute(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
             .map(|_| ())
     }
 
@@ -463,7 +463,7 @@ impl GuildBan {
             .bind(&reason)
             .execute(db)
             .await
-            .map_err(Error::SQLX)?;
+            .map_err(Error::Sqlx)?;
 
         Ok(Self {
             inner: chorus::types::GuildBan {
@@ -541,7 +541,7 @@ impl GuildBan {
             .bind(id)
             .fetch_optional(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn get_by_guild(
@@ -561,7 +561,7 @@ impl GuildBan {
             .bind(limit)
             .fetch_all(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn get_by_user(
@@ -574,7 +574,7 @@ impl GuildBan {
             .bind(guild_id)
             .fetch_optional(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn find_by_username(
@@ -589,7 +589,7 @@ impl GuildBan {
             .bind(limit)
             .fetch_all(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn delete(self, db: &PgPool) -> Result<(), Error> {
@@ -597,7 +597,7 @@ impl GuildBan {
             .bind(self.id)
             .execute(db)
             .await
-            .map_err(Error::SQLX)?;
+            .map_err(Error::Sqlx)?;
         Ok(())
     }
 

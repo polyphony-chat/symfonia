@@ -130,7 +130,7 @@ impl User {
             .bind(id)
             .fetch_optional(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn get_by_id_list(
@@ -155,7 +155,7 @@ impl User {
 
         let query = query_builder.build();
 
-        let r = query.fetch_all(db).await.map_err(Error::SQLX)?;
+        let r = query.fetch_all(db).await.map_err(Error::Sqlx)?;
         let users = r
             .iter()
             .map(User::from_row)
@@ -175,7 +175,7 @@ impl User {
             .bind(discrim)
             .fetch_optional(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn get_user_by_email_or_phone(
@@ -188,7 +188,7 @@ impl User {
             .bind(phone)
             .fetch_optional(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn add_to_guild(
@@ -221,7 +221,7 @@ impl User {
         sqlx::query("SELECT COUNT(*) FROM users")
             .fetch_one(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
             .map(|r| r.get::<i32, _>(0))
     }
 

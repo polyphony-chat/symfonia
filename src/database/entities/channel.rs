@@ -183,7 +183,7 @@ impl Channel {
             .bind(id)
             .fetch_optional(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn get_by_guild_id(db: &PgPool, guild_id: Snowflake) -> Result<Vec<Self>, Error> {
@@ -191,7 +191,7 @@ impl Channel {
             .bind(guild_id)
             .fetch_all(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn get_invites(&self, db: &PgPool) -> Result<Vec<Invite>, Error> {
@@ -361,7 +361,7 @@ impl Channel {
             .bind(self.id)
             .fetch_all(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn add_follower_webhook(

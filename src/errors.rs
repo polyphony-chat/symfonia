@@ -31,7 +31,7 @@ pub enum Error {
     Reaction(#[from] ReactionError),
 
     #[error("SQLX error: {0}")]
-    SQLX(#[from] sqlx::Error),
+    Sqlx(#[from] sqlx::Error),
 
     #[error("Migration error: {0}")]
     SQLXMigration(#[from] sqlx::migrate::MigrateError),
@@ -226,7 +226,7 @@ impl ResponseError for Error {
                 ReactionError::AlreadyExists => StatusCode::BAD_REQUEST,
                 ReactionError::NotFound => StatusCode::NOT_FOUND,
             },
-            Error::SQLX(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::Sqlx(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::SQLXMigration(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::Serde(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::IO(_) => StatusCode::INTERNAL_SERVER_ERROR,

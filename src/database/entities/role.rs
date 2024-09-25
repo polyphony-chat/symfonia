@@ -106,7 +106,7 @@ impl Role {
             .bind(id)
             .fetch_optional(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn get_by_guild(db: &PgPool, guild_id: Snowflake) -> Result<Vec<Self>, Error> {
@@ -114,7 +114,7 @@ impl Role {
             .bind(guild_id)
             .fetch_all(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn count_by_guild(db: &PgPool, guild_id: Snowflake) -> Result<i32, Error> {
@@ -123,7 +123,7 @@ impl Role {
             .fetch_one(db)
             .await
             .map(|res| res.get::<i32, _>(0))
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn save(&self, db: &PgPool) -> Result<(), Error> {
@@ -141,7 +141,7 @@ impl Role {
             .execute(db)
             .await
             .map(|_| ())
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn delete(&self, db: &PgPool) -> Result<(), Error> {
@@ -150,7 +150,7 @@ impl Role {
             .execute(db)
             .await
             .map(|_| ())
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub fn into_inner(self) -> chorus::types::RoleObject {

@@ -137,7 +137,7 @@ impl ConfigEntity {
             .fetch_one(db)
             .await
             .map(Self)
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn collect_entities(db: &PgPool) -> Result<Vec<Self>, Error> {
@@ -145,7 +145,7 @@ impl ConfigEntity {
             .fetch_all(db)
             .await
             .map(|res| res.into_iter().map(Self).collect())
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 }
 

@@ -80,6 +80,6 @@ impl UserSettings {
             .bind(index)
             .fetch_one(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 }

@@ -95,7 +95,7 @@ impl Application {
             .bind(id)
             .fetch_optional(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn get_by_owner(db: &PgPool, owner_id: &Snowflake) -> Result<Vec<Self>, Error> {
@@ -103,7 +103,7 @@ impl Application {
             .bind(owner_id)
             .fetch_all(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn get_owner(&self, db: &PgPool) -> Result<User, Error> {

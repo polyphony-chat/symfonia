@@ -501,7 +501,7 @@ impl RoleUserMap {
         let all_role_ids: Vec<PgU64> = sqlx::query_as("SELECT id FROM roles")
             .fetch_all(db)
             .await
-            .map_err(crate::errors::Error::SQLX)?;
+            .map_err(crate::errors::Error::Sqlx)?;
         for role_id in all_role_ids.iter() {
             self.map
                 .insert(Snowflake::from(role_id.to_uint()), HashSet::new());
@@ -511,7 +511,7 @@ impl RoleUserMap {
             sqlx::query_as("SELECT index, role_id FROM member_roles")
                 .fetch_all(db)
                 .await
-                .map_err(crate::errors::Error::SQLX)?;
+                .map_err(crate::errors::Error::Sqlx)?;
         for (user_id, role_id) in all_member_roles.iter() {
             // Unwrapping is fine here, as the member_roles table has a foreign key constraint
             // which states that role_id must be a valid id in the roles table.

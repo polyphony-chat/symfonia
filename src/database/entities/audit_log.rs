@@ -91,7 +91,7 @@ impl AuditLogEntry {
             .bind(guild_id)
             .fetch_all(db)
             .await
-            .map_err(Error::SQLX)?;
+            .map_err(Error::Sqlx)?;
 
         Ok(r.into_iter()
             .flat_map(|r| AuditLogEntry::from_row(&r))

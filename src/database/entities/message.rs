@@ -142,7 +142,7 @@ impl Message {
         .bind(nonce)
         .fetch_optional(db)
         .await
-        .map_err(Error::SQLX)
+        .map_err(Error::Sqlx)
     }
 
     pub async fn get_by_id(
@@ -155,7 +155,7 @@ impl Message {
             .bind(channel_id)
             .fetch_optional(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn get_by_channel_id(
@@ -172,7 +172,7 @@ impl Message {
                     .bind(limit)
                     .fetch_all(db)
                     .await
-                    .map_err(Error::SQLX)
+                    .map_err(Error::Sqlx)
             }
             ChannelMessagesAnchor::Around(around_id) => {
                 let limit = limit / 2;
@@ -183,7 +183,7 @@ impl Message {
                         .bind(limit)
                         .fetch_all(db)
                        .await
-                       .map_err(Error::SQLX)?;
+                       .map_err(Error::Sqlx)?;
 
                     let mut lower = sqlx::query_as("SELECT * FROM `messages` WHERE `channel_id` = ? AND `id` < ? ORDER BY `timestamp` DESC LIMIT ?")
                         .bind(channel_id)
@@ -191,7 +191,7 @@ impl Message {
                         .bind(limit)
                         .fetch_all(db)
                         .await
-                        .map_err(Error::SQLX)?;
+                        .map_err(Error::Sqlx)?;
 
                     upper.append(&mut lower);
                     upper.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
@@ -208,7 +208,7 @@ impl Message {
                     .bind(limit)
                     .fetch_all(db)
                     .await
-                    .map_err(Error::SQLX)
+                    .map_err(Error::Sqlx)
             }
         }
     }
@@ -218,7 +218,7 @@ impl Message {
             .bind(channel_id)
             .fetch_all(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn count_by_user_in_window(
@@ -293,7 +293,7 @@ impl Message {
             .bind(self.id)
             .execute(db)
             .await
-            .map_err(Error::SQLX)?;
+            .map_err(Error::Sqlx)?;
 
         Ok(())
     }
@@ -332,7 +332,7 @@ impl Message {
             .execute(db)
             .await
             .map(|_| ())
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn delete(&self, db: &PgPool) -> Result<(), Error> {
@@ -341,7 +341,7 @@ impl Message {
             .execute(db)
             .await
             .map(|_| ())
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn bulk_delete(db: &PgPool, ids: Vec<Snowflake>) -> Result<(), Error> {
@@ -460,7 +460,7 @@ impl Message {
 
         let query = query_builder.build();
 
-        let res = query.fetch_all(db).await.map_err(Error::SQLX)?;
+        let res = query.fetch_all(db).await.map_err(Error::Sqlx)?;
 
         Ok(res
             .into_iter()

@@ -68,7 +68,7 @@ impl ReadState {
             .bind(user_id)
             .fetch_optional(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn populate_relations(&mut self, db: &PgPool) -> Result<(), Error> {
@@ -89,7 +89,7 @@ impl ReadState {
            .bind(self.manual)
            .execute(db)
            .await
-           .map_err(Error::SQLX)
+           .map_err(Error::Sqlx)
             .map(|_| ())
     }
 }

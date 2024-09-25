@@ -89,7 +89,7 @@ impl Webhook {
             .bind(id)
             .fetch_optional(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn get_by_channel_id(db: &PgPool, channel_id: Snowflake) -> Result<Vec<Self>, Error> {
@@ -97,7 +97,7 @@ impl Webhook {
             .bind(channel_id)
             .fetch_all(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn count_by_channel(db: &PgPool, channel_id: Snowflake) -> Result<i32, Error> {
@@ -105,7 +105,7 @@ impl Webhook {
             .bind(channel_id)
             .fetch_one(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
             .map(|row| row.get::<i32, _>(0))
     }
 }

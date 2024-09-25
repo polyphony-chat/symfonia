@@ -37,7 +37,7 @@ impl GuildTemplate {
             .bind(code)
             .fetch_optional(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub fn into_inner(self) -> chorus::types::GuildTemplate {
