@@ -238,6 +238,8 @@ impl ConnectedUsers {
         self.role_user_map.lock().await.init(db).await
     }
 
+    /// Get a [GatewayUser] by its Snowflake ID if it already exists in the store, or create a new
+    /// [GatewayUser] if it does not exist using [ConnectedUsers::new_user].
     pub async fn get_user_or_new(&self, id: Snowflake) -> Arc<Mutex<GatewayUser>> {
         let inner = self.store.clone();
         let mut lock = inner.lock().await;
@@ -276,6 +278,8 @@ impl ConnectedUsers {
         self.store.lock().await.inboxes.get(&id).cloned()
     }
 
+    /// Create a new [GatewayUser] with the given Snowflake ID, [GatewayClient]s, and subscriptions.
+    /// Registers the new [GatewayUser] with the [ConnectedUsers] instance.
     pub async fn new_user(
         &self,
         clients: HashMap<String, Arc<Mutex<GatewayClient>>>,
@@ -293,6 +297,36 @@ impl ConnectedUsers {
         };
         self.register(user).await
     }
+
+    /// Create a new [GatewayClient] with the given [GatewayUser], [Connection], and other data.
+    /// Also handles appending the new [GatewayClient] to the [GatewayUser]'s list of clients.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn new_client(
+        &self,
+        user: Arc<Mutex<GatewayUser>>,
+        connection: Arc<Mutex<Connection>>,
+        main_task_handle: tokio::task::JoinHandle<()>,
+        heartbeat_task_handle: tokio::task::JoinHandle<()>,
+        kill_send: tokio::sync::broadcast::Sender<()>,
+        session_token: &str,
+        last_sequence: Arc<Mutex<u64>>,
+    ) -> Arc<Mutex<GatewayClient>> {
+        let client = GatewayClient {
+            connection,
+            parent: Arc::downgrade(&user),
+            main_task_handle,
+            heartbeat_task_handle,
+            kill_send,
+            session_token: session_token.to_string(),
+            last_sequence,
+        };
+        let arc = Arc::new(Mutex::new(client));
+        user.lock()
+            .await
+            .clients
+            .insert(session_token.to_string(), arc.clone());
+        arc
+    }
 }
 
 /// A single identifiable User connected to the Gateway - possibly using many clients at the same
@@ -303,7 +337,7 @@ pub struct GatewayUser {
     pub inbox: tokio::sync::broadcast::Receiver<Event>,
     /// The "outbox" of a [GatewayUser]. This is a [tokio::sync::mpsc::Sender]. From this outbox,
     /// more inboxes can be created.
-    pub(super) outbox: tokio::sync::broadcast::Sender<Event>,
+    outbox: tokio::sync::broadcast::Sender<Event>,
     /// Sessions a User is connected with. HashMap of SessionToken -> GatewayClient
     clients: HashMap<String, Arc<Mutex<GatewayClient>>>,
     /// The Snowflake ID of the User.
@@ -376,7 +410,7 @@ impl GatewayClient {
     }
 }
 
-struct Connection {
+pub struct Connection {
     sender: WebSocketSend,
     receiver: WebSocketReceive,
 }

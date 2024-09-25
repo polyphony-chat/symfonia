@@ -205,40 +205,37 @@ async fn finish_connecting(
                 }
             };
             let mut gateway_user = state.connected_users.get_user_or_new(claims.id).await;
-            let gateway_client = GatewayClient {
-                parent: Arc::downgrade(&gateway_user),
-                connection: state.connection.clone(),
-                main_task_handle: tokio::spawn(gateway_task::gateway_task(
+            let gateway_client = state
+                .connected_users
+                .new_client(
+                    gateway_user.clone(),
                     state.connection.clone(),
-                )),
-                heartbeat_task_handle: match heartbeat_handler_handle {
-                    Some(handle) => handle,
-                    None => tokio::spawn({
-                        let mut heartbeat_handler = HeartbeatHandler::new(
-                            state.connection.clone(),
-                            state.kill_receive.resubscribe(),
-                            state.kill_send.clone(),
-                            state.heartbeat_receive.resubscribe(),
-                            state.sequence_number.clone(),
-                            state.session_id_receive.resubscribe(),
-                        );
-                        async move {
-                            heartbeat_handler.run().await;
-                        }
-                    }),
-                },
-                kill_send: state.kill_send.clone(),
-                session_token: identify.event_data.token,
-                last_sequence: state.sequence_number.clone(),
-            };
-            let gateway_client_arc_mutex = Arc::new(Mutex::new(gateway_client));
-            gateway_user.lock().await.clients.insert(
-                gateway_client_arc_mutex.lock().await.session_token.clone(),
-                gateway_client_arc_mutex.clone(),
-            );
+                    tokio::spawn(gateway_task::gateway_task(state.connection.clone())),
+                    match heartbeat_handler_handle {
+                        Some(handle) => handle,
+                        None => tokio::spawn({
+                            let mut heartbeat_handler = HeartbeatHandler::new(
+                                state.connection.clone(),
+                                state.kill_receive.resubscribe(),
+                                state.kill_send.clone(),
+                                state.heartbeat_receive.resubscribe(),
+                                state.sequence_number.clone(),
+                                state.session_id_receive.resubscribe(),
+                            );
+                            async move {
+                                heartbeat_handler.run().await;
+                            }
+                        }),
+                    },
+                    state.kill_send.clone(),
+                    &identify.event_data.token,
+                    state.sequence_number.clone(),
+                )
+                .await;
+
             return Ok(NewConnection {
                 user: gateway_user,
-                client: gateway_client_arc_mutex.clone(),
+                client: gateway_client.clone(),
             });
         } else if let Ok(resume) = from_str::<GatewayResume>(&raw_message.to_string()) {
             log::trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Received resume payload");
