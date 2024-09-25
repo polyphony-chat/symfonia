@@ -2,10 +2,21 @@ use std::sync::Arc;
 
 use tokio::sync::Mutex;
 
-use super::GatewayClient;
+use super::{Event, GatewayClient};
 
 /// Handles all messages a client sends to the gateway post-handshake.
-pub(super) async fn gateway_task(connection: Arc<Mutex<super::WebSocketConnection>>) {
+pub(super) async fn gateway_task(
+    connection: Arc<Mutex<super::WebSocketConnection>>,
+    inbox: tokio::sync::broadcast::Receiver<Event>,
+    kill_receive: tokio::sync::broadcast::Receiver<()>,
+    kill_send: tokio::sync::broadcast::Sender<()>,
+    last_sequence_number: Arc<Mutex<u64>>,
+) {
+    // TODO
+    todo!()
+}
+
+async fn handle_event(event: Event, connection: Arc<Mutex<super::WebSocketConnection>>) {
     // TODO
     todo!()
 }
