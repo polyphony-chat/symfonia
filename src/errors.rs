@@ -75,6 +75,8 @@ pub enum GatewayError {
     Timeout,
     #[error("CLOSED")]
     Closed,
+    #[error("INTERNAL_SERVER_ERROR")]
+    Internal,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -243,6 +245,7 @@ impl ResponseError for Error {
                 GatewayError::UnexpectedMessage => StatusCode::BAD_REQUEST,
                 GatewayError::Timeout => StatusCode::BAD_REQUEST,
                 GatewayError::Closed => StatusCode::BAD_REQUEST,
+                GatewayError::Internal => StatusCode::INTERNAL_SERVER_ERROR,
             },
             Error::SqlxPgUint(_) => StatusCode::BAD_REQUEST,
             Error::Custom(_) => StatusCode::BAD_REQUEST,
