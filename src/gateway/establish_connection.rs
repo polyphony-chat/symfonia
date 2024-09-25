@@ -220,6 +220,7 @@ async fn finish_connecting(
                         gateway_user.lock().await.inbox.resubscribe(),
                         state.kill_receive.resubscribe(),
                         state.kill_send.clone(),
+                        state.heartbeat_send.clone(),
                         state.sequence_number.clone(),
                     )),
                     match heartbeat_handler_handle {
