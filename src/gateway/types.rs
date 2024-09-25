@@ -556,7 +556,7 @@ impl
 
 /// Represents a new successful connection to the gateway. The user is already part of the [ConnectedUsers]
 /// and the client is already registered with the [GatewayClient] "clients" map.
-pub struct NewConnection {
+pub struct NewWebSocketConnection {
     pub user: Arc<Mutex<GatewayUser>>,
     pub client: Arc<Mutex<GatewayClient>>,
 }

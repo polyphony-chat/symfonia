@@ -30,7 +30,8 @@ use crate::{
 };
 
 use super::{
-    ConnectedUsers, GatewayClient, NewConnection, ResumableClientsStore, WebSocketConnection,
+    ConnectedUsers, GatewayClient, NewWebSocketConnection, ResumableClientsStore,
+    WebSocketConnection,
 };
 
 /// Internal use only state struct to pass around data to the `finish_connecting` function.
@@ -59,7 +60,7 @@ pub(super) async fn establish_connection(
     db: PgPool,
     config: Config,
     connected_users: ConnectedUsers,
-) -> Result<NewConnection, Error> {
+) -> Result<NewWebSocketConnection, Error> {
     trace!(target: "symfonia::gateway::establish_connection::establish_connection", "Beginning process to establish connection (handshake)");
     // Accept the connection and split it into its sender and receiver halves.
     let ws_stream = accept_async(stream).await?;
@@ -142,7 +143,7 @@ pub(super) async fn establish_connection(
 async fn finish_connecting(
     mut heartbeat_handler_handle: Option<JoinHandle<()>>,
     state: State,
-) -> Result<NewConnection, Error> {
+) -> Result<NewWebSocketConnection, Error> {
     loop {
         trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Waiting for next message...");
         let raw_message = match state.connection.lock().await.receiver.next().await {
@@ -235,7 +236,7 @@ async fn finish_connecting(
                 )
                 .await;
 
-            return Ok(NewConnection {
+            return Ok(NewWebSocketConnection {
                 user: gateway_user,
                 client: gateway_client.clone(),
             });
