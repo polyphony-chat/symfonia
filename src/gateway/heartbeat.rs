@@ -13,7 +13,7 @@ use tokio_tungstenite::tungstenite::{
 
 use crate::gateway::DisconnectInfo;
 
-use super::{WebSocketConnection, GatewayClient};
+use super::{GatewayClient, WebSocketConnection};
 
 static HEARTBEAT_INTERVAL: std::time::Duration = std::time::Duration::from_secs(45);
 static LATENCY_BUFFER: std::time::Duration = std::time::Duration::from_secs(5);
