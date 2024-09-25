@@ -2,9 +2,18 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use std::collections::{HashMap, HashSet};
+use std::ops::Deref;
+use std::sync::{Arc, Weak};
+
 use ::serde::de::DeserializeOwned;
 use ::serde::{Deserialize, Serialize};
 use chorus::types::*;
+use pubserve::Subscriber;
+use sqlx::PgPool;
+use tokio::sync::Mutex;
+
+use super::{Connection, DisconnectInfo, ResumableClientsStore, RoleUserMap};
 
 #[derive(
     Debug,
@@ -171,5 +180,272 @@ impl<'de, T: DeserializeOwned + Serialize> Deserialize<'de> for GatewayPayload<T
             sequence_number,
             event_name,
         })
+    }
+}
+
+#[derive(Default, Clone)]
+pub struct ConnectedUsers {
+    pub store: Arc<Mutex<ConnectedUsersInner>>,
+    pub role_user_map: Arc<Mutex<RoleUserMap>>,
+}
+
+/// A mapping of Snowflake IDs to the "inbox" of a [GatewayUser].
+///
+/// An "inbox" is a [tokio::sync::mpsc::Sender] that can be used to send [Event]s to all connected
+/// clients of a [GatewayUser].
+#[derive(Default)]
+pub struct ConnectedUsersInner {
+    pub inboxes: HashMap<Snowflake, tokio::sync::broadcast::Sender<Event>>,
+    pub users: HashMap<Snowflake, Arc<Mutex<GatewayUser>>>,
+    pub resumeable_clients_store: ResumableClientsStore,
+}
+
+/// A single identifiable User connected to the Gateway - possibly using many clients at the same
+/// time.
+pub struct GatewayUser {
+    /// The "inbox" of a [GatewayUser]. This is a [tokio::sync::mpsc::Receiver]. Events sent to
+    /// this inbox will be sent to all connected clients of this user.
+    pub inbox: tokio::sync::broadcast::Receiver<Event>,
+    /// The "outbox" of a [GatewayUser]. This is a [tokio::sync::mpsc::Sender]. From this outbox,
+    /// more inboxes can be created.
+    outbox: tokio::sync::broadcast::Sender<Event>,
+    /// Sessions a User is connected with. HashMap of SessionToken -> GatewayClient
+    clients: HashMap<String, Arc<Mutex<GatewayClient>>>,
+    /// The Snowflake ID of the User.
+    pub id: Snowflake,
+    /// A collection of [Subscribers](Subscriber) to [Event] [Publishers](pubserve::Publisher).
+    ///
+    /// A GatewayUser may have many [GatewayClients](GatewayClient), but he only gets subscribed to
+    /// all relevant [Publishers](pubserve::Publisher) *once* to save resources.
+    subscriptions: Vec<Box<dyn Subscriber<Event>>>,
+    /// [Weak] reference to the [ConnectedUsers] store.
+    connected_users: ConnectedUsers,
+}
+
+/// A concrete session, that a [GatewayUser] is connected to the Gateway with.
+pub struct GatewayClient {
+    connection: Arc<Mutex<Connection>>,
+    /// A [Weak] reference to the [GatewayUser] this client belongs to.
+    pub parent: Weak<Mutex<GatewayUser>>,
+    // Handle to the main Gateway task for this client
+    main_task_handle: tokio::task::JoinHandle<()>,
+    // Handle to the heartbeat task for this client
+    heartbeat_task_handle: tokio::task::JoinHandle<()>,
+    // Kill switch to disconnect the client
+    pub kill_send: tokio::sync::broadcast::Sender<()>,
+    /// Token of the session token used for this connection
+    pub session_token: String,
+    /// The last sequence number received from the client. Shared between the main task, heartbeat
+    /// task, and this struct.
+    last_sequence: Arc<Mutex<u64>>,
+}
+
+impl ConnectedUsers {
+    /// Create a new, empty [ConnectedUsers] instance.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn bulk_message_builder(&self) -> BulkMessageBuilder {
+        BulkMessageBuilder::default()
+    }
+
+    /// Initialize the [RoleUserMap] with data from the database.
+    ///
+    /// This method will query the database for all roles and all users that have these roles.
+    /// The data will then populate the map.
+    ///
+    /// Due to the possibly large number of roles and users returned by the database, this method
+    /// should only be executed once. The [RoleUserMap] should be kept synchronized with the database
+    /// through means that do not involve this method.
+    pub async fn init_role_user_map(&self, db: &PgPool) -> Result<(), crate::errors::Error> {
+        self.role_user_map.lock().await.init(db).await
+    }
+
+    /// Get a [GatewayUser] by its Snowflake ID if it already exists in the store, or create a new
+    /// [GatewayUser] if it does not exist using [ConnectedUsers::new_user].
+    pub async fn get_user_or_new(&self, id: Snowflake) -> Arc<Mutex<GatewayUser>> {
+        let inner = self.store.clone();
+        let mut lock = inner.lock().await;
+        if let Some(user) = lock.users.get(&id) {
+            user.clone()
+        } else {
+            self.new_user(HashMap::new(), id, Vec::new()).await
+        }
+    }
+
+    pub fn inner(&self) -> Arc<Mutex<ConnectedUsersInner>> {
+        self.store.clone()
+    }
+
+    /// Register a new [GatewayUser] with the [ConnectedUsers] instance.
+    async fn register(&self, user: GatewayUser) -> Arc<Mutex<GatewayUser>> {
+        self.store
+            .lock()
+            .await
+            .inboxes
+            .insert(user.id, user.outbox.clone());
+        let id = user.id;
+        let arc = Arc::new(Mutex::new(user));
+        self.store.lock().await.users.insert(id, arc.clone());
+        arc
+    }
+
+    /// Deregister a [GatewayUser] from the [ConnectedUsers] instance.
+    pub async fn deregister(&self, user: &GatewayUser) {
+        self.store.lock().await.inboxes.remove(&user.id);
+        self.store.lock().await.users.remove(&user.id);
+    }
+
+    /// Get the "inbox" of a [GatewayUser] by its Snowflake ID.
+    pub async fn inbox(&self, id: Snowflake) -> Option<tokio::sync::broadcast::Sender<Event>> {
+        self.store.lock().await.inboxes.get(&id).cloned()
+    }
+
+    /// Create a new [GatewayUser] with the given Snowflake ID, [GatewayClient]s, and subscriptions.
+    /// Registers the new [GatewayUser] with the [ConnectedUsers] instance.
+    pub async fn new_user(
+        &self,
+        clients: HashMap<String, Arc<Mutex<GatewayClient>>>,
+        id: Snowflake,
+        subscriptions: Vec<Box<dyn Subscriber<Event>>>,
+    ) -> Arc<Mutex<GatewayUser>> {
+        let channel = tokio::sync::broadcast::channel(20);
+        let user = GatewayUser {
+            inbox: channel.1,
+            outbox: channel.0.clone(),
+            clients,
+            id,
+            subscriptions,
+            connected_users: self.clone(),
+        };
+        self.register(user).await
+    }
+
+    /// Create a new [GatewayClient] with the given [GatewayUser], [Connection], and other data.
+    /// Also handles appending the new [GatewayClient] to the [GatewayUser]'s list of clients.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn new_client(
+        &self,
+        user: Arc<Mutex<GatewayUser>>,
+        connection: Arc<Mutex<Connection>>,
+        main_task_handle: tokio::task::JoinHandle<()>,
+        heartbeat_task_handle: tokio::task::JoinHandle<()>,
+        kill_send: tokio::sync::broadcast::Sender<()>,
+        session_token: &str,
+        last_sequence: Arc<Mutex<u64>>,
+    ) -> Arc<Mutex<GatewayClient>> {
+        let client = GatewayClient {
+            connection,
+            parent: Arc::downgrade(&user),
+            main_task_handle,
+            heartbeat_task_handle,
+            kill_send,
+            session_token: session_token.to_string(),
+            last_sequence,
+        };
+        let arc = Arc::new(Mutex::new(client));
+        user.lock()
+            .await
+            .clients
+            .insert(session_token.to_string(), arc.clone());
+        arc
+    }
+}
+
+impl std::hash::Hash for GatewayUser {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
+}
+
+impl PartialEq for GatewayUser {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Eq for GatewayUser {}
+
+impl GatewayClient {
+    pub async fn die(mut self, connected_users: ConnectedUsers) {
+        self.kill_send.send(()).unwrap();
+        let disconnect_info = DisconnectInfo {
+            session_token: self.session_token.clone(),
+            disconnected_at_sequence: *self.last_sequence.lock().await,
+            parent: self.parent.clone(),
+        };
+        self.parent
+            .upgrade()
+            .unwrap()
+            .lock()
+            .await
+            .clients
+            .remove(&self.session_token);
+        connected_users
+            .deregister(self.parent.upgrade().unwrap().lock().await.deref())
+            .await;
+        connected_users
+            .store
+            .lock()
+            .await
+            .resumeable_clients_store
+            .insert(self.session_token.clone(), disconnect_info);
+    }
+}
+
+#[derive(Default, Clone)]
+pub struct BulkMessageBuilder {
+    users: Vec<Snowflake>,
+    roles: Vec<Snowflake>,
+    message: Option<Event>,
+}
+
+impl BulkMessageBuilder {
+    /// Add the given list of user snowflake IDs to the list of recipients.
+    pub async fn add_user_recipients(&mut self, users: &[Snowflake]) {
+        self.users.extend_from_slice(users);
+    }
+
+    /// Add all members which have the given role snowflake IDs to the list of recipients.
+    pub async fn add_role_recipients(&mut self, roles: &[Snowflake]) {
+        self.roles.extend_from_slice(roles);
+    }
+
+    /// Set the message to be sent to the recipients.
+    pub async fn set_message(&mut self, message: Event) {
+        self.message = Some(message);
+    }
+
+    /// Send the message to all recipients.
+    pub async fn send(self, connected_users: ConnectedUsers) -> Result<(), crate::errors::Error> {
+        if self.message.is_none() {
+            return Err(crate::errors::Error::Custom(
+                "No message to send".to_string(),
+            ));
+        }
+        let mut recipients = HashSet::new();
+        let lock = connected_users.role_user_map.lock().await;
+        for role in self.roles.iter() {
+            if let Some(users) = lock.get(role) {
+                for user in users.iter() {
+                    recipients.insert(*user);
+                }
+            }
+            for user in self.users.iter() {
+                recipients.insert(*user);
+            }
+        }
+        if recipients.is_empty() {
+            return Ok(());
+        }
+        for recipient in recipients.iter() {
+            if let Some(inbox) = connected_users.inbox(*recipient).await {
+                inbox.send(self.message.clone().unwrap()).map_err(|e| {
+                    crate::errors::Error::Custom(format!("tokio broadcast error: {}", e))
+                })?;
+            }
+        }
+        Ok(())
     }
 }
