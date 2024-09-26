@@ -4,6 +4,7 @@ use chorus::types::{GatewayHeartbeat, GatewaySendPayload};
 use futures::StreamExt;
 use serde_json::from_str;
 use tokio::sync::Mutex;
+use tokio_tungstenite::tungstenite::protocol::CloseFrame;
 use tokio_tungstenite::tungstenite::Message;
 
 use crate::errors::Error;
@@ -31,9 +32,27 @@ pub(super) async fn gateway_task(
             _ = kill_receive.recv() => {
                 return;
             },
-            // TODO: This locks the connection mutex which is not ideal/deadlock risk. Perhaps we
-            // should turn our websocket connection into a tokio broadcast channel instead. so that
-            // we can receive messages from it without having to lock one connection object.
+            message_result = connection.receiver.recv() => {
+                match message_result {
+                    Ok(message) => {
+                        let maybe_event = received_message_to_event(message);
+                        let event = match maybe_event {
+                            Ok(event) => event,
+                            Err(e) => {
+                                connection.sender.send(Message::Close(Some(CloseFrame { code: tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode::Library(4001), reason: e.to_string().into() })));
+                                kill_send.send(()).expect("Failed to send kill_send");
+                                return;
+                            },
+                        };
+                        // TODO: Do something with the event
+                    },
+                    Err(error) => {
+                        connection.sender.send(Message::Close(Some(CloseFrame { code: tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode::Library(4000), reason: "INTERNAL_SERVER_ERROR".into() })));
+                        kill_send.send(()).expect("Failed to send kill_send");
+                        return;
+                    },
+                }
+            }
         }
     }
 
