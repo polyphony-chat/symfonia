@@ -1,9 +1,11 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use chorus::types::{GatewayHeartbeat, GatewaySendPayload};
 use futures::StreamExt;
 use serde_json::from_str;
 use tokio::sync::Mutex;
+use tokio::time::sleep;
 use tokio_tungstenite::tungstenite::protocol::CloseFrame;
 use tokio_tungstenite::tungstenite::Message;
 
@@ -20,6 +22,7 @@ pub(super) async fn gateway_task(
     mut heartbeat_send: tokio::sync::broadcast::Sender<GatewayHeartbeat>,
     last_sequence_number: Arc<Mutex<u64>>,
 ) {
+    log::trace!(target: "symfonia::gateway::gateway_task", "Started a new gateway task!");
     let inbox_processor = tokio::spawn(process_inbox(
         connection.clone(),
         inbox.resubscribe(),
@@ -27,6 +30,8 @@ pub(super) async fn gateway_task(
     ));
 
     loop {
+        // TODO remove sleep and implement stuff
+        sleep(Duration::from_secs(3600)).await;
         todo!();
         tokio::select! {
             _ = kill_receive.recv() => {

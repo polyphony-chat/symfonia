@@ -292,10 +292,15 @@ impl ConnectedUsers {
     /// [GatewayUser] if it does not exist using [ConnectedUsers::new_user].
     pub async fn get_user_or_new(&self, id: Snowflake) -> Arc<Mutex<GatewayUser>> {
         let inner = self.store.clone();
+        log::trace!(target: "symfonia::gateway::types::ConnectedUsers::get_user_or_new", "Acquiring lock on ConnectedUsersInner...");
         let mut lock = inner.lock().await;
+        log::trace!(target: "symfonia::gateway::types::ConnectedUsers::get_user_or_new", "Lock acquired!");
         if let Some(user) = lock.users.get(&id) {
+            log::trace!(target: "symfonia::gateway::types::ConnectedUsers::get_user_or_new", "Found user {id} in store");
             user.clone()
         } else {
+            drop(lock);
+            log::trace!(target: "symfonia::gateway::types::ConnectedUsers::get_user_or_new", "Creating new user {id} in store");
             self.new_user(HashMap::new(), id, Vec::new()).await
         }
     }
@@ -306,14 +311,17 @@ impl ConnectedUsers {
 
     /// Register a new [GatewayUser] with the [ConnectedUsers] instance.
     async fn register(&self, user: GatewayUser) -> Arc<Mutex<GatewayUser>> {
+        log::trace!(target: "symfonia::gateway::types::ConnectedUsers::register", "Acquiring lock on ConnectedUsersInner...");
         self.store
             .lock()
             .await
             .inboxes
             .insert(user.id, user.outbox.clone());
+        log::trace!(target: "symfonia::gateway::types::ConnectedUsers::register", "Lock acquired!");
         let id = user.id;
         let arc = Arc::new(Mutex::new(user));
         self.store.lock().await.users.insert(id, arc.clone());
+        log::trace!(target: "symfonia::gateway::types::ConnectedUsers::register", "Inserted user {id} into users store");
         arc
     }
 
@@ -371,10 +379,14 @@ impl ConnectedUsers {
             last_sequence,
         };
         let arc = Arc::new(Mutex::new(client));
+        log::trace!(target: "symfonia::gateway::ConnectedUsers::new_client", "Acquiring lock...");
         user.lock()
             .await
             .clients
             .insert(session_token.to_string(), arc.clone());
+        // TODO: Deadlock here
+        log::trace!(target: "symfonia::gateway::ConnectedUsers::new_client", "Lock acquired!");
+        log::trace!(target: "symfonia::gateway::ConnectedUsers::new_client", "Inserted into map. Done.");
         arc
     }
 }
@@ -557,6 +569,7 @@ impl WebSocketConnection {
         let mut receiver_sender_task = receiver.resubscribe();
         // The sender task concerns itself with sending messages to the WebSocket client.
         let sender_task = tokio::spawn(async move {
+            log::trace!(target: "symfonia::gateway::types::WebSocketConnection", "spawned sender_task");
             loop {
                 let message: Result<Message, tokio::sync::broadcast::error::RecvError> =
                     receiver_sender_task.recv().await;
@@ -582,6 +595,7 @@ impl WebSocketConnection {
         // The receiver task receives messages from the WebSocket client and sends them to the
         // broadcast channel.
         let receiver_task = tokio::spawn(async move {
+            log::trace!(target: "symfonia::gateway::types::WebSocketConnection", "spawned receiver_task");
             loop {
                 let web_socket_receive_result = match stream.next().await {
                     Some(res) => res,
@@ -629,6 +643,7 @@ impl WebSocketConnection {
 
 impl Clone for WebSocketConnection {
     fn clone(&self) -> Self {
+        log::trace!(target: "symfonia::gateway::WebSocketConnection", "WebSocketConnection cloned!");
         Self {
             sender: self.sender.clone(),
             receiver: self.receiver.resubscribe(),

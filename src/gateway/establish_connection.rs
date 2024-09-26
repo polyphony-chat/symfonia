@@ -214,7 +214,9 @@ async fn finish_connecting(
                     return Err(crate::errors::UserError::InvalidToken.into());
                 }
             };
+            log::trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Getting gateway_user");
             let mut gateway_user = state.connected_users.get_user_or_new(claims.id).await;
+            log::trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Creating gateway_client");
             let gateway_client = state
                 .connected_users
                 .new_client(
@@ -260,6 +262,7 @@ async fn finish_connecting(
                     return Err(GatewayError::Internal.into());
                 }
             }
+            log::trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Done!");
             return Ok(NewWebSocketConnection {
                 user: gateway_user,
                 client: gateway_client.clone(),
