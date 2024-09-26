@@ -86,6 +86,12 @@ impl From<SendError<tokio_tungstenite::tungstenite::Message>> for GatewayError {
     }
 }
 
+impl From<SendError<tokio_tungstenite::tungstenite::Message>> for Error {
+    fn from(value: SendError<tokio_tungstenite::tungstenite::Message>) -> Self {
+        Self::Gateway(GatewayError::from(value))
+    }
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum UserError {
     #[error("EMAIL_INVALID")]
