@@ -9,6 +9,7 @@ use std::fmt::Display;
 
 use chorus::types::{APIError, AuthError, Rights};
 use poem::{error::ResponseError, http::StatusCode, Response};
+use tokio::sync::broadcast::error::SendError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -77,6 +78,12 @@ pub enum GatewayError {
     Closed,
     #[error("INTERNAL_SERVER_ERROR")]
     Internal,
+}
+
+impl From<SendError<tokio_tungstenite::tungstenite::Message>> for GatewayError {
+    fn from(value: SendError<tokio_tungstenite::tungstenite::Message>) -> Self {
+        Self::Internal
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
