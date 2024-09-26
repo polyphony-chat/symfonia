@@ -527,6 +527,15 @@ impl RoleUserMap {
     }
 }
 
+/// Connection to a WebSocket client with sending and receiving capabilities.
+///
+/// A [WebSocketConnection] is essentially an adapter from tungstenites sink/stream to a
+/// [tokio::sync::broadcast] channel. Broadcast channels are used in favor of sink/stream, because
+/// to clone a sink/stream to pass it around to different tasks which need sending/receiving
+/// capabilities, an `Arc<Mutex<T>>` has to be used. This means, that no more than one task can
+/// listen for incoming messages at a time, as a lock on the [Mutex] has to be acquired.
+///
+/// Read up on [tokio::sync::broadcast] channels if you'd like to understand how they work.
 pub struct WebSocketConnection {
     pub sender: tokio::sync::broadcast::Sender<Message>,
     pub receiver: tokio::sync::broadcast::Receiver<Message>,
@@ -535,6 +544,7 @@ pub struct WebSocketConnection {
 }
 
 impl WebSocketConnection {
+    /// Create a new [WebSocketConnection] from a tungstenite Sink/Stream pair.
     pub fn new(mut sink: WebSocketSend, mut stream: WebSocketReceive) -> Self {
         let (mut sender, mut receiver) = tokio::sync::broadcast::channel(100);
         let mut sender_sender_task = sender.clone();
