@@ -578,7 +578,7 @@ impl WebSocketConnection {
         // broadcast channel.
         let receiver_task = tokio::spawn(async move {
             loop {
-                let web_socket_recieve_result = match stream.next().await {
+                let web_socket_receive_result = match stream.next().await {
                     Some(res) => res,
                     None => {
                         log::debug!(target: "symfonia::gateway::WebSocketConnection", "WebSocketReceive yielded None. Sending close message...");
@@ -589,7 +589,7 @@ impl WebSocketConnection {
                         return;
                     }
                 };
-                let web_socket_receive_message = match web_socket_recieve_result {
+                let web_socket_receive_message = match web_socket_receive_result {
                     Ok(message) => message,
                     Err(e) => {
                         log::error!(target: "symfonia::gateway::WebSocketConnection", "Received malformed message, closing channel: {e}");
