@@ -19,7 +19,7 @@ static HEARTBEAT_INTERVAL: std::time::Duration = std::time::Duration::from_secs(
 static LATENCY_BUFFER: std::time::Duration = std::time::Duration::from_secs(5);
 
 pub(super) struct HeartbeatHandler {
-    connection: Arc<Mutex<WebSocketConnection>>,
+    connection: WebSocketConnection,
     kill_receive: tokio::sync::broadcast::Receiver<()>,
     kill_send: tokio::sync::broadcast::Sender<()>,
     message_receive: tokio::sync::broadcast::Receiver<GatewayHeartbeat>,
@@ -63,7 +63,7 @@ impl HeartbeatHandler {
     /// let heartbeat_handler = HeartbeatHandler::new(connection, kill_receive, kill_send, message_receive).await;
     /// ```
     pub(super) fn new(
-        connection: Arc<Mutex<WebSocketConnection>>,
+        connection: WebSocketConnection,
         kill_receive: tokio::sync::broadcast::Receiver<()>,
         kill_send: tokio::sync::broadcast::Sender<()>,
         message_receive: tokio::sync::broadcast::Receiver<GatewayHeartbeat>,
@@ -153,28 +153,30 @@ impl HeartbeatHandler {
                                 // TODO: We could potentially send a heartbeat to the client, prompting it to send a new heartbeat.
                                 // This would require more logic though.
                                 trace!(target: "symfonia::gateway::heartbeat_handler", "Received heartbeat sequence number is way off by {}. This may be due to latency.", diff);
-                                self.connection.lock().await.sender.send(Message::Text(json!(GatewayReconnect::default()).to_string())).await.unwrap_or_else(|_| {
-                                    trace!("Failed to send reconnect message in heartbeat_handler. Stopping gateway_task and heartbeat_handler");
-                                    self.kill_send.send(()).expect("Failed to send kill signal in heartbeat_handler");
-                                });
+                                match self.connection.sender.send(Message::Text(json!(GatewayReconnect::default()).to_string())) {
+                                    Ok(_) => (),
+                                    Err(e) => {
+                                        trace!("Failed to send reconnect message in heartbeat_handler. Stopping gateway_task and heartbeat_handler");
+                                        self.kill_send.send(()).expect("Failed to send kill signal in heartbeat_handler");
+                                    }
+                                };
                                 self.kill_send.send(()).expect("Failed to send kill signal in heartbeat_handler");
                                 return;
                             }
                         }
                     }
                     self.last_heartbeat = std::time::Instant::now();
-                    self.connection
-                .lock()
-                .await
-                .sender
-                .send(Message::Text(
-                    json!(GatewayHeartbeatAck::default()).to_string(),
-                ))
-                .await.unwrap_or_else(|_| {
-                    trace!("Failed to send heartbeat ack in heartbeat_handler. Stopping gateway_task and heartbeat_handler");
-                    self.kill_send.send(()).expect("Failed to send kill signal in heartbeat_handler");
-                }
-                );
+                    match self.connection.sender.send(Message::Text(
+                        json!(GatewayHeartbeatAck::default()).to_string(),
+                    )) {
+                        Ok(_) => (),
+                        Err(_) => {
+                            trace!("Failed to send heartbeat ack in heartbeat_handler. Stopping gateway_task and heartbeat_handler");
+                            self.kill_send.send(()).expect("Failed to send kill signal in heartbeat_handler");
+                        },
+                    }
+
+                    ;
                 }
                 else => {
                     // TODO: We could potentially send a heartbeat if we haven't received one in ~40 seconds,
@@ -203,10 +205,17 @@ impl HeartbeatHandler {
 
     /// Shorthand for sending a heartbeat ack message.
     async fn send_ack(&self) {
-        self.connection.lock().await.sender.send(Message::Text(json!(GatewayHeartbeatAck::default()).to_string())).await.unwrap_or_else(|_| {
-            trace!("Failed to send heartbeat ack in heartbeat_handler. Stopping gateway_task and heartbeat_handler");
-            self.kill_send.send(()).expect("Failed to send kill signal in heartbeat_handler");
-        });
+        match self.connection.sender.send(Message::Text(
+            json!(GatewayHeartbeatAck::default()).to_string(),
+        )) {
+            Ok(_) => (),
+            Err(_) => {
+                trace!("Failed to send heartbeat ack in heartbeat_handler. Stopping gateway_task and heartbeat_handler");
+                self.kill_send
+                    .send(())
+                    .expect("Failed to send kill signal in heartbeat_handler");
+            }
+        };
     }
 }
 

@@ -10,7 +10,7 @@ use super::{Event, GatewayClient};
 
 /// Handles all messages a client sends to the gateway post-handshake.
 pub(super) async fn gateway_task(
-    mut connection: Arc<Mutex<super::WebSocketConnection>>,
+    mut connection: super::WebSocketConnection,
     mut inbox: tokio::sync::broadcast::Receiver<Event>,
     mut kill_receive: tokio::sync::broadcast::Receiver<()>,
     mut kill_send: tokio::sync::broadcast::Sender<()>,
@@ -24,6 +24,7 @@ pub(super) async fn gateway_task(
     ));
 
     loop {
+        todo!();
         tokio::select! {
             _ = kill_receive.recv() => {
                 return;
@@ -31,32 +32,19 @@ pub(super) async fn gateway_task(
             // TODO: This locks the connection mutex which is not ideal/deadlock risk. Perhaps we
             // should turn our websocket connection into a tokio broadcast channel instead. so that
             // we can receive messages from it without having to lock one connection object.
-            message = connection.lock().await.receiver.next() => {
-                match message {
-                    Ok(message) => {
-                        handle_message(message, connection.clone()).await;
-                    }
-                    Err(_) => {
-                        kill_send.send(()).expect("Failed to send kill signal");
-                    }
-                }
-            }
         }
     }
 
     todo!()
 }
 
-async fn handle_event(
-    event: Event,
-    connection: Arc<Mutex<super::WebSocketConnection>>,
-) -> Result<(), Error> {
+async fn handle_event(event: Event, connection: super::WebSocketConnection) -> Result<(), Error> {
     // TODO
     todo!()
 }
 
 async fn process_inbox(
-    connection: Arc<Mutex<super::WebSocketConnection>>,
+    connection: super::WebSocketConnection,
     mut inbox: tokio::sync::broadcast::Receiver<Event>,
     mut kill_receive: tokio::sync::broadcast::Receiver<()>,
 ) {

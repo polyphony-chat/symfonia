@@ -20,11 +20,16 @@ use chorus::types::{
     UserUpdate, VoiceServerUpdate, VoiceStateUpdate, WebhooksUpdate,
 };
 use futures::stream::{SplitSink, SplitStream};
+use futures::{SinkExt, StreamExt};
+use log::log;
 use pubserve::Subscriber;
 use sqlx::PgPool;
 use sqlx_pg_uint::PgU64;
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
+use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode;
+use tokio_tungstenite::tungstenite::protocol::CloseFrame;
+use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
 
 use crate::{WebSocketReceive, WebSocketSend};
@@ -240,7 +245,7 @@ pub struct GatewayUser {
 
 /// A concrete session, that a [GatewayUser] is connected to the Gateway with.
 pub struct GatewayClient {
-    connection: Arc<Mutex<WebSocketConnection>>,
+    connection: WebSocketConnection,
     /// A [Weak] reference to the [GatewayUser] this client belongs to.
     pub parent: Weak<Mutex<GatewayUser>>,
     // Handle to the main Gateway task for this client
@@ -344,7 +349,7 @@ impl ConnectedUsers {
     pub async fn new_client(
         &self,
         user: Arc<Mutex<GatewayUser>>,
-        connection: Arc<Mutex<WebSocketConnection>>,
+        connection: WebSocketConnection,
         main_task_handle: tokio::task::JoinHandle<()>,
         heartbeat_task_handle: tokio::task::JoinHandle<()>,
         kill_send: tokio::sync::broadcast::Sender<()>,
@@ -523,8 +528,98 @@ impl RoleUserMap {
 }
 
 pub struct WebSocketConnection {
-    pub sender: WebSocketSend,
-    pub receiver: WebSocketReceive,
+    pub sender: tokio::sync::broadcast::Sender<Message>,
+    pub receiver: tokio::sync::broadcast::Receiver<Message>,
+    sender_task: Arc<tokio::task::JoinHandle<()>>,
+    receiver_task: Arc<tokio::task::JoinHandle<()>>,
+}
+
+impl WebSocketConnection {
+    pub fn new(mut sink: WebSocketSend, mut stream: WebSocketReceive) -> Self {
+        let (mut sender, mut receiver) = tokio::sync::broadcast::channel(100);
+        let mut sender_sender_task = sender.clone();
+        let mut receiver_sender_task = receiver.resubscribe();
+        // The sender task concerns itself with sending messages to the WebSocket client.
+        let sender_task = tokio::spawn(async move {
+            loop {
+                let message: Result<Message, tokio::sync::broadcast::error::RecvError> =
+                    receiver_sender_task.recv().await;
+                match message {
+                    Ok(msg) => {
+                        let send_result = sink.send(msg).await;
+                        match send_result {
+                            Ok(_) => (),
+                            Err(_) => {
+                                sender_sender_task.send(Message::Close(Some(CloseFrame {
+                                    code: CloseCode::Error,
+                                    reason: "Channel closed or error encountered".into(),
+                                })));
+                                return;
+                            }
+                        }
+                    }
+                    Err(_) => return,
+                }
+            }
+        });
+        let sender_receiver_task = sender.clone();
+        // The receiver task receives messages from the WebSocket client and sends them to the
+        // broadcast channel.
+        let receiver_task = tokio::spawn(async move {
+            loop {
+                let web_socket_recieve_result = match stream.next().await {
+                    Some(res) => res,
+                    None => {
+                        log::debug!(target: "symfonia::gateway::WebSocketConnection", "WebSocketReceive yielded None. Sending close message...");
+                        sender_receiver_task.send(Message::Close(Some(CloseFrame {
+                            code: CloseCode::Error,
+                            reason: "Channel closed or error encountered".into(),
+                        })));
+                        return;
+                    }
+                };
+                let web_socket_receive_message = match web_socket_recieve_result {
+                    Ok(message) => message,
+                    Err(e) => {
+                        log::error!(target: "symfonia::gateway::WebSocketConnection", "Received malformed message, closing channel: {e}");
+                        sender_receiver_task.send(Message::Close(Some(CloseFrame {
+                            code: CloseCode::Error,
+                            reason: "Channel closed or error encountered".into(),
+                        })));
+                        return;
+                    }
+                };
+                match sender_receiver_task.send(web_socket_receive_message) {
+                    Ok(_) => (),
+                    Err(e) => {
+                        log::error!(target: "symfonia::gateway::WebSocketConnection", "Unable to send received WebSocket message to channel recipients. Closing channel: {e}");
+                        sender_receiver_task.send(Message::Close(Some(CloseFrame {
+                            code: CloseCode::Error,
+                            reason: "Channel closed or error encountered".into(),
+                        })));
+                        return;
+                    }
+                }
+            }
+        });
+        Self {
+            sender,
+            receiver,
+            sender_task: Arc::new(sender_task),
+            receiver_task: Arc::new(receiver_task),
+        }
+    }
+}
+
+impl Clone for WebSocketConnection {
+    fn clone(&self) -> Self {
+        Self {
+            sender: self.sender.clone(),
+            receiver: self.receiver.resubscribe(),
+            sender_task: self.sender_task.clone(),
+            receiver_task: self.receiver_task.clone(),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -547,10 +642,7 @@ impl
             SplitStream<WebSocketStream<TcpStream>>,
         ),
     ) -> Self {
-        Self {
-            sender: value.0,
-            receiver: value.1,
-        }
+        Self::new(value.0, value.1)
     }
 }
 

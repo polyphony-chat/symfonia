@@ -36,7 +36,7 @@ use super::{
 
 /// Internal use only state struct to pass around data to the `finish_connecting` function.
 struct State {
-    connection: Arc<Mutex<WebSocketConnection>>,
+    connection: WebSocketConnection,
     db: PgPool,
     config: Config,
     connected_users: ConnectedUsers,
@@ -68,16 +68,17 @@ pub(super) async fn establish_connection(
     let mut connection: WebSocketConnection = ws_stream.split().into();
     trace!(target: "symfonia::gateway::establish_connection::establish_connection", "Sending hello message");
     // Hello message
-    connection
+    match connection
         .sender
         .send(Message::Text(json!(GatewayHello::default()).to_string()))
-        .await?;
+    {
+        Ok(_) => (),
+        Err(e) => {
+            log::debug!(target: "symfonia::gateway::establish_connection", "Error when sending hello message. Aborting connection: {e}");
+            return Err(GatewayError::Internal.into());
+        }
+    };
     trace!(target: "symfonia::gateway::establish_connection::establish_connection", "Sent hello message");
-
-    // Wrap the connection in an Arc<Mutex<Connection>> to allow for shared ownership and mutation.
-    // For example, the `HeartbeatHandler` and `GatewayClient` tasks will need to access the connection
-    // to send messages.
-    let connection = Arc::new(Mutex::new(connection));
 
     let mut received_identify_or_resume = false;
 
@@ -144,14 +145,18 @@ pub(super) async fn establish_connection(
 #[allow(clippy::too_many_arguments)]
 async fn finish_connecting(
     mut heartbeat_handler_handle: Option<JoinHandle<()>>,
-    state: State,
+    mut state: State,
 ) -> Result<NewWebSocketConnection, Error> {
     loop {
         trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Waiting for next message...");
-        let raw_message = match state.connection.lock().await.receiver.next().await {
-            Some(next) => next,
-            None => return Err(GatewayError::Timeout.into()),
-        }?;
+        let raw_message = match state.connection.receiver.recv().await {
+            Ok(next) => next,
+            Err(_) => {
+                log::debug!(target: "symfonia::gateway::finish_connecting", "Encountered error when trying to receive message. Sending kill signal...");
+                state.kill_send.send(()).expect("Failed to send kill_send");
+                return Err(GatewayError::Timeout.into());
+            }
+        };
         debug!(target: "symfonia::gateway::establish_connection::finish_connecting", "Received message");
 
         if let Ok(heartbeat) = from_str::<GatewayHeartbeat>(&raw_message.to_string()) {
@@ -264,15 +269,12 @@ async fn finish_connecting(
             log::warn!(target: "symfonia::gateway::establish_connection::finish_connecting", "Resuming connections is not yet implemented. Telling client to identify instead.");
             state
                 .connection
-                .lock()
-                .await
                 .sender
                 .send(Message::Close(Some(CloseFrame {
                     code: CloseCode::from(4007u16),
                     reason: "Resuming connections is not yet implemented. Please identify instead."
                         .into(),
-                })))
-                .await?;
+                })))?;
             state
                 .kill_send
                 .send(())
