@@ -4,6 +4,7 @@
  *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use super::*;
 use std::ops::{Deref, DerefMut};
 
 use chorus::types::{
@@ -14,6 +15,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool, QueryBuilder, Row};
 use sqlx_pg_uint::PgU16;
 
+use crate::SharedEventPublisherMap;
 use crate::{
     database::entities::{
         Channel, Config, Emoji, GuildMember, GuildTemplate, Invite, Role, Sticker, User,
@@ -32,6 +34,9 @@ pub struct Guild {
     pub parent: Option<String>,
     pub template_id: Option<Snowflake>,
     pub nsfw: bool,
+    #[sqlx(skip)]
+    #[serde(skip)]
+    pub publisher: SharedEventPublisher,
 }
 
 impl Deref for Guild {
@@ -50,6 +55,7 @@ impl DerefMut for Guild {
 impl Guild {
     pub async fn create(
         db: &PgPool,
+        shared_event_publisher_map: SharedEventPublisherMap,
         cfg: &Config,
         name: &str,
         icon: Option<String>,
@@ -86,6 +92,9 @@ impl Guild {
             },
             ..Default::default()
         };
+        shared_event_publisher_map
+            .write()
+            .insert(guild.id, guild.publisher.clone());
 
         sqlx::query("INSERT INTO guilds (id, afk_timeout, default_message_notifications, explicit_content_filter, features, icon, max_members, max_presences, max_video_channel_users, name, owner_id, region, system_channel_flags, preferred_locale, welcome_screen, large, premium_tier, unavailable, widget_enabled, nsfw) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,0,0,?)")
             .bind(guild.id)
@@ -111,6 +120,7 @@ impl Guild {
 
         let everyone = Role::create(
             db,
+            shared_event_publisher_map,
             Some(guild.id),
             guild.id,
             "@everyone",
@@ -130,7 +140,7 @@ impl Guild {
         user.add_to_guild(db, guild.id).await?;
         guild.owner = Some(true);
 
-        guild.roles = vec![everyone.to_inner()];
+        guild.roles = vec![everyone.into_inner()];
 
         let channels = if channels.is_empty() {
             vec![
@@ -180,6 +190,7 @@ impl Guild {
     pub async fn create_from_template(
         db: &PgPool,
         cfg: &Config,
+        shared_event_publisher_map: SharedEventPublisherMap,
         owner_id: Snowflake,
         template: &GuildTemplate,
         name: &str,
@@ -188,7 +199,16 @@ impl Guild {
             return Err(Error::Guild(GuildError::NoSourceGuild));
         };
 
-        Self::create(db, cfg, name, None, owner_id, &g.channels).await
+        Self::create(
+            db,
+            shared_event_publisher_map,
+            cfg,
+            name,
+            None,
+            owner_id,
+            &g.channels,
+        )
+        .await
     }
 
     pub async fn get_by_id(db: &PgPool, id: Snowflake) -> Result<Option<Self>, Error> {
@@ -196,7 +216,7 @@ impl Guild {
             .bind(id)
             .fetch_optional(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     // Helper functions start
@@ -222,7 +242,7 @@ impl Guild {
             .bind(user_id)
             .fetch_optional(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
             .map(|r: Option<GuildMember>| r.is_some())
     }
 
@@ -262,7 +282,7 @@ impl Guild {
         sqlx::query("SELECT COUNT(*) FROM guilds")
             .fetch_one(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
             .map(|r| r.get::<i32, _>(0))
     }
 
@@ -318,7 +338,7 @@ impl Guild {
                 .bind(highest_role)
                 .fetch_all(db)
                 .await
-                .map_err(Error::SQLX)
+                .map_err(Error::Sqlx)
         } else {
             let mut builder = QueryBuilder::new("SELECT gm.* FROM members gm JOIN member_roles mr ON gm.index = mr.index JOIN roles r ON r.id = mr.role_id WHERE gm.guild_id = ? AND (gm.last_message_id < ? OR gm.last_message_id IS NULL) AND r.position < ? AND mr.role_id IN (");
 
@@ -367,7 +387,7 @@ impl Guild {
             .execute(db)
             .await
             .map(|_| ())
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn delete(self, db: &PgPool) -> Result<(), Error> {
@@ -375,7 +395,7 @@ impl Guild {
             .bind(self.id)
             .execute(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
             .map(|_| ())
     }
 
@@ -443,7 +463,7 @@ impl GuildBan {
             .bind(&reason)
             .execute(db)
             .await
-            .map_err(Error::SQLX)?;
+            .map_err(Error::Sqlx)?;
 
         Ok(Self {
             inner: chorus::types::GuildBan {
@@ -521,7 +541,7 @@ impl GuildBan {
             .bind(id)
             .fetch_optional(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn get_by_guild(
@@ -541,7 +561,7 @@ impl GuildBan {
             .bind(limit)
             .fetch_all(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn get_by_user(
@@ -554,7 +574,7 @@ impl GuildBan {
             .bind(guild_id)
             .fetch_optional(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn find_by_username(
@@ -569,7 +589,7 @@ impl GuildBan {
             .bind(limit)
             .fetch_all(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn delete(self, db: &PgPool) -> Result<(), Error> {
@@ -577,7 +597,7 @@ impl GuildBan {
             .bind(self.id)
             .execute(db)
             .await
-            .map_err(Error::SQLX)?;
+            .map_err(Error::Sqlx)?;
         Ok(())
     }
 

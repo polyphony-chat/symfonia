@@ -92,7 +92,7 @@ impl Sticker {
             .bind(id)
             .fetch_optional(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn get_by_guild(db: &PgPool, guild_id: Snowflake) -> Result<Vec<Self>, Error> {
@@ -100,7 +100,7 @@ impl Sticker {
             .bind(guild_id)
             .fetch_all(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn count_by_guild(db: &PgPool, guild_id: Snowflake) -> Result<i32, Error> {
@@ -108,7 +108,7 @@ impl Sticker {
             .bind(guild_id)
             .fetch_one(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
             .map(|r| r.get::<i32, _>(0))
     }
 
@@ -129,7 +129,7 @@ impl Sticker {
             .bind(self.id)
             .execute(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
             .map(|_| ())
     }
 

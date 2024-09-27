@@ -5,9 +5,11 @@
  */
 
 use std::error::Error as StdError;
+use std::fmt::Display;
 
 use chorus::types::{APIError, AuthError, Rights};
 use poem::{error::ResponseError, http::StatusCode, Response};
+use tokio::sync::broadcast::error::SendError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -30,7 +32,7 @@ pub enum Error {
     Reaction(#[from] ReactionError),
 
     #[error("SQLX error: {0}")]
-    SQLX(#[from] sqlx::Error),
+    Sqlx(#[from] sqlx::Error),
 
     #[error("Migration error: {0}")]
     SQLXMigration(#[from] sqlx::migrate::MigrateError),
@@ -52,6 +54,42 @@ pub enum Error {
 
     #[error(transparent)]
     Reqwest(#[from] reqwest::Error),
+
+    #[error(transparent)]
+    Tungstenite(#[from] tokio_tungstenite::tungstenite::Error),
+
+    #[error(transparent)]
+    Gateway(#[from] GatewayError),
+
+    #[error(transparent)]
+    SqlxPgUint(#[from] sqlx_pg_uint::Error),
+
+    #[error("{0}")]
+    Custom(String),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum GatewayError {
+    #[error("UNEXPECTED_MESSAGE")]
+    UnexpectedMessage,
+    #[error("TIMEOUT")]
+    Timeout,
+    #[error("CLOSED")]
+    Closed,
+    #[error("INTERNAL_SERVER_ERROR")]
+    Internal,
+}
+
+impl From<SendError<tokio_tungstenite::tungstenite::Message>> for GatewayError {
+    fn from(value: SendError<tokio_tungstenite::tungstenite::Message>) -> Self {
+        Self::Internal
+    }
+}
+
+impl From<SendError<tokio_tungstenite::tungstenite::Message>> for Error {
+    fn from(value: SendError<tokio_tungstenite::tungstenite::Message>) -> Self {
+        Self::Gateway(GatewayError::from(value))
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -201,7 +239,7 @@ impl ResponseError for Error {
                 ReactionError::AlreadyExists => StatusCode::BAD_REQUEST,
                 ReactionError::NotFound => StatusCode::NOT_FOUND,
             },
-            Error::SQLX(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::Sqlx(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::SQLXMigration(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::Serde(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::IO(_) => StatusCode::INTERNAL_SERVER_ERROR,
@@ -214,6 +252,16 @@ impl ResponseError for Error {
             Error::Rand(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::Utf8(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::Reqwest(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::Tungstenite(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::Gateway(err) => match err {
+                // TODO: Check if the associated statuscodes are okay
+                GatewayError::UnexpectedMessage => StatusCode::BAD_REQUEST,
+                GatewayError::Timeout => StatusCode::BAD_REQUEST,
+                GatewayError::Closed => StatusCode::BAD_REQUEST,
+                GatewayError::Internal => StatusCode::INTERNAL_SERVER_ERROR,
+            },
+            Error::SqlxPgUint(_) => StatusCode::BAD_REQUEST,
+            Error::Custom(_) => StatusCode::BAD_REQUEST,
         }
     }
 

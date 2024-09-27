@@ -22,6 +22,8 @@ pub use user_settings::*;
 pub use voice_state::*;
 pub use webhook::*;
 
+use crate::SharedEventPublisher;
+
 mod application;
 mod attachment;
 mod audit_log;

@@ -12,6 +12,7 @@ use poem::{
 };
 use sqlx::PgPool;
 
+use crate::SharedEventPublisherMap;
 use crate::{
     database::entities::{Config, Guild, Role, User},
     errors::{Error, GuildError},
@@ -42,6 +43,7 @@ pub async fn get_roles(
 #[handler]
 pub async fn create_role(
     Data(db): Data<&PgPool>,
+    Data(publisher_map): Data<&SharedEventPublisherMap>,
     Data(authed_user): Data<&User>,
     Data(config): Data<&Config>,
     Path(guild_id): Path<Snowflake>,
@@ -65,6 +67,7 @@ pub async fn create_role(
 
     let role = Role::create(
         db,
+        publisher_map.clone(),
         None,
         guild.id,
         &name,

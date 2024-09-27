@@ -66,7 +66,7 @@ impl Invite {
                 .await?
                 .ok_or(Error::Channel(ChannelError::InvalidChannel))?;
 
-            guild_id = channel.guild_id;
+            guild_id = channel.inner.guild_id;
         }
 
         let expires_at = data
@@ -174,7 +174,7 @@ impl Invite {
             .bind(code)
             .fetch_optional(db)
             .await
-            .map_err(Error::SQLX)?;
+            .map_err(Error::Sqlx)?;
 
         Ok(invite)
     }
@@ -188,7 +188,7 @@ impl Invite {
             .bind(guild_id)
             .fetch_all(db)
             .await
-            .map_err(Error::SQLX)?;
+            .map_err(Error::Sqlx)?;
 
         invites
             .iter_mut()
@@ -205,7 +205,7 @@ impl Invite {
             .bind(guild_id)
             .fetch_optional(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn get_by_channel(db: &PgPool, channel_id: Snowflake) -> Result<Vec<Self>, Error> {
@@ -213,7 +213,7 @@ impl Invite {
             .bind(channel_id)
             .fetch_all(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn delete(&self, db: &PgPool) -> Result<(), Error> {
@@ -222,7 +222,7 @@ impl Invite {
             .execute(db)
             .await
             .map(|_| ())
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn join(&mut self, db: &PgPool, user: &User) -> Result<(), Error> {
@@ -264,7 +264,7 @@ impl Invite {
             .execute(db)
             .await
             .map(|_| ())
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn populate_relations(&mut self, db: &PgPool) -> Result<(), Error> {
@@ -309,7 +309,7 @@ impl Invite {
             .execute(db)
             .await
             .map(|_| ())
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub fn into_inner(self) -> chorus::types::Invite {

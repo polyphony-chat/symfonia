@@ -1,7 +1,7 @@
 create table if not exists message_role_mentions
 (
-    messagesId varchar(255) not null,
-    rolesId    varchar(255) not null,
+    messagesId numeric(20, 0) not null constraint chk_messages_id_range check (messagesId >= 0 AND messagesId <= 18446744073709551615),
+    rolesId    numeric(20, 0) not null constraint chk_roles_id_range check (rolesId >= 0 AND rolesId <= 18446744073709551615),
     primary key (messagesId, rolesId),
     constraint FK_29d63eb1a458200851bc37d074b
         foreign key (rolesId) references roles (id)

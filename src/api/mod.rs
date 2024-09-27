@@ -13,6 +13,8 @@ use poem::{
 use serde_json::json;
 use sqlx::PgPool;
 
+use crate::gateway::ConnectedUsers;
+use crate::SharedEventPublisherMap;
 use crate::{
     api::{
         middleware::{
@@ -27,9 +29,12 @@ use crate::{
 mod middleware;
 mod routes;
 
-pub async fn start_api(db: PgPool) -> Result<(), Error> {
+pub async fn start_api(
+    db: PgPool,
+    connected_users: ConnectedUsers,
+    config: Config,
+) -> Result<(), Error> {
     log::info!(target: "symfonia::api::cfg", "Loading configuration");
-    let config = Config::init(&db).await?;
 
     if config.sentry.enabled {
         let _guard = sentry::init((
@@ -75,13 +80,24 @@ pub async fn start_api(db: PgPool) -> Result<(), Error> {
         .nest("/api/v9", routes)
         .data(db)
         .data(config)
+        .data(connected_users)
         .with(NormalizePath::new(TrailingSlash::Trim))
         .catch_all_error(custom_error);
 
     let bind = std::env::var("API_BIND").unwrap_or_else(|_| String::from("localhost:3001"));
+    let bind_clone = bind.clone();
 
     log::info!(target: "symfonia::api", "Starting HTTP Server");
-    Server::new(TcpListener::bind(bind)).run(v9_api).await?;
+
+    tokio::task::spawn(async move {
+        Server::new(TcpListener::bind(bind_clone))
+            .run(v9_api)
+            .await
+            .expect("Failed to start HTTP server");
+        log::info!(target: "symfonia::api", "HTTP Server stopped");
+    });
+
+    log::info!(target: "symfonia::api", "HTTP Server listening on {bind}");
     Ok(())
 }
 

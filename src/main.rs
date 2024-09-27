@@ -4,7 +4,15 @@
  *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+#![allow(unused)] // TODO: Remove, I just want to clean up my build output
+
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
+
+use chorus::types::Snowflake;
 use clap::Parser;
+
+use gateway::{ConnectedUsers, Event};
 use log::LevelFilter;
 use log4rs::{
     append::{
@@ -21,6 +29,9 @@ use log4rs::{
     filter::Filter,
     Config,
 };
+use parking_lot::RwLock;
+use pubserve::Publisher;
+use tokio::sync::Mutex;
 
 mod api;
 mod cdn;
@@ -28,6 +39,22 @@ mod database;
 mod errors;
 mod gateway;
 mod util;
+
+pub type SharedEventPublisher = Arc<RwLock<Publisher<Event>>>;
+pub type EventPublisherMap = HashMap<Snowflake, SharedEventPublisher>;
+pub type SharedEventPublisherMap = Arc<RwLock<EventPublisherMap>>;
+pub type WebSocketReceive =
+    futures::stream::SplitStream<tokio_tungstenite::WebSocketStream<tokio::net::TcpStream>>;
+pub type WebSocketSend = futures::stream::SplitSink<
+    tokio_tungstenite::WebSocketStream<tokio::net::TcpStream>,
+    tokio_tungstenite::tungstenite::Message,
+>;
+
+pub fn eq_shared_event_publisher(a: &SharedEventPublisher, b: &SharedEventPublisher) -> bool {
+    let a = a.read();
+    let b = b.read();
+    *a == *b
+}
 
 #[derive(Debug)]
 struct LogFilter;
@@ -187,5 +214,33 @@ async fn main() {
             .expect("Failed to seed config");
     }
 
-    api::start_api(db).await.unwrap();
+    let symfonia_config = crate::database::entities::Config::init(&db)
+        .await
+        .unwrap_or_default();
+
+    let connected_users = ConnectedUsers::default();
+    log::debug!(target: "symfonia", "Initializing Role->User map...");
+    connected_users
+        .init_role_user_map(&db)
+        .await
+        .expect("Failed to init role user map");
+    log::trace!(target: "symfonia", "Role->User map initialized with {} entries", connected_users.role_user_map.lock().await.len());
+
+    let mut tasks = [
+        tokio::spawn(api::start_api(
+            db.clone(),
+            connected_users.clone(),
+            symfonia_config.clone(),
+        )),
+        tokio::spawn(gateway::start_gateway(
+            db.clone(),
+            connected_users.clone(),
+            symfonia_config.clone(),
+        )),
+    ];
+    for task in tasks.iter_mut() {
+        task.await
+            .expect("Failed to start server")
+            .expect("Failed to start server");
+    }
 }

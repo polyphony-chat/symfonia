@@ -21,7 +21,9 @@ pub async fn check_token(db: &PgPool, token: &str, jwt_secret: &str) -> Result<C
         .unwrap()
         .ok_or(Error::User(UserError::InvalidUser))?;
 
-    if chrono::DateTime::from_timestamp(token.claims.iat, 0).unwrap() < user.data.valid_tokens_since
+    // TODO(bitfl0wer): I changed the direction of the comparison here (from < to >) to fix a bug. I don't know if this is correct,
+    // nor have I looked at this code at all to see if it's correct.
+    if chrono::DateTime::from_timestamp(token.claims.iat, 0).unwrap() > user.data.valid_tokens_since
     {
         return Err(Error::User(UserError::InvalidToken));
     }

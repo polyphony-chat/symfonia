@@ -1,20 +1,19 @@
 create table if not exists invites
 (
-    code             varchar(255) not null
-        primary key,
-    type             smallint     not null,
-    temporary        smallint      not null,
+    code             varchar(255) not null primary key,
+    type             boolean      not null,
+    temporary        boolean      not null,
     uses             int          not null,
     max_uses         int          not null,
     max_age          int          not null,
     created_at       timestamp     not null,
     expires_at       timestamp     null,
-    guild_id         varchar(255) null,
-    channel_id       varchar(255) null,
-    inviter_id       varchar(255) null,
-    target_user_id   varchar(255) null,
+    guild_id         numeric(20, 0) null constraint chk_guild_id_range check (guild_id >= 0 AND guild_id <= 18446744073709551615),
+    channel_id       numeric(20, 0) null constraint chk_channel_id_range check (channel_id >= 0 AND channel_id <= 18446744073709551615),
+    inviter_id       numeric(20, 0) null constraint chk_inviter_id check (inviter_id >= 0 AND inviter_id <= 18446744073709551615),
+    target_user_id   numeric(20, 0) null constraint chk_target_user_id check (target_user_id >= 0 AND target_user_id <= 18446744073709551615),
     target_user_type int          null,
-    vanity_url       smallint      null,
+    vanity_url       boolean       null,
     flags            int          not null,
     constraint FK_11a0d394f8fc649c19ce5f16b59
         foreign key (target_user_id) references users (id)

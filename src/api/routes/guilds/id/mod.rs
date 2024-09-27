@@ -55,7 +55,7 @@ pub async fn get_guild(
 
     let roles = Role::get_by_guild(db, guild_id).await?;
 
-    guild.roles = roles.into_iter().map(|r| r.to_inner()).collect();
+    guild.roles = roles.into_iter().map(|r| r.into_inner()).collect();
 
     let member = GuildMember::get_by_id(db, claims.id, guild_id)
         .await?

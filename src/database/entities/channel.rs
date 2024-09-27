@@ -6,6 +6,7 @@
 
 use std::ops::{Deref, DerefMut};
 
+use super::*;
 use chorus::types::{
     ChannelMessagesAnchor, ChannelModifySchema, ChannelType, CreateChannelInviteSchema, InviteType,
     MessageSendSchema, PermissionOverwrite, Snowflake,
@@ -14,6 +15,7 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use sqlx::{types::Json, PgPool};
 
+use crate::eq_shared_event_publisher;
 use crate::{
     database::entities::{
         invite::Invite, message::Message, read_state::ReadState, recipient::Recipient, GuildMember,
@@ -22,10 +24,19 @@ use crate::{
     errors::{ChannelError, Error, GuildError, UserError},
 };
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, Default)]
 pub struct Channel {
     #[sqlx(flatten)]
     pub(crate) inner: chorus::types::Channel,
+    #[sqlx(skip)]
+    #[serde(skip)]
+    pub publisher: SharedEventPublisher,
+}
+
+impl PartialEq for Channel {
+    fn eq(&self, other: &Self) -> bool {
+        self.inner == other.inner && eq_shared_event_publisher(&self.publisher, &other.publisher)
+    }
 }
 
 impl Deref for Channel {
@@ -93,6 +104,7 @@ impl Channel {
                 guild_id,
                 ..Default::default()
             },
+            ..Default::default()
         };
 
         sqlx::query("INSERT INTO channels (id, type, name, nsfw, guild_id, parent_id, flags, permission_overwrites, default_thread_rate_limit_per_user, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())")
@@ -171,7 +183,7 @@ impl Channel {
             .bind(id)
             .fetch_optional(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn get_by_guild_id(db: &PgPool, guild_id: Snowflake) -> Result<Vec<Self>, Error> {
@@ -179,7 +191,7 @@ impl Channel {
             .bind(guild_id)
             .fetch_all(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn get_invites(&self, db: &PgPool) -> Result<Vec<Invite>, Error> {
@@ -349,7 +361,7 @@ impl Channel {
             .bind(self.id)
             .fetch_all(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn add_follower_webhook(

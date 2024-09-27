@@ -1,12 +1,11 @@
 create table if not exists roles
 (
-    id            varchar(255)  not null
-        primary key,
-    guild_id      varchar(255)  not null,
+    id            numeric(20, 0) not null constraint chk_id_range check (id >= 0 AND id <= 18446744073709551615) primary key,
+    guild_id      numeric(20, 0) not null constraint chk_guild_id_range check (guild_id >= 0 AND guild_id <= 18446744073709551615),
     color         int           not null,
-    hoist         smallint       not null,
-    managed       smallint       not null,
-    mentionable   smallint       not null,
+    hoist         boolean       not null,
+    managed       boolean       not null,
+    mentionable   boolean       not null,
     name          varchar(255)  not null,
     permissions   varchar(255)  not null,
     position      int           not null,

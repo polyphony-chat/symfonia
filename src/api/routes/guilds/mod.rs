@@ -12,6 +12,7 @@ use poem::{
 };
 use sqlx::PgPool;
 
+use crate::SharedEventPublisherMap;
 use crate::{
     database::entities::{Config, Guild, User},
     errors::{Error, UserError},
@@ -140,6 +141,7 @@ pub fn setup_routes() -> Route {
 #[handler]
 pub async fn create_guild(
     Data(db): Data<&PgPool>,
+    Data(publisher_map): Data<&SharedEventPublisherMap>,
     Data(cfg): Data<&Config>,
     Data(claims): Data<&Claims>,
     Json(payload): Json<GuildCreateSchema>,
@@ -157,6 +159,7 @@ pub async fn create_guild(
 
     let guild = Guild::create(
         db,
+        publisher_map.clone(),
         cfg,
         &guild_name,
         payload.icon,

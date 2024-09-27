@@ -6,11 +6,23 @@
 
 use std::ops::{Deref, DerefMut};
 
+use bigdecimal::BigDecimal;
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
+use sqlx::{FromRow, PgPool};
 use sqlx_pg_uint::PgU64;
 
 use crate::errors::Error;
+
+#[derive(Debug, Clone)]
+struct PgU64Mapper {
+    inner: BigDecimal,
+}
+
+impl PgU64Mapper {
+    fn into_pg_u64(self) -> Result<PgU64, sqlx_pg_uint::Error> {
+        PgU64::try_from(self.inner)
+    }
+}
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, sqlx::FromRow)]
 pub struct UserSettings {
@@ -50,15 +62,15 @@ impl UserSettings {
             index: PgU64::from(0),
         };
 
-        let res = sqlx::query("INSERT INTO user_settings (locale) VALUES (?)")
-            .bind(locale)
-            .execute(db)
-            .await?;
-
-        // todo!("settings.index = res.last_insert_id(); Does not work!");
-        // TODO(bitfl0wer) Why do we even need the index? :thinking:
-        // settings.index = res.last_insert_id(); // FIXME: Does not exist for Postgres
-
+        let res = sqlx::query_as!(
+            PgU64Mapper,
+            "INSERT INTO user_settings (locale) VALUES ($1) RETURNING index as inner",
+            locale
+        )
+        .fetch_one(db)
+        .await?;
+        let index = res.into_pg_u64()?;
+        settings.index = index;
         Ok(settings)
     }
 
@@ -68,6 +80,6 @@ impl UserSettings {
             .bind(index)
             .fetch_one(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 }

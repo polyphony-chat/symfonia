@@ -4,6 +4,8 @@
  *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use super::*;
+
 use std::ops::{Deref, DerefMut};
 
 use chorus::types::{PermissionFlags, Snowflake};
@@ -11,12 +13,24 @@ use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Row};
 
 use crate::errors::Error;
+use crate::{eq_shared_event_publisher, SharedEventPublisherMap};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Role {
     #[sqlx(flatten)]
     inner: chorus::types::RoleObject,
     pub guild_id: Snowflake,
+    #[sqlx(skip)]
+    #[serde(skip)]
+    pub publisher: SharedEventPublisher,
+}
+
+impl PartialEq for Role {
+    fn eq(&self, other: &Self) -> bool {
+        self.inner == other.inner
+            && self.guild_id == other.guild_id
+            && eq_shared_event_publisher(&self.publisher, &other.publisher)
+    }
 }
 
 impl Deref for Role {
@@ -34,12 +48,9 @@ impl DerefMut for Role {
 }
 
 impl Role {
-    pub fn to_inner(self) -> chorus::types::RoleObject {
-        self.inner
-    }
-
     pub async fn create(
         db: &PgPool,
+        shared_event_publisher_map: SharedEventPublisherMap,
         id: Option<Snowflake>,
         guild_id: Snowflake,
         name: &str,
@@ -67,8 +78,11 @@ impl Role {
                 ..Default::default()
             },
             guild_id: guild_id.to_owned(),
+            publisher: SharedEventPublisher::default(),
         };
-
+        shared_event_publisher_map
+            .write()
+            .insert(role.id, role.publisher.clone());
         sqlx::query("INSERT INTO roles (id, guild_id, name, color, hoist, managed, mentionable, permissions, position, icon, unicode_emoji) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
             .bind(role.id)
             .bind(role.guild_id)
@@ -92,7 +106,7 @@ impl Role {
             .bind(id)
             .fetch_optional(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn get_by_guild(db: &PgPool, guild_id: Snowflake) -> Result<Vec<Self>, Error> {
@@ -100,7 +114,7 @@ impl Role {
             .bind(guild_id)
             .fetch_all(db)
             .await
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn count_by_guild(db: &PgPool, guild_id: Snowflake) -> Result<i32, Error> {
@@ -109,7 +123,7 @@ impl Role {
             .fetch_one(db)
             .await
             .map(|res| res.get::<i32, _>(0))
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn save(&self, db: &PgPool) -> Result<(), Error> {
@@ -127,7 +141,7 @@ impl Role {
             .execute(db)
             .await
             .map(|_| ())
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub async fn delete(&self, db: &PgPool) -> Result<(), Error> {
@@ -136,7 +150,7 @@ impl Role {
             .execute(db)
             .await
             .map(|_| ())
-            .map_err(Error::SQLX)
+            .map_err(Error::Sqlx)
     }
 
     pub fn into_inner(self) -> chorus::types::RoleObject {

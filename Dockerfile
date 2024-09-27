@@ -1,7 +1,6 @@
 FROM rust:1-bookworm AS chef
 RUN cargo install cargo-chef
-RUN rustup target add x86_64-unknown-linux-gnu && \
-    update-ca-certificates
+RUN update-ca-certificates
 WORKDIR /app
 
 FROM chef AS planner
@@ -10,9 +9,9 @@ RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder
 COPY --from=planner /app/recipe.json recipe.json
-RUN cargo chef cook --release --target x86_64-unknown-linux-gnu --recipe-path recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
 COPY . .
-RUN cargo build --target x86_64-unknown-linux-gnu --release
+RUN SQLX_OFFLINE=true cargo build --release
 
 FROM debian:latest AS runtime
 
@@ -35,7 +34,7 @@ RUN adduser \
     --uid 10001 \
     "symfonia"
 
-COPY --from=builder --chown=symfonia:symfonia /app/target/x86_64-unknown-linux-gnu/release/symfonia /app/symfonia
+COPY --from=builder --chown=symfonia:symfonia /app/target/release/symfonia /app/symfonia
 
 USER symfonia:symfonia
 WORKDIR /app/

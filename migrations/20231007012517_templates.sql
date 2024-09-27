@@ -1,15 +1,14 @@
 create table if not exists templates
 (
-    id                      varchar(255) not null
-        primary key,
+    id                      numeric(20, 0) not null constraint chk_id_range check (id >= 0 AND id <= 18446744073709551615) primary key,
     code                    varchar(255) not null,
     name                    varchar(255) not null,
     description             varchar(255) null,
     usage_count             int          null,
-    creator_id              varchar(255) null,
+    creator_id              numeric(20, 0) null constraint chk_creator_id_range check (creator_id >= 0 AND creator_id <= 18446744073709551615),
     created_at              timestamp     not null,
     updated_at              timestamp     not null,
-    source_guild_id         varchar(255) null,
+    source_guild_id         numeric(20, 0) null constraint chk_source_guild_id_range check (source_guild_id >= 0 AND source_guild_id <= 18446744073709551615),
     serialized_source_guild text         not null,
     constraint IDX_be38737bf339baf63b1daeffb5
         unique (code),

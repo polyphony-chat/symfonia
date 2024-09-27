@@ -1,7 +1,7 @@
 create table if not exists message_user_mentions
 (
-    messagesId varchar(255) not null,
-    usersId    varchar(255) not null,
+    messagesId numeric(20, 0) not null constraint chk_messages_id_range check (messagesId >= 0 AND messagesId <= 18446744073709551615),
+    usersId    numeric(20, 0) not null constraint chk_users_id_range check (usersId >= 0 AND usersId <= 18446744073709551615),
     primary key (messagesId, usersId),
     constraint FK_a343387fc560ef378760681c236
         foreign key (messagesId) references messages (id)
