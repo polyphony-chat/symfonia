@@ -379,12 +379,11 @@ impl ConnectedUsers {
             last_sequence,
         };
         let arc = Arc::new(Mutex::new(client));
-        log::trace!(target: "symfonia::gateway::ConnectedUsers::new_client", "Acquiring lock...");
+        log::trace!(target: "symfonia::gateway::ConnectedUsers::new_client", "Acquiring lock on user...");
         user.lock()
             .await
             .clients
             .insert(session_token.to_string(), arc.clone());
-        // TODO: Deadlock here
         log::trace!(target: "symfonia::gateway::ConnectedUsers::new_client", "Lock acquired!");
         log::trace!(target: "symfonia::gateway::ConnectedUsers::new_client", "Inserted into map. Done.");
         arc
