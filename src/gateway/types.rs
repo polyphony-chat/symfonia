@@ -339,18 +339,30 @@ impl ConnectedUsers {
     }
 
     /// Deregister a [GatewayUser] from the [ConnectedUsers] instance.
+    ///
+    /// ## Locking
+    ///
+    /// This method acquires a write lock on `store` for the duration of its runtime.
     pub fn deregister(&self, user: &GatewayUser) {
         self.store.write().inboxes.remove(&user.id);
         self.store.write().users.remove(&user.id);
     }
 
     /// Get the "inbox" of a [GatewayUser] by its Snowflake ID.
+    ///
+    /// ## Locking
+    ///
+    /// This method acquires a read lock on `store` for the duration of its runtime.
     pub async fn inbox(&self, id: Snowflake) -> Option<tokio::sync::broadcast::Sender<Event>> {
         self.store.read().inboxes.get(&id).cloned()
     }
 
     /// Create a new [GatewayUser] with the given Snowflake ID, [GatewayClient]s, and subscriptions.
     /// Registers the new [GatewayUser] with the [ConnectedUsers] instance.
+    ///
+    /// ## Locking
+    ///
+    /// This method calls [Self::register]. Refer to that method for information on locking behavior.
     pub fn new_user(
         &self,
         clients: HashMap<String, Arc<Mutex<GatewayClient>>>,
@@ -371,6 +383,10 @@ impl ConnectedUsers {
 
     /// Create a new [GatewayClient] with the given [GatewayUser], [Connection], and other data.
     /// Also handles appending the new [GatewayClient] to the [GatewayUser]'s list of clients.
+    ///
+    /// ## Locking
+    ///
+    /// This method acquires a lock on the [Arc<Mutex<GatewayUser>>] that is passed as `user`.
     #[allow(clippy::too_many_arguments)]
     pub async fn new_client(
         &self,
@@ -418,6 +434,8 @@ impl PartialEq for GatewayUser {
 impl Eq for GatewayUser {}
 
 impl GatewayClient {
+    /// Disconnects a [GatewayClient] properly, including un-registering it from the memory store
+    /// and creating a resumeable session.
     pub async fn die(mut self, connected_users: ConnectedUsers) {
         self.kill_send.send(()).unwrap();
         let disconnect_info = DisconnectInfo {
@@ -442,6 +460,9 @@ impl GatewayClient {
 }
 
 #[derive(Default, Clone)]
+/// `BulkMessageBuilder` can be used to build and send GatewayMessages to the inboxes of all
+/// currently connected [GatewayClients](GatewayClient). Recipients can be added either via
+/// User or Role snowflake IDs.
 pub struct BulkMessageBuilder {
     users: Vec<Snowflake>,
     roles: Vec<Snowflake>,
