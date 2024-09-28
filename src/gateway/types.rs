@@ -285,12 +285,21 @@ impl ConnectedUsers {
     /// Due to the possibly large number of roles and users returned by the database, this method
     /// should only be executed once. The [RoleUserMap] should be kept synchronized with the database
     /// through means that do not involve this method.
+    ///
+    /// ## Locking
+    ///
+    /// This method acquires a lock on `role_user_map` for the duration of its runtime.
     pub async fn init_role_user_map(&self, db: &PgPool) -> Result<(), crate::errors::Error> {
         self.role_user_map.lock().await.init(db).await
     }
 
     /// Get a [GatewayUser] by its Snowflake ID if it already exists in the store, or create a new
     /// [GatewayUser] if it does not exist using [ConnectedUsers::new_user].
+    ///
+    /// ## Locking
+    ///
+    /// This method always acquires a read lock on `store`. If the user does not yet exist in the
+    /// store, a `write` lock will be acquired additionally.
     pub fn get_user_or_new(&self, id: Snowflake) -> Arc<Mutex<GatewayUser>> {
         let inner = self.store.clone();
         log::trace!(target: "symfonia::gateway::types::ConnectedUsers::get_user_or_new", "Acquiring lock on ConnectedUsersInner...");
@@ -311,6 +320,10 @@ impl ConnectedUsers {
     }
 
     /// Register a new [GatewayUser] with the [ConnectedUsers] instance.
+    ///
+    /// ## Locking
+    ///
+    /// This method acquires a write lock on `store` for the duration of its runtime.
     fn register(&self, user: GatewayUser) -> Arc<Mutex<GatewayUser>> {
         log::trace!(target: "symfonia::gateway::types::ConnectedUsers::register", "Acquiring lock on ConnectedUsersInner...");
         self.store
