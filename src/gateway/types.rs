@@ -23,6 +23,7 @@ use chorus::types::{
 use futures::stream::{SplitSink, SplitStream};
 use futures::{SinkExt, StreamExt};
 use log::log;
+use parking_lot::RwLock;
 use pubserve::Subscriber;
 use sqlx::PgPool;
 use sqlx_pg_uint::PgU64;
@@ -211,7 +212,7 @@ impl<'de, T: DeserializeOwned + Serialize> Deserialize<'de> for GatewayPayload<T
 
 #[derive(Default, Clone)]
 pub struct ConnectedUsers {
-    pub store: Arc<Mutex<ConnectedUsersInner>>,
+    pub store: Arc<RwLock<ConnectedUsersInner>>,
     pub role_user_map: Arc<Mutex<RoleUserMap>>,
 }
 
@@ -290,10 +291,10 @@ impl ConnectedUsers {
 
     /// Get a [GatewayUser] by its Snowflake ID if it already exists in the store, or create a new
     /// [GatewayUser] if it does not exist using [ConnectedUsers::new_user].
-    pub async fn get_user_or_new(&self, id: Snowflake) -> Arc<Mutex<GatewayUser>> {
+    pub fn get_user_or_new(&self, id: Snowflake) -> Arc<Mutex<GatewayUser>> {
         let inner = self.store.clone();
         log::trace!(target: "symfonia::gateway::types::ConnectedUsers::get_user_or_new", "Acquiring lock on ConnectedUsersInner...");
-        let mut lock = inner.lock().await;
+        let mut lock = inner.read();
         log::trace!(target: "symfonia::gateway::types::ConnectedUsers::get_user_or_new", "Lock acquired!");
         if let Some(user) = lock.users.get(&id) {
             log::trace!(target: "symfonia::gateway::types::ConnectedUsers::get_user_or_new", "Found user {id} in store");
@@ -301,44 +302,43 @@ impl ConnectedUsers {
         } else {
             drop(lock);
             log::trace!(target: "symfonia::gateway::types::ConnectedUsers::get_user_or_new", "Creating new user {id} in store");
-            self.new_user(HashMap::new(), id, Vec::new()).await
+            self.new_user(HashMap::new(), id, Vec::new())
         }
     }
 
-    pub fn inner(&self) -> Arc<Mutex<ConnectedUsersInner>> {
+    pub fn inner(&self) -> Arc<RwLock<ConnectedUsersInner>> {
         self.store.clone()
     }
 
     /// Register a new [GatewayUser] with the [ConnectedUsers] instance.
-    async fn register(&self, user: GatewayUser) -> Arc<Mutex<GatewayUser>> {
+    fn register(&self, user: GatewayUser) -> Arc<Mutex<GatewayUser>> {
         log::trace!(target: "symfonia::gateway::types::ConnectedUsers::register", "Acquiring lock on ConnectedUsersInner...");
         self.store
-            .lock()
-            .await
+            .write()
             .inboxes
             .insert(user.id, user.outbox.clone());
         log::trace!(target: "symfonia::gateway::types::ConnectedUsers::register", "Lock acquired!");
         let id = user.id;
         let arc = Arc::new(Mutex::new(user));
-        self.store.lock().await.users.insert(id, arc.clone());
+        self.store.write().users.insert(id, arc.clone());
         log::trace!(target: "symfonia::gateway::types::ConnectedUsers::register", "Inserted user {id} into users store");
         arc
     }
 
     /// Deregister a [GatewayUser] from the [ConnectedUsers] instance.
-    pub async fn deregister(&self, user: &GatewayUser) {
-        self.store.lock().await.inboxes.remove(&user.id);
-        self.store.lock().await.users.remove(&user.id);
+    pub fn deregister(&self, user: &GatewayUser) {
+        self.store.write().inboxes.remove(&user.id);
+        self.store.write().users.remove(&user.id);
     }
 
     /// Get the "inbox" of a [GatewayUser] by its Snowflake ID.
     pub async fn inbox(&self, id: Snowflake) -> Option<tokio::sync::broadcast::Sender<Event>> {
-        self.store.lock().await.inboxes.get(&id).cloned()
+        self.store.read().inboxes.get(&id).cloned()
     }
 
     /// Create a new [GatewayUser] with the given Snowflake ID, [GatewayClient]s, and subscriptions.
     /// Registers the new [GatewayUser] with the [ConnectedUsers] instance.
-    pub async fn new_user(
+    pub fn new_user(
         &self,
         clients: HashMap<String, Arc<Mutex<GatewayClient>>>,
         id: Snowflake,
@@ -353,7 +353,7 @@ impl ConnectedUsers {
             subscriptions,
             connected_users: self.clone(),
         };
-        self.register(user).await
+        self.register(user)
     }
 
     /// Create a new [GatewayClient] with the given [GatewayUser], [Connection], and other data.
@@ -419,13 +419,10 @@ impl GatewayClient {
             .await
             .clients
             .remove(&self.session_token);
-        connected_users
-            .deregister(self.parent.upgrade().unwrap().lock().await.deref())
-            .await;
+        connected_users.deregister(self.parent.upgrade().unwrap().lock().await.deref());
         connected_users
             .store
-            .lock()
-            .await
+            .write()
             .resumeable_clients_store
             .insert(self.session_token.clone(), disconnect_info);
     }

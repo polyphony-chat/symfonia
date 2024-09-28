@@ -216,7 +216,7 @@ async fn finish_connecting(
                 }
             };
             log::trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Getting gateway_user");
-            let mut gateway_user = state.connected_users.get_user_or_new(claims.id).await;
+            let mut gateway_user = state.connected_users.get_user_or_new(claims.id);
             log::trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Creating main gateway task handle");
             let main_task_handle = tokio::spawn(gateway_task::gateway_task(
                 state.connection.clone(),
