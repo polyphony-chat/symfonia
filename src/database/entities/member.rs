@@ -43,6 +43,18 @@ impl DerefMut for GuildMember {
 
 impl GuildMember {
     pub async fn create(db: &sqlx::PgPool, user: &User, guild: &Guild) -> Result<Self, Error> {
+        // TODO: check if user is banned
+        // TODO: Check max guild count
+
+        if let Err(e) = GuildMember::get_by_id(db, user.id, guild_id).await {
+            match e {
+                Error::Guild(GuildError::MemberNotFound) => {
+                    // Continue adding user to guild
+                }
+                _ => return Err(e),
+            }
+        }
+
         let user = user.to_owned();
         let mut member = Self {
             index: 0.into(),
