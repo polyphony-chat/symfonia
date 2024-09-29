@@ -208,21 +208,9 @@ impl User {
     ) -> Result<GuildMember, Error> {
         let public = self.to_public_user();
 
-        // TODO: check if user is banned
-        // TODO: Check max guild count
-
         let guild = Guild::get_by_id(db, guild_id)
             .await?
             .ok_or(Error::Guild(GuildError::InvalidGuild))?;
-
-        if let Err(e) = GuildMember::get_by_id(db, self.id, guild_id).await {
-            match e {
-                Error::Guild(GuildError::MemberNotFound) => {
-                    // Continue adding user to guild
-                }
-                _ => return Err(e),
-            }
-        }
 
         GuildMember::create(db, self, &guild).await
     }
