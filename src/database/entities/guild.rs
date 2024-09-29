@@ -7,13 +7,15 @@
 use super::*;
 use std::ops::{Deref, DerefMut};
 
+use bigdecimal::BigDecimal;
 use chorus::types::{
     ChannelType, NSFWLevel, PermissionFlags, PremiumTier, Snowflake, SystemChannelFlags,
     WelcomeScreenObject,
 };
+use num_traits::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool, QueryBuilder, Row};
-use sqlx_pg_uint::PgU16;
+use sqlx_pg_uint::{PgU16, PgU64};
 
 use crate::SharedEventPublisherMap;
 use crate::{
@@ -310,6 +312,7 @@ impl Guild {
         Ok(())
     }
 
+    /// Shorthand for `GuildMember::create()`
     pub async fn add_member(&self, db: &PgPool, user_id: Snowflake) -> Result<(), Error> {
         let user = User::get_by_id(db, user_id)
             .await?
@@ -449,6 +452,7 @@ impl GuildBan {
         executing_user_id: Snowflake,
         reason: impl Into<Option<String>>,
     ) -> Result<Self, Error> {
+        // TODO: Remove the user from the Guild
         let ban_id = Snowflake::default();
         let reason = reason.into();
         let user = GuildMember::get_by_id(db, user_id, guild_id)
