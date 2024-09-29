@@ -46,7 +46,7 @@ impl GuildMember {
         // TODO: check if user is banned
         // TODO: Check max guild count
 
-        if let Err(e) = GuildMember::get_by_id(db, user.id, guild_id).await {
+        if let Err(e) = GuildMember::get_by_id(db, user.id, guild.id).await {
             match e {
                 Error::Guild(GuildError::MemberNotFound) => {
                     // Continue adding user to guild
