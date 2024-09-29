@@ -9,6 +9,7 @@ static RESUME_RECONNECT_WINDOW_SECONDS: u8 = 90;
 mod establish_connection;
 mod gateway_task;
 mod heartbeat;
+mod ready;
 mod types;
 
 use std::collections::HashSet;
