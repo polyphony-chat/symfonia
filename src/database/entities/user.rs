@@ -76,23 +76,13 @@ impl User {
 
         let password = password.map(|password| bcrypt::hash(password, 14).unwrap());
 
-        // TODO: I don't really like this. The configuration should be validated on startup, not
-        // during a random point in the runtime. See issue #52 on the symfonia repo. -bitfl0wer
-        let premium_type = match cfg.defaults.user.premium_type {
-            0 => PremiumType::None,
-            1 => PremiumType::Tier1,
-            2 => PremiumType::Tier2,
-            3 => PremiumType::Tier3,
-            _ => return Err(Error::Custom(format!("The symfonia configuration holds an invalid integer for defaults.user.premium_type: {}. Allowed values are integers 0, 1, 2, 3.", cfg.defaults.user.premium_type))),
-        };
-
         let user = Self {
             inner: chorus::types::User {
                 username: username.to_string(),
                 discriminator: "0000".to_string(),
                 email: email.clone(),
                 premium: cfg.defaults.user.premium.into(),
-                premium_type: Some(premium_type),
+                premium_type: Some(cfg.defaults.user.premium_type),
                 bot: Some(bot),
                 verified: cfg.defaults.user.verified.into(),
                 ..Default::default()
