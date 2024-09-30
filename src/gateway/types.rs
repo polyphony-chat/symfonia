@@ -110,9 +110,8 @@ pub enum EventType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-/// Enum representing all possible* events that can be received from or sent to the gateway.
-///
-/// TODO: This is only temporary. Replace with this enum from chorus, when it is ready.
+/// This enum is supposed to represent all possible events that can be received from or sent to the
+/// gateway. If a variant is missing, it might just be because we haven't caught it yet.
 #[serde(rename_all = "PascalCase")]
 pub enum Event {
     Hello(GatewayHello),
