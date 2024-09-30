@@ -12,6 +12,7 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
+use bigdecimal::BigDecimal;
 use chorus::types::{PremiumType, PublicUser, Rights, Snowflake, UserData};
 use chrono::{NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
@@ -203,6 +204,24 @@ impl User {
             .ok_or(Error::Guild(GuildError::InvalidGuild))?;
 
         GuildMember::create(db, self, &guild).await
+    }
+
+    /// Return the Snowflake IDs of all guilds the user is a member of. Limited to 1000 results to
+    /// avoid memory exhaustion.
+    /// TODO: Does this work???????? -bitfl0wer
+    pub async fn get_guild_ids(&self, db: &PgPool) -> Result<Vec<Snowflake>, Error> {
+        Ok(sqlx::query!(
+            "SELECT guild_id FROM members where id = $1 LIMIT 1000",
+            BigDecimal::from(u64::from(self.id))
+        )
+        .fetch_all(db)
+        .await
+        .map_err(Error::Sqlx)
+        .map(|r| {
+            r.iter()
+                .map(|x| Snowflake::from(PgU64::try_from(x.guild_id.clone()).unwrap().to_uint()))
+                .collect()
+        })?)
     }
 
     pub async fn count(db: &PgPool) -> Result<i32, Error> {
