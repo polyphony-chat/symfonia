@@ -13,8 +13,6 @@ use poem::{
 use serde_json::json;
 use sqlx::PgPool;
 
-use crate::gateway::ConnectedUsers;
-use crate::SharedEventPublisherMap;
 use crate::{
     api::{
         middleware::{
@@ -24,6 +22,8 @@ use crate::{
     },
     database::entities::Config,
     errors::Error,
+    gateway::ConnectedUsers,
+    SharedEventPublisherMap,
 };
 
 mod middleware;

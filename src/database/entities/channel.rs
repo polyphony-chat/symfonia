@@ -15,12 +15,12 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use sqlx::{types::Json, PgPool};
 
-use crate::eq_shared_event_publisher;
 use crate::{
     database::entities::{
         invite::Invite, message::Message, read_state::ReadState, recipient::Recipient, GuildMember,
         User, Webhook,
     },
+    eq_shared_event_publisher,
     errors::{ChannelError, Error, GuildError, UserError},
 };
 

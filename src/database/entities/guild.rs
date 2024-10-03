@@ -17,12 +17,12 @@ use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool, QueryBuilder, Row};
 use sqlx_pg_uint::{PgU16, PgU64};
 
-use crate::SharedEventPublisherMap;
 use crate::{
     database::entities::{
         Channel, Config, Emoji, GuildMember, GuildTemplate, Invite, Role, Sticker, User,
     },
     errors::{Error, GuildError, UserError},
+    SharedEventPublisherMap,
 };
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, sqlx::FromRow)]

@@ -1,8 +1,7 @@
 use chorus::types::{GatewayReady, Snowflake};
 use sqlx::PgPool;
 
-use crate::database::entities::User;
-use crate::errors::Error;
+use crate::{database::entities::User, errors::Error};
 
 pub async fn create_ready(user_id: Snowflake, db: &PgPool) -> Result<GatewayReady, Error> {
     let user = match User::get_by_id(db, user_id).await? {

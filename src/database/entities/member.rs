@@ -11,8 +11,10 @@ use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Row};
 use sqlx_pg_uint::{PgU16, PgU64};
 
-use crate::database::entities::{Guild, User};
-use crate::errors::{Error, GuildError, UserError};
+use crate::{
+    database::entities::{Guild, User},
+    errors::{Error, GuildError, UserError},
+};
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize, FromRow)]
 pub struct GuildMember {

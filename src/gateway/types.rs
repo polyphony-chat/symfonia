@@ -2,12 +2,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use std::collections::{HashMap, HashSet};
-use std::ops::{Deref, DerefMut};
-use std::sync::{Arc, Weak};
+use std::{
+    collections::{HashMap, HashSet},
+    ops::{Deref, DerefMut},
+    sync::{Arc, Weak},
+};
 
-use ::serde::de::DeserializeOwned;
-use ::serde::{Deserialize, Serialize};
+use ::serde::{de::DeserializeOwned, Deserialize, Serialize};
 use chorus::types::{
     ChannelCreate, ChannelDelete, ChannelUpdate, GatewayHeartbeat, GatewayHello,
     GatewayIdentifyPayload, GatewayInvalidSession, GatewayReady, GatewayRequestGuildMembers,
@@ -20,19 +21,23 @@ use chorus::types::{
     ThreadListSync, ThreadMemberUpdate, ThreadMembersUpdate, ThreadUpdate, TypingStartEvent,
     UserUpdate, VoiceServerUpdate, VoiceStateUpdate, WebhooksUpdate,
 };
-use futures::stream::{SplitSink, SplitStream};
-use futures::{SinkExt, StreamExt};
+use futures::{
+    stream::{SplitSink, SplitStream},
+    SinkExt, StreamExt,
+};
 use log::log;
 use parking_lot::RwLock;
 use pubserve::Subscriber;
 use sqlx::PgPool;
 use sqlx_pg_uint::PgU64;
-use tokio::net::TcpStream;
-use tokio::sync::Mutex;
-use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode;
-use tokio_tungstenite::tungstenite::protocol::CloseFrame;
-use tokio_tungstenite::tungstenite::Message;
-use tokio_tungstenite::WebSocketStream;
+use tokio::{net::TcpStream, sync::Mutex};
+use tokio_tungstenite::{
+    tungstenite::{
+        protocol::{frame::coding::CloseCode, CloseFrame},
+        Message,
+    },
+    WebSocketStream,
+};
 
 use crate::{WebSocketReceive, WebSocketSend};
 

@@ -12,11 +12,10 @@ mod heartbeat;
 mod ready;
 mod types;
 
-use std::collections::HashSet;
-use std::hash::Hash;
-use std::ops::{Deref, DerefMut};
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, HashMap, HashSet},
+    hash::Hash,
+    ops::{Deref, DerefMut},
     sync::{Arc, Weak},
     thread::sleep,
     time::Duration,
@@ -34,10 +33,9 @@ use pubserve::Subscriber;
 use serde_json::{from_str, json};
 use sqlx::PgPool;
 use sqlx_pg_uint::PgU64;
-use tokio::sync::MutexGuard;
 use tokio::{
     net::{TcpListener, TcpStream},
-    sync::Mutex,
+    sync::{Mutex, MutexGuard},
 };
 
 use tokio_tungstenite::{accept_async, tungstenite::Message, WebSocketStream};

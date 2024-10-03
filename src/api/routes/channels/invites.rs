@@ -4,14 +4,18 @@
  *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use chorus::types::jwt::Claims;
-use chorus::types::{CreateChannelInviteSchema, Snowflake};
-use poem::web::{Data, Json, Path};
-use poem::{handler, IntoResponse};
+use chorus::types::{jwt::Claims, CreateChannelInviteSchema, Snowflake};
+use poem::{
+    handler,
+    web::{Data, Json, Path},
+    IntoResponse,
+};
 use sqlx::PgPool;
 
-use crate::database::entities::Channel;
-use crate::errors::{ChannelError, Error};
+use crate::{
+    database::entities::Channel,
+    errors::{ChannelError, Error},
+};
 
 #[handler]
 pub async fn create_invite(

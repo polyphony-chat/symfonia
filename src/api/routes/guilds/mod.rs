@@ -12,10 +12,10 @@ use poem::{
 };
 use sqlx::PgPool;
 
-use crate::SharedEventPublisherMap;
 use crate::{
     database::entities::{Config, Guild, User},
     errors::{Error, UserError},
+    SharedEventPublisherMap,
 };
 
 mod id;

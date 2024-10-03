@@ -4,8 +4,7 @@
  *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use sqlx::postgres::PgConnectOptions;
-use sqlx::{Database, Executor, PgPool, Row};
+use sqlx::{postgres::PgConnectOptions, Database, Executor, PgPool, Row};
 
 use crate::errors::Error;
 
