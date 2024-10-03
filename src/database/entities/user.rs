@@ -6,10 +6,10 @@
 
 use super::*;
 
-use std::str::FromStr;
 use std::{
     default::Default,
     ops::{Deref, DerefMut},
+    str::FromStr,
 };
 
 use bigdecimal::BigDecimal;
