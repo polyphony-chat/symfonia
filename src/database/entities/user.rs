@@ -210,7 +210,7 @@ impl User {
     /// avoid memory exhaustion.
     /// TODO: Does this work???????? -bitfl0wer
     pub async fn get_guild_ids(&self, db: &PgPool) -> Result<Vec<Snowflake>, Error> {
-        Ok(sqlx::query!(
+        sqlx::query!(
             "SELECT guild_id FROM members where id = $1 LIMIT 1000",
             BigDecimal::from(u64::from(self.id))
         )
@@ -221,7 +221,7 @@ impl User {
             r.iter()
                 .map(|x| Snowflake::from(PgU64::try_from(x.guild_id.clone()).unwrap().to_uint()))
                 .collect()
-        })?)
+        })
     }
 
     pub async fn count(db: &PgPool) -> Result<i32, Error> {
