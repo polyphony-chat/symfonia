@@ -244,3 +244,11 @@ impl User {
         self.inner.clone()
     }
 }
+
+#[cfg(test)]
+mod user_unit_tests {
+    use sqlx::PgPool;
+
+    #[sqlx::test]
+    async fn get_user_guilds(pool: PgPool) {}
+}
