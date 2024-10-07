@@ -247,8 +247,57 @@ impl User {
 
 #[cfg(test)]
 mod user_unit_tests {
+    use bigdecimal::BigDecimal;
+    use chorus::types::Snowflake;
     use sqlx::PgPool;
+
+    use crate::database::entities::User;
     // TODO: Write this test
     #[sqlx::test(fixtures(path = "../../../fixtures", scripts("users", "guilds")))]
-    async fn get_user_guilds(pool: PgPool) {}
+    async fn get_user_guilds(pool: PgPool) {
+        sqlx::query!(
+            "INSERT INTO members(
+            id, guild_id, deaf, mute, pending, settings, bio, pronouns, joined_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, current_timestamp);",
+            BigDecimal::from(7248639845155737600_u64),
+            BigDecimal::from(7249086638293258240_u64),
+            false,
+            false,
+            false,
+            "{}",
+            "my bio on this guild",
+            "any/all"
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query!(
+            "INSERT INTO members(
+            id, guild_id, deaf, mute, pending, settings, bio, pronouns, joined_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, current_timestamp);",
+            BigDecimal::from(7248639845155737600_u64),
+            BigDecimal::from(7249112309484752896_u64),
+            false,
+            false,
+            false,
+            "{}",
+            "my bio on this guild",
+            "any/all"
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        let user = User::get_by_id(&pool, Snowflake::from(7248639845155737600))
+            .await
+            .unwrap()
+            .unwrap();
+        let guilds = user.get_guild_ids(&pool).await.unwrap();
+        assert_eq!(
+            guilds,
+            vec![
+                Snowflake::from(7249086638293258240),
+                Snowflake::from(7249112309484752896)
+            ]
+        );
+    }
 }
