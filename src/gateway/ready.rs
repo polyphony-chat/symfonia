@@ -1,6 +1,7 @@
 use chorus::types::{GatewayReady, Snowflake};
 use sqlx::PgPool;
 
+use crate::database::entities::Guild;
 use crate::{database::entities::User, errors::Error};
 
 pub async fn create_ready(user_id: Snowflake, db: &PgPool) -> Result<GatewayReady, Error> {
@@ -12,13 +13,22 @@ pub async fn create_ready(user_id: Snowflake, db: &PgPool) -> Result<GatewayRead
             )))
         }
     };
+    let guild_ids = user.get_guild_ids(db).await?;
+    let mut guilds = Vec::with_capacity(guild_ids.len());
+    for guild_id in guild_ids.iter() {
+        guilds.push(match Guild::get_by_id(db, *guild_id).await? {
+            Some(guild) => guild.into_inner(),
+            None => continue,
+        });
+    }
+
     let ready = GatewayReady {
         analytics_token: todo!(),
         auth_session_id_hash: todo!(),
         country_code: todo!(),
         api_version: todo!(),
         user: user.to_inner(),
-        guilds: todo!(),
+        guilds,
         presences: todo!(),
         sessions: todo!(),
         session_id: todo!(),
