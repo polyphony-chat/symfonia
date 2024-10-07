@@ -248,7 +248,7 @@ impl User {
 #[cfg(test)]
 mod user_unit_tests {
     use sqlx::PgPool;
-
-    #[sqlx::test]
+    // TODO: Write this test
+    #[sqlx::test(fixtures(path = "../../../fixtures", scripts("users", "guilds")))]
     async fn get_user_guilds(pool: PgPool) {}
 }
