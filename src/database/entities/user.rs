@@ -208,7 +208,6 @@ impl User {
 
     /// Return the Snowflake IDs of all guilds the user is a member of. Limited to 1000 results to
     /// avoid memory exhaustion.
-    /// TODO: Does this work???????? -bitfl0wer
     pub async fn get_guild_ids(&self, db: &PgPool) -> Result<Vec<Snowflake>, Error> {
         sqlx::query!(
             "SELECT guild_id FROM members where id = $1 LIMIT 1000",
@@ -243,6 +242,14 @@ impl User {
     pub fn to_inner(&self) -> chorus::types::User {
         self.inner.clone()
     }
+
+    // TODO: Implement this
+    pub async fn get_relationships(
+        target: Snowflake,
+        db: &PgPool,
+    ) -> Result<Vec<Snowflake>, Error> {
+        todo!()
+    }
 }
 
 #[cfg(test)]
@@ -252,7 +259,6 @@ mod user_unit_tests {
     use sqlx::PgPool;
 
     use crate::database::entities::User;
-    // TODO: Write this test
     #[sqlx::test(fixtures(path = "../../../fixtures", scripts("users", "guilds")))]
     async fn get_user_guilds(pool: PgPool) {
         sqlx::query!(
