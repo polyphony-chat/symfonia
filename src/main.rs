@@ -58,6 +58,10 @@ pub fn eq_shared_event_publisher(a: &SharedEventPublisher, b: &SharedEventPublis
     *a == *b
 }
 
+// TODO: Use this in more places
+/// The maximum number of rows that can be returned in most queries
+static QUERY_UPPER_LIMIT: i32 = 1000;
+
 #[derive(Debug)]
 struct LogFilter;
 
