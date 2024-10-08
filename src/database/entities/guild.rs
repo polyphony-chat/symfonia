@@ -184,7 +184,7 @@ impl Guild {
             new_channels
         };
 
-        guild.channels = channels.into_iter().map(|c| c.to_inner()).collect();
+        guild.channels = channels.into_iter().map(|c| c.into_inner()).collect();
 
         Ok(guild)
     }

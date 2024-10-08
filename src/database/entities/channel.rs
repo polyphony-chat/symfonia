@@ -53,7 +53,7 @@ impl DerefMut for Channel {
 }
 
 impl Channel {
-    pub fn to_inner(self) -> chorus::types::Channel {
+    pub fn into_inner(self) -> chorus::types::Channel {
         self.inner
     }
 

@@ -30,7 +30,7 @@ impl DerefMut for Relationship {
 }
 
 impl Relationship {
-    pub fn to_inner(self) -> chorus::types::Relationship {
+    pub fn into_inner(self) -> chorus::types::Relationship {
         self.inner
     }
 
