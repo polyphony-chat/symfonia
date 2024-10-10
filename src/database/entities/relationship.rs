@@ -56,3 +56,36 @@ impl Relationship {
             .map_err(Error::from)
     }
 }
+
+#[cfg(test)]
+mod relationship_unit_tests {
+    use bigdecimal::BigDecimal;
+    use chorus::types::RelationshipType;
+    use sqlx::PgPool;
+    use sqlx_pg_uint::PgU8;
+
+    #[sqlx::test(fixtures(path = "../../../fixtures", scripts("users")))]
+    async fn get_by_from_id(pool: PgPool) {
+        sqlx::query!(
+            "INSERT INTO relationships(from_id, to_id, nickname, type) VALUES($1, $2, $3, $4);",
+            BigDecimal::from(7248639845155737600_u64),
+            BigDecimal::from(7248639891561517057_u64),
+            "Janana Banana 🍌",
+            BigDecimal::from(RelationshipType::Outgoing as u8)
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let relationships = super::Relationship::get_by_from_id(7248639845155737600.into(), &pool)
+            .await
+            .unwrap();
+
+        assert_eq!(relationships.len(), 1);
+        let relationship = &relationships[0];
+        assert_eq!(relationship.from_id, 7248639845155737600.into());
+        assert_eq!(relationship.id, 7248639891561517057.into());
+        assert_eq!(relationship.nickname, Some("Janana Banana 🍌".to_string()));
+        assert_eq!(relationship.relationship_type, RelationshipType::Outgoing);
+    }
+}
