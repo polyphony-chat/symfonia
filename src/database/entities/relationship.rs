@@ -46,7 +46,7 @@ impl Relationship {
         &mut self.inner
     }
 
-    // TODO: Write tests for this
+    /// Retrieve all relationships for a user by their ID
     pub async fn get_by_from_id(from_id: Snowflake, db: &PgPool) -> Result<Vec<Self>, Error> {
         sqlx::query_as("SELECT * from relationships WHERE from_id = $1 LIMIT $2")
             .bind(from_id)
