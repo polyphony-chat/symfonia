@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS relationships
     to_id    numeric(20, 0) not null constraint chk_to_id_range check (to_id >= 0 AND to_id <= 18446744073709551615),
     nickname varchar(255) null,
     type     numeric(3, 0)  not null constraint chk_type_range check (type >= 0 AND type <= 255),
+    since    timestamptz null default now(),
     constraint FK_unique_relationships
         unique (from_id, to_id),
     constraint FK_from_id_references_users_id
