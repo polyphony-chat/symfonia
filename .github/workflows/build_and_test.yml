@@ -42,7 +42,6 @@ jobs:
           DATABASE_PASSWORD: symfonia
           DATABASE_NAME: symfonia
           DATABASE_PORT: 5432
-
         run: |
           curl -L --proto '=https' --tlsv1.3 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
           cargo binstall cargo-nextest --secure --no-confirm --force
