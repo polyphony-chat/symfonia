@@ -4,12 +4,16 @@
  *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::database::entities::User;
-use crate::errors::{Error, UserError};
-use chorus::types::jwt::Claims;
-use chorus::types::UserSettings;
-use poem::web::{Data, Json};
-use poem::{handler, IntoResponse};
+use crate::{
+    database::entities::User,
+    errors::{Error, UserError},
+};
+use chorus::types::{jwt::Claims, UserSettings};
+use poem::{
+    handler,
+    web::{Data, Json},
+    IntoResponse,
+};
 use sqlx::PgPool;
 
 #[handler]

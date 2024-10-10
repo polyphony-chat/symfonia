@@ -4,10 +4,12 @@
  *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use chorus::types::jwt::generate_token;
-use chorus::types::{APIError, AuthError, RegisterSchema};
-use poem::web::{Data, Json};
-use poem::{handler, IntoResponse, Request};
+use chorus::types::{jwt::generate_token, APIError, AuthError, RegisterSchema};
+use poem::{
+    handler,
+    web::{Data, Json},
+    IntoResponse, Request,
+};
 use serde_json::json;
 
 use crate::database::entities::{Config, User};

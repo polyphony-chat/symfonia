@@ -11,8 +11,10 @@ use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Row};
 use sqlx_pg_uint::{PgU16, PgU64};
 
-use crate::database::entities::{Guild, User};
-use crate::errors::{Error, GuildError, UserError};
+use crate::{
+    database::entities::{Guild, User},
+    errors::{Error, GuildError, UserError},
+};
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize, FromRow)]
 pub struct GuildMember {
@@ -43,6 +45,18 @@ impl DerefMut for GuildMember {
 
 impl GuildMember {
     pub async fn create(db: &sqlx::PgPool, user: &User, guild: &Guild) -> Result<Self, Error> {
+        // TODO: check if user is banned
+        // TODO: Check max guild count
+
+        if let Err(e) = GuildMember::get_by_id(db, user.id, guild.id).await {
+            match e {
+                Error::Guild(GuildError::MemberNotFound) => {
+                    // Continue adding user to guild
+                }
+                _ => return Err(e),
+            }
+        }
+
         let user = user.to_owned();
         let mut member = Self {
             index: 0.into(),

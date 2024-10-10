@@ -6,8 +6,10 @@
 
 #![allow(unused)] // TODO: Remove, I just want to clean up my build output
 
-use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 use chorus::types::Snowflake;
 use clap::Parser;
@@ -55,6 +57,10 @@ pub fn eq_shared_event_publisher(a: &SharedEventPublisher, b: &SharedEventPublis
     let b = b.read();
     *a == *b
 }
+
+// TODO: Use this in more places
+/// The maximum number of rows that can be returned in most queries
+static QUERY_UPPER_LIMIT: i32 = 10000;
 
 #[derive(Debug)]
 struct LogFilter;

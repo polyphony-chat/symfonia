@@ -4,8 +4,10 @@
  *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::database::entities::User;
-use crate::errors::{Error, UserError};
+use crate::{
+    database::entities::User,
+    errors::{Error, UserError},
+};
 use chorus::types::jwt::Claims;
 use jsonwebtoken::TokenData;
 use sqlx::PgPool;

@@ -4,10 +4,7 @@
  *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use poem::http::StatusCode;
-use poem::web::Data;
-use poem::{get, Route};
-use poem::{handler, IntoResponse};
+use poem::{get, handler, http::StatusCode, web::Data, IntoResponse, Route};
 use sqlx::PgPool;
 
 #[handler]

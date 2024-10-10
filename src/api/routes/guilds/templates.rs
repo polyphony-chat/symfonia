@@ -14,10 +14,10 @@ use reqwest::StatusCode;
 use serde_json::json;
 use sqlx::PgPool;
 
-use crate::SharedEventPublisherMap;
 use crate::{
     database::entities::{Config, Guild, GuildTemplate, User},
     errors::{Error, GuildError},
+    SharedEventPublisherMap,
 };
 
 #[handler]

@@ -6,11 +6,16 @@
 
 mod settings;
 
-use crate::database::entities::User;
-use crate::errors::{Error, UserError};
+use crate::{
+    database::entities::User,
+    errors::{Error, UserError},
+};
 use chorus::types::jwt::Claims;
-use poem::web::{Data, Json};
-use poem::{get, handler, IntoResponse, Route};
+use poem::{
+    get, handler,
+    web::{Data, Json},
+    IntoResponse, Route,
+};
 use settings::{get_settings, update_settings};
 use sqlx::PgPool;
 

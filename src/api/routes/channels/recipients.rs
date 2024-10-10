@@ -39,7 +39,7 @@ pub async fn add_recipient(
 
         let new_dm_channel = Channel::create_dm_channel(db, new_recipients, user.id, None).await?;
 
-        Ok(Json(new_dm_channel.to_inner()).into_response())
+        Ok(Json(new_dm_channel.into_inner()).into_response())
     } else {
         if let Some(recipients) = channel.recipients.as_ref() {
             if recipients.iter().any(|r| r.id == user_id) {

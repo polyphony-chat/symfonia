@@ -1,7 +1,6 @@
 use std::env;
 
-use poem::web::Json;
-use poem::{handler, IntoResponse, Route};
+use poem::{handler, web::Json, IntoResponse, Route};
 use serde::Serialize;
 
 pub fn setup_routes() -> Route {

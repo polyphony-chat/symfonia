@@ -31,7 +31,7 @@ pub async fn get_channels(
     Ok(Json(
         channels
             .into_iter()
-            .map(|c| c.to_inner())
+            .map(|c| c.into_inner())
             .collect::<Vec<_>>(),
     ))
 }
@@ -60,7 +60,7 @@ pub async fn create_channel(
     )
     .await?;
 
-    Ok(Json(channel.to_inner()).with_status(StatusCode::CREATED))
+    Ok(Json(channel.into_inner()).with_status(StatusCode::CREATED))
 }
 
 #[handler]

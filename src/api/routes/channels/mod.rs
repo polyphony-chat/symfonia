@@ -105,7 +105,7 @@ pub async fn get_channel(
 
     // TODO: Check if the user has permission to read the channel
 
-    Ok(Json(channel.to_inner()))
+    Ok(Json(channel.into_inner()))
 }
 
 #[handler]
@@ -122,7 +122,7 @@ pub async fn delete_channel(
     // TODO: Check if the channel is a DM, and handle recipients
     channel.delete(db).await?;
 
-    Ok(Json(channel.to_inner()))
+    Ok(Json(channel.into_inner()))
 }
 
 #[handler]
@@ -141,5 +141,5 @@ pub async fn modify_channel(
     channel.modify(payload);
     channel.save(db).await?;
 
-    Ok(Json(channel.to_inner()))
+    Ok(Json(channel.into_inner()))
 }

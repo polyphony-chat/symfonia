@@ -9,13 +9,13 @@ static RESUME_RECONNECT_WINDOW_SECONDS: u8 = 90;
 mod establish_connection;
 mod gateway_task;
 mod heartbeat;
+mod ready;
 mod types;
 
-use std::collections::HashSet;
-use std::hash::Hash;
-use std::ops::{Deref, DerefMut};
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, HashMap, HashSet},
+    hash::Hash,
+    ops::{Deref, DerefMut},
     sync::{Arc, Weak},
     thread::sleep,
     time::Duration,
@@ -33,10 +33,9 @@ use pubserve::Subscriber;
 use serde_json::{from_str, json};
 use sqlx::PgPool;
 use sqlx_pg_uint::PgU64;
-use tokio::sync::MutexGuard;
 use tokio::{
     net::{TcpListener, TcpStream},
-    sync::Mutex,
+    sync::{Mutex, MutexGuard},
 };
 
 use tokio_tungstenite::{accept_async, tungstenite::Message, WebSocketStream};
@@ -156,8 +155,9 @@ async fn purge_expired_disconnects(connected_users: ConnectedUsers) {
             .as_secs();
         let mut to_remove = Vec::new();
         let mut _inner = connected_users.inner();
-        let mut lock = _inner.lock().await;
-        for (disconnected_session_id, disconnected_session) in lock.resumeable_clients_store.iter()
+        let mut read_lock = _inner.read();
+        for (disconnected_session_id, disconnected_session) in
+            read_lock.resumeable_clients_store.iter()
         {
             // TODO(bitfl0wer): What are we calculating here? At least, this should be commented
             if current_unix_timestamp - disconnected_session.disconnected_at_sequence
@@ -166,14 +166,16 @@ async fn purge_expired_disconnects(connected_users: ConnectedUsers) {
                 to_remove.push(disconnected_session_id.clone());
             }
         }
+        drop(read_lock);
         let len = to_remove.len();
         removed_elements_last_minute = removed_elements_last_minute
             .checked_add(len as u128)
             .unwrap_or(u128::MAX);
+        let mut write_lock = _inner.write();
         for session_id in to_remove.iter() {
-            lock.resumeable_clients_store.remove(session_id);
+            write_lock.resumeable_clients_store.remove(session_id);
         }
-        drop(lock);
+        drop(write_lock);
         minutely_log_timer += 1;
         if minutely_log_timer == 12 {
             log::debug!(target: "symfonia::gateway::purge_expired_disconnects", "Removed {} stale sessions in the last 60 seconds", removed_elements_last_minute);

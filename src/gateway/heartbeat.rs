@@ -122,7 +122,7 @@ impl HeartbeatHandler {
     /// });
     /// ```
     pub(super) async fn run(&mut self) {
-        trace!(target: "symfonia::gateway::heartbeat_handler", "Starting heartbeat handler");
+        trace!(target: "symfonia::gateway::heartbeat_handler", "Heartbeat handler started");
         // TODO: On death of this task, create and store disconnect info in gateway client object
         let mut sequence = 0u64;
         loop {

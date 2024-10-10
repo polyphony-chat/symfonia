@@ -133,6 +133,7 @@ pub(super) async fn establish_connection(
         // connection establishment process. :(
         new_connection = finish_connecting(heartbeat_handler_handle, state)
          => {
+            log::trace!(target: "symfonia::gateway::establish_connection", "Connection established. We are done here");
             new_connection
         }
     }
@@ -215,24 +216,27 @@ async fn finish_connecting(
                 }
             };
             log::trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Getting gateway_user");
-            let mut gateway_user = state.connected_users.get_user_or_new(claims.id).await;
+            let mut gateway_user = state.connected_users.get_user_or_new(claims.id);
+            log::trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Creating main gateway task handle");
+            let main_task_handle = tokio::spawn(gateway_task::gateway_task(
+                state.connection.clone(),
+                gateway_user.lock().await.inbox.resubscribe(),
+                state.kill_receive.resubscribe(),
+                state.kill_send.clone(),
+                state.heartbeat_send.clone(),
+                state.sequence_number.clone(),
+            ));
             log::trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Creating gateway_client");
             let gateway_client = state
                 .connected_users
                 .new_client(
                     gateway_user.clone(),
                     state.connection.clone(),
-                    tokio::spawn(gateway_task::gateway_task(
-                        state.connection.clone(),
-                        gateway_user.lock().await.inbox.resubscribe(),
-                        state.kill_receive.resubscribe(),
-                        state.kill_send.clone(),
-                        state.heartbeat_send.clone(),
-                        state.sequence_number.clone(),
-                    )),
+                    main_task_handle,
                     match heartbeat_handler_handle {
                         Some(handle) => handle,
                         None => tokio::spawn({
+                            log::trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "No heartbeat_handler yet. Creating one...");
                             let mut heartbeat_handler = HeartbeatHandler::new(
                                 state.connection.clone(),
                                 state.kill_receive.resubscribe(),
