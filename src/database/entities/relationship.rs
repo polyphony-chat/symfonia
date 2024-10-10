@@ -33,6 +33,7 @@ impl DerefMut for Relationship {
     }
 }
 
+// TODO: Lots of missing methods
 impl Relationship {
     pub fn into_inner(self) -> chorus::types::Relationship {
         self.inner
