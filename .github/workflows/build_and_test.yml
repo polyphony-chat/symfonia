@@ -41,6 +41,7 @@ jobs:
           DATABASE_PASSWORD: symfonia
           DATABASE_NAME: symfonia
           DATABASE_PORT: 5432
+          SQLX_OFFLINE: true
           # This is only important for tests
           DATABASE_URL: postgres://symfonia:symfonia@postgres/symfonia
         run: |
