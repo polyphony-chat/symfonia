@@ -2,18 +2,31 @@ name: Build and Test
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main", "dev" ]
+    branches: ["main", "dev"]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   linux:
-
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    container: node:20-bookworm-slim
+
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: symfonia
+          POSTGRES_DB: symfonia
+          POSTGRES_USER: symfonia
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 3s
+          --health-timeout 5s
+          --health-retries 10
 
     steps:
       - name: Checkout code
@@ -22,14 +35,15 @@ jobs:
         with:
           cache-all-crates: "true"
           prefix-key: "linux"
-      - name: Build, Test and Publish Coverage
+      - name: Build and Test with Nextest
+        env:
+          DATABASE_HOST: postgres
+          DATABASE_USERNAME: symfonia
+          DATABASE_PASSWORD: symfonia
+          DATABASE_NAME: symfonia
+          DATABASE_PORT: 5432
+
         run: |
-          if [ -n "${{ secrets.COVERALLS_REPO_TOKEN }}" ]; then
-            curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
-            cargo binstall --no-confirm cargo-tarpaulin --force
-            cargo tarpaulin --all-features --avoid-cfg-tarpaulin --tests --verbose --skip-clean --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }} --timeout 120
-          else
-            echo "Code Coverage step is skipped on forks!"
-            cargo build --verbose --all-features
-            cargo test --verbose --all-features
-          fi
+          curl -L --proto '=https' --tlsv1.3 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+          cargo binstall cargo-nextest --secure --no-confirm --force
+          cargo nextest run --all --verbose
