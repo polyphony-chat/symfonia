@@ -33,8 +33,13 @@ jobs:
         with:
           components: clippy
 
-      - name: Install required cargo
-        run: cargo install clippy-sarif sarif-fmt
+      - name: cargo binstall
+        run: curl -L --proto '=https' --tlsv1.3 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+
+      - name: Install required utils
+        run: |
+          cargo binstall clippy-sarif --no-confirm --force
+          cargo binstall sarif-fmt --no-confirm --force
 
       - uses: Swatinem/rust-cache@v2
         with:
