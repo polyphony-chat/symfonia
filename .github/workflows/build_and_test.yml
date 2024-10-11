@@ -19,8 +19,6 @@ jobs:
           password: trans-actional-database-haha-get-it
           database: symfoniadb
           port: 5432
-          postgres-version: "16"
-          ssl: "off"
         id: postgres
       - name: Checkout code
         uses: actions/checkout@v4
