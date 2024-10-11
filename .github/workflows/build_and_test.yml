@@ -12,21 +12,16 @@ env:
 jobs:
   linux:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres
-        env:
-          POSTGRES_PASSWORD: symfonia
-          POSTGRES_DB: symfonia
-          POSTGRES_USER: symfonia
-        # Set health checks to wait until postgres has started
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 3s
-          --health-timeout 5s
-          --health-retries 10
-
     steps:
+      - uses: ikalnytskyi/action-setup-postgres@v6
+        with:
+          username: symfonia
+          password: trans-actional-database-haha-get-it
+          database: symfoniadb
+          port: 5432
+          postgres-version: "16"
+          ssl: "off"
+        id: postgres
       - name: Checkout code
         uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -38,12 +33,12 @@ jobs:
         env:
           DATABASE_HOST: postgres
           DATABASE_USERNAME: symfonia
-          DATABASE_PASSWORD: symfonia
-          DATABASE_NAME: symfonia
+          DATABASE_PASSWORD: trans-actional-database-haha-get-it
+          DATABASE_NAME: symfoniadb
           DATABASE_PORT: 5432
           SQLX_OFFLINE: true
           # This is only important for tests
-          DATABASE_URL: postgres://symfonia:symfonia@postgres/symfonia
+          DATABASE_URL: ${{ steps.postgres.outputs.connection-uri }}
         run: |
           curl -L --proto '=https' --tlsv1.3 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
           cargo binstall cargo-nextest --secure --no-confirm --force
