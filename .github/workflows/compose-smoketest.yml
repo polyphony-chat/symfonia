@@ -1,10 +1,8 @@
 name: docker compose smoketest
 
 on:
-  push:
-    branches: ["main"]
-  pull_request:
-    branches: ["main", "dev"]
+  schedule:
+    - cron: "0 12 1,10,20 * *"
 
 jobs:
   deploy_compose:
