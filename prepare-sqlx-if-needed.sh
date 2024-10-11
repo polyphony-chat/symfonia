@@ -1,13 +1,7 @@
 #!/bin/bash
 
-if git diff --quiet HEAD -- "./migrations"; then
-    echo "No changes in migrations folder"
-    exit 0
-else
-    echo "Changes in migrations folder detected, running sqlx prepare"
-    cargo sqlx prepare --all -- --all-targets --all-features
-    git add .sqlx/*
-    exit_code=$?
+cargo sqlx prepare --all -- --all-targets --all-features
+git add .sqlx/*
+exit_code=$?
 
-    exit $exit_code
-fi
+exit $exit_code
