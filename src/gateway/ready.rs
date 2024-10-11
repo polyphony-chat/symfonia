@@ -1,7 +1,7 @@
 use chorus::types::{GatewayReady, Snowflake};
 use sqlx::PgPool;
 
-use crate::database::entities::Guild;
+use crate::database::entities::{Guild, Relationship};
 use crate::{database::entities::User, errors::Error};
 
 pub async fn create_ready(user_id: Snowflake, db: &PgPool) -> Result<GatewayReady, Error> {
@@ -22,6 +22,12 @@ pub async fn create_ready(user_id: Snowflake, db: &PgPool) -> Result<GatewayRead
         });
     }
 
+    let relationships = Relationship::get_all_by_id(user_id, db)
+        .await?
+        .into_iter()
+        .map(|x| x.into_inner())
+        .collect();
+
     let ready = GatewayReady {
         analytics_token: todo!(),
         auth_session_id_hash: todo!(),
@@ -37,7 +43,7 @@ pub async fn create_ready(user_id: Snowflake, db: &PgPool) -> Result<GatewayRead
         shard: todo!(),
         user_settings: Some(*user.settings),
         user_settings_proto: todo!(),
-        relationships: todo!(),
+        relationships,
         friend_suggestion_count: todo!(),
         private_channels: todo!(),
         notes: todo!(),
