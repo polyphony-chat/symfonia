@@ -1,4 +1,4 @@
-name: docker compose smoketest
+name: Docker compose smoketest
 
 on:
   push:
@@ -13,10 +13,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
           cache-all-crates: "true"
-          prefix-key: "ubuntu-latest"
+          prefix-key: "linux"
+      - name: Container build acceleration using rust-cache
+        run: |
+          SQLX_OFFLINE=true cargo build --release
       - name: Create .env file
         run: cp compose-example.env .env
       - name: Docker Compose Action
