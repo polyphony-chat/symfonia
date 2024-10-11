@@ -5,12 +5,17 @@
  */
 
 use chorus::types::jwt::Claims;
-use poem::web::{Data, Json, Path};
-use poem::{get, handler, IntoResponse, Route};
+use poem::{
+    get, handler,
+    web::{Data, Json, Path},
+    IntoResponse, Route,
+};
 use sqlx::PgPool;
 
-use crate::database::entities::{Channel, Invite, User};
-use crate::errors::{ChannelError, Error, InviteError, UserError};
+use crate::{
+    database::entities::{Channel, Invite, User},
+    errors::{ChannelError, Error, InviteError, UserError},
+};
 
 pub fn setup_routes() -> Route {
     Route::new().at("/:invite_code", get(get_invite).delete(delete_invite))

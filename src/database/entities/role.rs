@@ -12,8 +12,7 @@ use chorus::types::{PermissionFlags, Snowflake};
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Row};
 
-use crate::errors::Error;
-use crate::{eq_shared_event_publisher, SharedEventPublisherMap};
+use crate::{eq_shared_event_publisher, errors::Error, SharedEventPublisherMap};
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Role {

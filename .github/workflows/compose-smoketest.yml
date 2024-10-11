@@ -1,10 +1,8 @@
 name: docker compose smoketest
 
 on:
-  push:
-    branches: ["main"]
-  pull_request:
-    branches: ["main", "dev"]
+  schedule:
+    - cron: "0 12 1,10,20 * *"
 
 jobs:
   deploy_compose:
@@ -13,10 +11,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - uses: Swatinem/rust-cache@v2
-        with:
-          cache-all-crates: "true"
-          prefix-key: "ubuntu-latest"
       - name: Create .env file
         run: cp compose-example.env .env
       - name: Docker Compose Action

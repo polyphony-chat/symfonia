@@ -3,9 +3,9 @@ create table if not exists users (
     username            varchar(255)       not null,
     discriminator       varchar(255)       not null,
     avatar              varchar(255)       null,
-    accent_color        int                null,
+    accent_color        numeric(10, 0)     null constraint chk_accent_color check (accent_color >= 0 and accent_color <= 4294967295),
     banner              varchar(255)       null,
-    theme_colors        text               null,
+    theme_colors        NUMERIC(3,0)[8]    null,
     pronouns            varchar(255)       null,
     phone               varchar(255)       null,
     desktop             boolean            not null default false,
@@ -21,7 +21,7 @@ create table if not exists users (
     totp_secret         varchar(255)       null,
     totp_last_ticket    varchar(255)       null,
     created_at          timestamp          not null,
-    premium_since       timestamp          null,
+    premium_since       timestamptz        null,
     verified            boolean            not null default false,
     disabled            boolean            not null default false,
     deleted             boolean            not null default false,
@@ -37,5 +37,8 @@ create table if not exists users (
     settings_index      numeric(20, 0)     null constraint chk_settings_index_range check (settings_index >= 0 AND settings_index <= 18446744073709551615),
     relevant_events     json               not null default '[]',
     constraint users_settings_index_uindex unique (settings_index),
-    constraint users_user_settings_index_fk foreign key (settings_index) references user_settings (index)
+    constraint users_user_settings_index_fk foreign key (settings_index) references user_settings (index),
+    constraint check_theme_colors_elements check (
+        array_length(theme_colors, 1) <= 8
+    )
 );

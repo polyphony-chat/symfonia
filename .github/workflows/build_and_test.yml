@@ -2,34 +2,42 @@ name: Build and Test
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main", "dev" ]
+    branches: ["main", "dev"]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   linux:
-
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-
     steps:
+      - uses: ikalnytskyi/action-setup-postgres@v6
+        with:
+          username: symfonia
+          password: trans-actional-database-haha-get-it
+          database: symfoniadb
+          port: 5432
+        id: postgres
       - name: Checkout code
         uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
           cache-all-crates: "true"
           prefix-key: "linux"
-      - name: Build, Test and Publish Coverage
+      - name: Build and Test with Nextest
+        env:
+          DATABASE_HOST: postgres
+          DATABASE_USERNAME: symfonia
+          DATABASE_PASSWORD: trans-actional-database-haha-get-it
+          DATABASE_NAME: symfoniadb
+          DATABASE_PORT: 5432
+          SQLX_OFFLINE: true
+          # This is only important for tests
+          DATABASE_URL: ${{ steps.postgres.outputs.connection-uri }}
         run: |
-          if [ -n "${{ secrets.COVERALLS_REPO_TOKEN }}" ]; then
-            curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
-            cargo binstall --no-confirm cargo-tarpaulin --force
-            cargo tarpaulin --all-features --avoid-cfg-tarpaulin --tests --verbose --skip-clean --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }} --timeout 120
-          else
-            echo "Code Coverage step is skipped on forks!"
-            cargo build --verbose --all-features
-            cargo test --verbose --all-features
-          fi
+          curl -L --proto '=https' --tlsv1.3 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+          cargo binstall cargo-nextest --secure --no-confirm --force
+          cargo nextest run --all --verbose

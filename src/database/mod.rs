@@ -4,8 +4,7 @@
  *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use sqlx::postgres::PgConnectOptions;
-use sqlx::{Database, Executor, PgPool, Row};
+use sqlx::{postgres::PgConnectOptions, Database, Executor, PgPool, Row};
 
 use crate::errors::Error;
 
@@ -15,7 +14,7 @@ pub trait Queryer<'c, DB: Database>: Executor<'c, Database = DB> {}
 
 impl<'c> Queryer<'c, sqlx::Postgres> for &PgPool {}
 
-static DEFAULT_CONNECTION_HOST: &str = "localhost:5432";
+static DEFAULT_CONNECTION_HOST: &str = "localhost";
 static DEFAULT_CONNECTION_USERNAME: &str = "symfonia";
 static DEFAULT_CONNECTION_PASSWORD: &str = "symfonia";
 static DEFAULT_CONNECTION_NAME: &str = "symfonia";

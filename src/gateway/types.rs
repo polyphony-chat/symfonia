@@ -2,12 +2,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use std::collections::{HashMap, HashSet};
-use std::ops::{Deref, DerefMut};
-use std::sync::{Arc, Weak};
+use std::{
+    collections::{HashMap, HashSet},
+    ops::{Deref, DerefMut},
+    sync::{Arc, Weak},
+};
 
-use ::serde::de::DeserializeOwned;
-use ::serde::{Deserialize, Serialize};
+use ::serde::{de::DeserializeOwned, Deserialize, Serialize};
 use chorus::types::{
     ChannelCreate, ChannelDelete, ChannelUpdate, GatewayHeartbeat, GatewayHello,
     GatewayIdentifyPayload, GatewayInvalidSession, GatewayReady, GatewayRequestGuildMembers,
@@ -20,18 +21,23 @@ use chorus::types::{
     ThreadListSync, ThreadMemberUpdate, ThreadMembersUpdate, ThreadUpdate, TypingStartEvent,
     UserUpdate, VoiceServerUpdate, VoiceStateUpdate, WebhooksUpdate,
 };
-use futures::stream::{SplitSink, SplitStream};
-use futures::{SinkExt, StreamExt};
+use futures::{
+    stream::{SplitSink, SplitStream},
+    SinkExt, StreamExt,
+};
 use log::log;
+use parking_lot::RwLock;
 use pubserve::Subscriber;
 use sqlx::PgPool;
 use sqlx_pg_uint::PgU64;
-use tokio::net::TcpStream;
-use tokio::sync::Mutex;
-use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode;
-use tokio_tungstenite::tungstenite::protocol::CloseFrame;
-use tokio_tungstenite::tungstenite::Message;
-use tokio_tungstenite::WebSocketStream;
+use tokio::{net::TcpStream, sync::Mutex};
+use tokio_tungstenite::{
+    tungstenite::{
+        protocol::{frame::coding::CloseCode, CloseFrame},
+        Message,
+    },
+    WebSocketStream,
+};
 
 use crate::{WebSocketReceive, WebSocketSend};
 
@@ -109,9 +115,8 @@ pub enum EventType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-/// Enum representing all possible* events that can be received from or sent to the gateway.
-///
-/// TODO: This is only temporary. Replace with this enum from chorus, when it is ready.
+/// This enum is supposed to represent all possible events that can be received from or sent to the
+/// gateway. If a variant is missing, it might just be because we haven't caught it yet.
 #[serde(rename_all = "PascalCase")]
 pub enum Event {
     Hello(GatewayHello),
@@ -211,7 +216,7 @@ impl<'de, T: DeserializeOwned + Serialize> Deserialize<'de> for GatewayPayload<T
 
 #[derive(Default, Clone)]
 pub struct ConnectedUsers {
-    pub store: Arc<Mutex<ConnectedUsersInner>>,
+    pub store: Arc<RwLock<ConnectedUsersInner>>,
     pub role_user_map: Arc<Mutex<RoleUserMap>>,
 }
 
@@ -284,16 +289,25 @@ impl ConnectedUsers {
     /// Due to the possibly large number of roles and users returned by the database, this method
     /// should only be executed once. The [RoleUserMap] should be kept synchronized with the database
     /// through means that do not involve this method.
+    ///
+    /// ## Locking
+    ///
+    /// This method acquires a lock on `role_user_map` for the duration of its runtime.
     pub async fn init_role_user_map(&self, db: &PgPool) -> Result<(), crate::errors::Error> {
         self.role_user_map.lock().await.init(db).await
     }
 
     /// Get a [GatewayUser] by its Snowflake ID if it already exists in the store, or create a new
     /// [GatewayUser] if it does not exist using [ConnectedUsers::new_user].
-    pub async fn get_user_or_new(&self, id: Snowflake) -> Arc<Mutex<GatewayUser>> {
+    ///
+    /// ## Locking
+    ///
+    /// This method always acquires a read lock on `store`. If the user does not yet exist in the
+    /// store, a `write` lock will be acquired additionally.
+    pub fn get_user_or_new(&self, id: Snowflake) -> Arc<Mutex<GatewayUser>> {
         let inner = self.store.clone();
         log::trace!(target: "symfonia::gateway::types::ConnectedUsers::get_user_or_new", "Acquiring lock on ConnectedUsersInner...");
-        let mut lock = inner.lock().await;
+        let mut lock = inner.read();
         log::trace!(target: "symfonia::gateway::types::ConnectedUsers::get_user_or_new", "Lock acquired!");
         if let Some(user) = lock.users.get(&id) {
             log::trace!(target: "symfonia::gateway::types::ConnectedUsers::get_user_or_new", "Found user {id} in store");
@@ -301,44 +315,59 @@ impl ConnectedUsers {
         } else {
             drop(lock);
             log::trace!(target: "symfonia::gateway::types::ConnectedUsers::get_user_or_new", "Creating new user {id} in store");
-            self.new_user(HashMap::new(), id, Vec::new()).await
+            self.new_user(HashMap::new(), id, Vec::new())
         }
     }
 
-    pub fn inner(&self) -> Arc<Mutex<ConnectedUsersInner>> {
+    pub fn inner(&self) -> Arc<RwLock<ConnectedUsersInner>> {
         self.store.clone()
     }
 
     /// Register a new [GatewayUser] with the [ConnectedUsers] instance.
-    async fn register(&self, user: GatewayUser) -> Arc<Mutex<GatewayUser>> {
+    ///
+    /// ## Locking
+    ///
+    /// This method acquires a write lock on `store` for the duration of its runtime.
+    fn register(&self, user: GatewayUser) -> Arc<Mutex<GatewayUser>> {
         log::trace!(target: "symfonia::gateway::types::ConnectedUsers::register", "Acquiring lock on ConnectedUsersInner...");
         self.store
-            .lock()
-            .await
+            .write()
             .inboxes
             .insert(user.id, user.outbox.clone());
         log::trace!(target: "symfonia::gateway::types::ConnectedUsers::register", "Lock acquired!");
         let id = user.id;
         let arc = Arc::new(Mutex::new(user));
-        self.store.lock().await.users.insert(id, arc.clone());
+        self.store.write().users.insert(id, arc.clone());
         log::trace!(target: "symfonia::gateway::types::ConnectedUsers::register", "Inserted user {id} into users store");
         arc
     }
 
     /// Deregister a [GatewayUser] from the [ConnectedUsers] instance.
-    pub async fn deregister(&self, user: &GatewayUser) {
-        self.store.lock().await.inboxes.remove(&user.id);
-        self.store.lock().await.users.remove(&user.id);
+    ///
+    /// ## Locking
+    ///
+    /// This method acquires a write lock on `store` for the duration of its runtime.
+    pub fn deregister(&self, user: &GatewayUser) {
+        self.store.write().inboxes.remove(&user.id);
+        self.store.write().users.remove(&user.id);
     }
 
     /// Get the "inbox" of a [GatewayUser] by its Snowflake ID.
+    ///
+    /// ## Locking
+    ///
+    /// This method acquires a read lock on `store` for the duration of its runtime.
     pub async fn inbox(&self, id: Snowflake) -> Option<tokio::sync::broadcast::Sender<Event>> {
-        self.store.lock().await.inboxes.get(&id).cloned()
+        self.store.read().inboxes.get(&id).cloned()
     }
 
     /// Create a new [GatewayUser] with the given Snowflake ID, [GatewayClient]s, and subscriptions.
     /// Registers the new [GatewayUser] with the [ConnectedUsers] instance.
-    pub async fn new_user(
+    ///
+    /// ## Locking
+    ///
+    /// This method calls [Self::register]. Refer to that method for information on locking behavior.
+    pub fn new_user(
         &self,
         clients: HashMap<String, Arc<Mutex<GatewayClient>>>,
         id: Snowflake,
@@ -353,11 +382,15 @@ impl ConnectedUsers {
             subscriptions,
             connected_users: self.clone(),
         };
-        self.register(user).await
+        self.register(user)
     }
 
     /// Create a new [GatewayClient] with the given [GatewayUser], [Connection], and other data.
     /// Also handles appending the new [GatewayClient] to the [GatewayUser]'s list of clients.
+    ///
+    /// ## Locking
+    ///
+    /// This method acquires a lock on the [Arc<Mutex<GatewayUser>>] that is passed as `user`.
     #[allow(clippy::too_many_arguments)]
     pub async fn new_client(
         &self,
@@ -379,12 +412,11 @@ impl ConnectedUsers {
             last_sequence,
         };
         let arc = Arc::new(Mutex::new(client));
-        log::trace!(target: "symfonia::gateway::ConnectedUsers::new_client", "Acquiring lock...");
+        log::trace!(target: "symfonia::gateway::ConnectedUsers::new_client", "Acquiring lock on user...");
         user.lock()
             .await
             .clients
             .insert(session_token.to_string(), arc.clone());
-        // TODO: Deadlock here
         log::trace!(target: "symfonia::gateway::ConnectedUsers::new_client", "Lock acquired!");
         log::trace!(target: "symfonia::gateway::ConnectedUsers::new_client", "Inserted into map. Done.");
         arc
@@ -406,6 +438,8 @@ impl PartialEq for GatewayUser {
 impl Eq for GatewayUser {}
 
 impl GatewayClient {
+    /// Disconnects a [GatewayClient] properly, including un-registering it from the memory store
+    /// and creating a resumeable session.
     pub async fn die(mut self, connected_users: ConnectedUsers) {
         self.kill_send.send(()).unwrap();
         let disconnect_info = DisconnectInfo {
@@ -420,19 +454,19 @@ impl GatewayClient {
             .await
             .clients
             .remove(&self.session_token);
-        connected_users
-            .deregister(self.parent.upgrade().unwrap().lock().await.deref())
-            .await;
+        connected_users.deregister(self.parent.upgrade().unwrap().lock().await.deref());
         connected_users
             .store
-            .lock()
-            .await
+            .write()
             .resumeable_clients_store
             .insert(self.session_token.clone(), disconnect_info);
     }
 }
 
 #[derive(Default, Clone)]
+/// `BulkMessageBuilder` can be used to build and send GatewayMessages to the inboxes of all
+/// currently connected [GatewayClients](GatewayClient). Recipients can be added either via
+/// User or Role snowflake IDs.
 pub struct BulkMessageBuilder {
     users: Vec<Snowflake>,
     roles: Vec<Snowflake>,

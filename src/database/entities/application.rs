@@ -6,8 +6,10 @@
 
 use super::*;
 
-use std::ops::{Deref, DerefMut};
-use std::sync::Arc;
+use std::{
+    ops::{Deref, DerefMut},
+    sync::Arc,
+};
 
 use chorus::types::{ApplicationFlags, Snowflake};
 use parking_lot::RwLock;

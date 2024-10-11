@@ -11,10 +11,10 @@ name: rust-clippy analyze
 
 on:
   push:
-    branches: [ "main", "preserve/*" ]
+    branches: ["main", "preserve/*"]
   pull_request:
     # The branches below must be a subset of the branches above
-    branches: [ "main", "dev" ]
+    branches: ["main", "dev"]
 
 jobs:
   rust-clippy-analyze:
@@ -33,12 +33,21 @@ jobs:
         with:
           components: clippy
 
-      - name: Install required cargo
-        run: cargo install clippy-sarif sarif-fmt
+      - name: cargo binstall
+        run: curl -L --proto '=https' --tlsv1.3 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+
+      - name: Install required utils
+        run: |
+          cargo binstall clippy-sarif --no-confirm --force
+          cargo binstall sarif-fmt --no-confirm --force
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: "true"
+          prefix-key: "v0a-rust-clippy"
 
       - name: Run rust-clippy
-        run:
-          cargo clippy
+        run: cargo clippy
           --all-features
           --message-format=json | clippy-sarif | tee rust-clippy-results.sarif | sarif-fmt
         continue-on-error: true

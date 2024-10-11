@@ -1,13 +1,10 @@
-use std::sync::Arc;
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use chorus::types::{GatewayHeartbeat, GatewaySendPayload};
 use futures::StreamExt;
 use serde_json::from_str;
-use tokio::sync::Mutex;
-use tokio::time::sleep;
-use tokio_tungstenite::tungstenite::protocol::CloseFrame;
-use tokio_tungstenite::tungstenite::Message;
+use tokio::{sync::Mutex, time::sleep};
+use tokio_tungstenite::tungstenite::{protocol::CloseFrame, Message};
 
 use crate::errors::Error;
 

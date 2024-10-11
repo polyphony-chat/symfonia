@@ -4,8 +4,7 @@
  *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use std::error::Error as StdError;
-use std::fmt::Display;
+use std::{error::Error as StdError, fmt::Display};
 
 use chorus::types::{APIError, AuthError, Rights};
 use poem::{error::ResponseError, http::StatusCode, Response};
