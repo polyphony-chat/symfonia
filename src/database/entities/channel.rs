@@ -392,3 +392,15 @@ impl Channel {
         .map_err(Error::Sqlx)
     }
 }
+
+#[cfg(test)]
+mod channel_unit_tests {
+    #[sqlx::test(fixtures(path = "../../../fixtures", scripts("private_channels")))]
+    async fn get_private_of_user(pool: sqlx::PgPool) {
+        let channels = super::Channel::get_private_of_user(7250861145186111490.into(), &pool)
+            .await
+            .unwrap();
+        assert_eq!(channels.len(), 1);
+        assert_eq!(channels[0].id, 7250859537236758528.into());
+    }
+}
