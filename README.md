@@ -28,6 +28,15 @@ Whether you are using Docker or not, you will need to have the following install
 
 - [Rust](https://www.rust-lang.org/tools/install)
 - [git](https://git-scm.com/downloads)
+- [`sqlx-cli`](https://crates.io/crates/sqlx-cli)
+
+If your development environment is hosted on a Windows machine, please additionally make sure that
+you have a bash shell available to execute pre-commit hooks. This can be done by installing
+[Git Bash](https://git-scm.com/downloads) or
+[Windows Subsystem for Linux 2](https://learn.microsoft.com/en-us/windows/wsl/install) and, additionally,
+configuring your IDE correctly.
+
+See the instructions below for guidance on how to run the project.
 
 ### Non-Docker
 
