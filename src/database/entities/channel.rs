@@ -379,7 +379,6 @@ impl Channel {
     }
 
     /// Get all private channels of a user. Only queries channels which are not marked as closed.
-    // TODO: Write test for this
     pub async fn get_private_of_user(user_id: Snowflake, db: &PgPool) -> Result<Vec<Self>, Error> {
         sqlx::query_as(
             "SELECT c.* FROM recipients r
