@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use chorus::types::{GatewayReady, Snowflake, UserNote};
+use serde_json::json;
 use sqlx::PgPool;
 
 use crate::database::entities::{Channel, Guild, Note, Relationship};
@@ -51,36 +52,18 @@ pub async fn create_ready(user_id: Snowflake, db: &PgPool) -> Result<GatewayRead
     // session disconnect. This is a temporary solution.
     let session_id = Snowflake::generate().to_string();
 
+    // TODO: There are a lot of missing fields here. Ideally, all of the fields should be
+    // populated with the correct data.
     let ready = GatewayReady {
-        analytics_token: todo!(),
-        auth_session_id_hash: todo!(),
-        country_code: todo!(),
-        api_version: todo!(),
-        user: user.to_inner(),
+        user: user.clone().to_inner(),
         guilds,
-        presences: todo!(),
-        sessions: todo!(),
         session_id,
-        session_type: todo!(),
-        resume_gateway_url: todo!(),
-        shard: todo!(),
-        user_settings: Some(*user.settings),
-        user_settings_proto: todo!(),
+        user_settings: Some(user.settings.into_inner()),
         relationships,
-        friend_suggestion_count: todo!(),
         private_channels,
         notes,
-        merged_presences: todo!(),
-        users: todo!(),
-        auth_token: todo!(),
-        authenticator_types: todo!(),
-        required_action: todo!(),
-        geo_ordered_rtc_regions: todo!(),
-        tutorial: todo!(),
-        api_code_version: todo!(),
-        experiments: todo!(),
-        guild_experiments: todo!(),
-        _trace: todo!(),
+        ..Default::default()
     };
-    todo!()
+    log::debug!(target: "symfonia::gateway::ready::create_ready", "Created READY json payload: {:#?}", json!(ready));
+    Ok(ready)
 }
