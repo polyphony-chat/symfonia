@@ -1,8 +1,8 @@
 use std::{collections::HashMap, sync::Arc};
 
 use chorus::types::{
-    GatewayHeartbeat, GatewayHeartbeatAck, GatewayHello, GatewayIdentifyPayload, GatewayResume,
-    Snowflake,
+    GatewayHeartbeat, GatewayHeartbeatAck, GatewayHello, GatewayIdentifyPayload, GatewayReady,
+    GatewayResume, Snowflake,
 };
 use futures::{SinkExt, StreamExt};
 use log::{debug, trace};
@@ -22,6 +22,7 @@ use tokio_tungstenite::{
     },
 };
 
+use crate::gateway::ready::create_ready;
 use crate::{
     database::entities::Config,
     errors::{Error, GatewayError},
@@ -133,7 +134,7 @@ pub(super) async fn establish_connection(
         // connection establishment process. :(
         new_connection = finish_connecting(heartbeat_handler_handle, state)
          => {
-            log::trace!(target: "symfonia::gateway::establish_connection", "Connection established. We are done here");
+            log::trace!(target: "symfonia::gateway::establish_connection", "Connection established.");
             new_connection
         }
     }
@@ -266,6 +267,16 @@ async fn finish_connecting(
                     return Err(GatewayError::Internal.into());
                 }
             }
+            let formatted_payload = GatewayPayload::<GatewayReady> {
+                op_code: 0,
+                event_data: create_ready(claims.id, &state.db).await?,
+                sequence_number: None,
+                event_name: Some("READY".to_string()),
+            };
+            state
+                .connection
+                .sender
+                .send(Message::Text(json!(formatted_payload).to_string()))?;
             log::trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Done!");
             return Ok(NewWebSocketConnection {
                 user: gateway_user,
