@@ -63,6 +63,7 @@ pub(super) async fn gateway_task(
 
 /// Convert a [Message] into an [Event], if the event message is a valid event that a server can
 /// expect to receive from a client.
+// TODO this function sucks and i wanna delete it
 fn received_message_to_event(message: Message) -> Result<Event, Error> {
     if !message.is_text() {
         return Err(Error::Custom(
