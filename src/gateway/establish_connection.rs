@@ -65,8 +65,8 @@ pub(super) async fn establish_connection(
 ) -> Result<NewWebSocketConnection, Error> {
     trace!(target: "symfonia::gateway::establish_connection::establish_connection", "Beginning process to establish connection (handshake)");
     // Accept the connection and split it into its sender and receiver halves.
-    let ws_stream = accept_async(stream).await?;
-    let mut connection: WebSocketConnection = ws_stream.split().into();
+    let ws_stream = accept_async(stream).await?.split();
+    let mut connection = WebSocketConnection::new(ws_stream.0, ws_stream.1);
     trace!(target: "symfonia::gateway::establish_connection::establish_connection", "Sending hello message");
     // Hello message
     match connection
@@ -87,11 +87,6 @@ pub(super) async fn establish_connection(
     // Inter-task communication channels. The main gateway task will send received heartbeat related messages
     // to the `HeartbeatHandler` task via the `message_send` channel, which the `HeartbeatHandler` task will
     // then receive and handle.
-    //
-    // TODO: The HeartbeatHandler theoretically does not need a full connection object, but either only the sender
-    // or just these message_* channels. Using the latter approach, the HeartbeatHandler could send Heartbeat
-    // responses to the main gateway task, which in turn would send them to the client. This way, the
-    // connection object might not need to be wraped in an `Arc<Mutex<Connection>>`.
     let (message_send, message_receive) = tokio::sync::broadcast::channel::<GatewayHeartbeat>(4);
 
     let sequence_number = Arc::new(Mutex::new(0u64)); // TODO: Actually use this, as in: Increment it when needed. Currently, this is not being done.
