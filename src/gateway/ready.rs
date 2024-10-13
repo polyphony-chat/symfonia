@@ -47,6 +47,10 @@ pub async fn create_ready(user_id: Snowflake, db: &PgPool) -> Result<GatewayRead
         notes.insert(note.target_id, note.content);
     }
 
+    // TODO: The session ID needs to be stored in the database and also removed on
+    // session disconnect. This is a temporary solution.
+    let session_id = Snowflake::generate().to_string();
+
     let ready = GatewayReady {
         analytics_token: todo!(),
         auth_session_id_hash: todo!(),
@@ -56,7 +60,7 @@ pub async fn create_ready(user_id: Snowflake, db: &PgPool) -> Result<GatewayRead
         guilds,
         presences: todo!(),
         sessions: todo!(),
-        session_id: todo!(),
+        session_id,
         session_type: todo!(),
         resume_gateway_url: todo!(),
         shard: todo!(),
