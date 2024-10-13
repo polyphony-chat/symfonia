@@ -1,7 +1,9 @@
 use std::ops::{Deref, DerefMut};
 
-use chorus::types::UserNote;
+use chorus::types::{Snowflake, UserNote};
 use serde::{Deserialize, Serialize};
+
+use crate::errors::Error;
 
 #[derive(sqlx::FromRow, Debug, Clone, Serialize, Deserialize)]
 /// A note that a user has written about another user. The target user may be the author of the note.
@@ -35,5 +37,32 @@ impl Note {
 
     pub fn as_inner_mut(&mut self) -> &mut UserNote {
         &mut self.inner
+    }
+
+    /// Retrieve all notes from a user by their ID
+    pub async fn get_by_author_id(
+        author_id: Snowflake,
+        db: &sqlx::PgPool,
+    ) -> Result<Vec<Self>, Error> {
+        sqlx::query_as("SELECT * from notes WHERE owner_id = $1")
+            .bind(author_id)
+            .fetch_all(db)
+            .await
+            .map_err(Error::Sqlx)
+    }
+}
+
+#[cfg(test)]
+mod note_unit_tests {
+    #[sqlx::test(fixtures(path = "../../../fixtures", scripts("notes")))]
+    async fn test_get_by_author_id(db: sqlx::PgPool) {
+        let notes = super::Note::get_by_author_id(7250861145186111490.into(), &db)
+            .await
+            .unwrap();
+        assert_eq!(notes.len(), 1);
+        let note = notes[0].as_inner();
+        assert_eq!(note.user_id, 7250861145186111490.into());
+        assert_eq!(note.note_user_id, 7250861145186111491.into());
+        assert_eq!(note.note, "This is a note");
     }
 }
