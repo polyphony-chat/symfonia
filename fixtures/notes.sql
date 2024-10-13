@@ -42,7 +42,7 @@ VALUES
 COMMIT;
 
 INSERT INTO notes (
-    content, owner_id, target_id
+    content, author_id, target_id
 )
 VALUES 
     ('This is a note', 7250861145186111490, 7250861145186111491),

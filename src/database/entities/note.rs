@@ -44,7 +44,7 @@ impl Note {
         author_id: Snowflake,
         db: &sqlx::PgPool,
     ) -> Result<Vec<Self>, Error> {
-        sqlx::query_as("SELECT * from notes WHERE owner_id = $1")
+        sqlx::query_as("SELECT * from notes WHERE author_id = $1")
             .bind(author_id)
             .fetch_all(db)
             .await
@@ -61,8 +61,8 @@ mod note_unit_tests {
             .unwrap();
         assert_eq!(notes.len(), 1);
         let note = notes[0].as_inner();
-        assert_eq!(note.user_id, 7250861145186111490.into());
-        assert_eq!(note.note_user_id, 7250861145186111491.into());
-        assert_eq!(note.note, "This is a note");
+        assert_eq!(note.author_id, 7250861145186111490.into());
+        assert_eq!(note.target_id, 7250861145186111491.into());
+        assert_eq!(note.content, "This is a note");
     }
 }
