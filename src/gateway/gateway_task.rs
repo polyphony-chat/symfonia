@@ -1,12 +1,14 @@
 use std::{sync::Arc, time::Duration};
 
-use chorus::types::{GatewayHeartbeat, GatewaySendPayload};
+use chorus::types::{GatewayHeartbeat, GatewaySendPayload, Opcode};
 use futures::StreamExt;
-use serde_json::from_str;
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
+use serde_json::{from_str, json};
 use tokio::{sync::Mutex, time::sleep};
 use tokio_tungstenite::tungstenite::{protocol::CloseFrame, Message};
 
-use crate::errors::Error;
+use crate::errors::{Error, GatewayError};
 
 use super::{Event, GatewayClient, GatewayPayload};
 
@@ -40,7 +42,7 @@ pub(super) async fn gateway_task(
             },
             message_result = connection.receiver.recv() => {
                 match message_result {
-                    Ok(message) => {
+                    Ok(message_of_unknown_type) => {
                         todo!()
                         // TODO: Do something with the event
                     },
@@ -53,6 +55,119 @@ pub(super) async fn gateway_task(
             }
         }
     }
+
+    todo!()
+}
+
+/// Equivalent to
+///
+/// ```rust
+/// Ok(Event::Heartbeat(from_str(&message)?))
+/// ```
+macro_rules! convert_to {
+    ($event_variant:path, $message:expr) => {
+        return Ok($event_variant(from_str(&$message)?))
+    };
+}
+
+/// Takes a message of unknown type as input and tries to figure out what kind of event it is.
+async fn match_message_type(message: Message) -> Result<Event, Error> {
+    let message_as_string = message.to_string();
+    let raw_gateway_payload: GatewayPayload<String> = from_str(&message_as_string)?;
+    match Opcode::try_from(raw_gateway_payload.op_code).map_err(|_| {
+        Error::Gateway(GatewayError::UnexpectedMessage(format!(
+            "Unknown Opcode: {}",
+            raw_gateway_payload.op_code
+        )))
+    })? {
+        Opcode::Heartbeat => return convert_to!(Event::Heartbeat, message_as_string),
+        Opcode::Identify => return convert_to!(Event::Heartbeat, message_as_string),
+        Opcode::PresenceUpdate => convert_to!(Event::PresenceUpdate, message_as_string),
+        Opcode::VoiceStateUpdate => convert_to!(Event::VoiceStateUpdate, message_as_string),
+        Opcode::VoiceServerPing => convert_to!(Event::VoiceServerPing, message_as_string),
+        Opcode::Resume => convert_to!(Event::Resume, message_as_string),
+        Opcode::Reconnect => convert_to!(Event::Reconnect, message_as_string),
+        Opcode::RequestGuildMembers => convert_to!(Event::RequestGuildMembers, message_as_string),
+        Opcode::InvalidSession => convert_to!(Event::InvalidSession, message_as_string),
+        Opcode::Hello => convert_to!(Event::Hello, message_as_string),
+        Opcode::HeartbeatAck => convert_to!(Event::HeartbeatAck, message_as_string),
+        #[allow(deprecated)]
+        Opcode::GuildSync => {
+            return Err(Error::Gateway(GatewayError::UnexpectedMessage(format!(
+                "Deprecated opcode: {}",
+                raw_gateway_payload.op_code
+            ))))
+        }
+        Opcode::CallConnect => convert_to!(Event::CallConnect, message_as_string),
+        Opcode::GuildSubscriptions => convert_to!(Event::GuildSubscriptions, message_as_string),
+        Opcode::LobbyConnect => convert_to!(Event::LobbyConnect, message_as_string),
+        Opcode::LobbyDisconnect => convert_to!(Event::LobbyDisconnect, message_as_string),
+        Opcode::LobbyVoiceStates => convert_to!(Event::LobbyVoiceStates, message_as_string),
+        Opcode::StreamCreate => convert_to!(Event::StreamCreate, message_as_string),
+        Opcode::StreamDelete => convert_to!(Event::StreamDelete, message_as_string),
+        Opcode::StreamWatch => convert_to!(Event::StreamWatch, message_as_string),
+        Opcode::StreamPing => convert_to!(Event::StreamPing, message_as_string),
+        Opcode::StreamSetPaused => convert_to!(Event::StreamSetPaused, message_as_string),
+        #[allow(deprecated)]
+        Opcode::LfgSubscriptions => {
+            return Err(Error::Gateway(GatewayError::UnexpectedMessage(format!(
+                "Deprecated opcode {} will not be processed",
+                raw_gateway_payload.op_code
+            ))))
+        }
+        #[allow(deprecated)]
+        Opcode::RequestGuildApplicationCommands => {
+            return Err(Error::Gateway(GatewayError::UnexpectedMessage(format!(
+                "Deprecated opcode {} will not be processed",
+                raw_gateway_payload.op_code
+            ))))
+        }
+        Opcode::EmbeddedActivityCreate => {
+            convert_to!(Event::EmbeddedActivityCreate, message_as_string)
+        }
+        Opcode::EmbeddedActivityDelete => {
+            convert_to!(Event::EmbeddedActivityDelete, message_as_string)
+        }
+        Opcode::EmbeddedActivityUpdate => {
+            convert_to!(Event::EmbeddedActivityUpdate, message_as_string)
+        }
+        Opcode::RequestForumUnreads => convert_to!(Event::RequestForumUnreads, message_as_string),
+        Opcode::RemoteCommand => convert_to!(Event::RemoteCommand, message_as_string),
+        Opcode::RequestDeletedEntityIDs => {
+            convert_to!(Event::RequestDeletedEntityIDs, message_as_string)
+        }
+        Opcode::RequestSoundboardSounds => {
+            convert_to!(Event::RequestSoundboardSounds, message_as_string)
+        }
+        Opcode::SpeedTestCreate => convert_to!(Event::SpeedTestCreate, message_as_string),
+        Opcode::SpeedTestDelete => convert_to!(Event::SpeedTestDelete, message_as_string),
+        Opcode::RequestLastMessages => convert_to!(Event::RequestLastMessages, message_as_string),
+        Opcode::SearchRecentMembers => convert_to!(Event::SearchRecentMembers, message_as_string),
+        Opcode::RequestChannelStatuses => {
+            convert_to!(Event::RequestChannelStatuses, message_as_string)
+        }
+        // Dispatch has to be handled differently
+        Opcode::Dispatch => (),
+        o => {
+            return Err(GatewayError::UnexpectedMessage(format!(
+                "Opcode not implemented: {}",
+                o as u8
+            ))
+            .into())
+        }
+    };
+    //TODO Process dispatch events
+
+    let event_name = match raw_gateway_payload.event_name {
+        Some(n) => n,
+        None => {
+            return Err(GatewayError::UnexpectedMessage(format!(
+                "No event name provided on dispatch event: {}",
+                message_as_string
+            ))
+            .into())
+        }
+    };
 
     todo!()
 }

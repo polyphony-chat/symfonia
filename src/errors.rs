@@ -69,8 +69,8 @@ pub enum Error {
 
 #[derive(Debug, thiserror::Error)]
 pub enum GatewayError {
-    #[error("UNEXPECTED_MESSAGE")]
-    UnexpectedMessage,
+    #[error("UNEXPECTED_MESSAGE: {0}")]
+    UnexpectedMessage(String),
     #[error("TIMEOUT")]
     Timeout,
     #[error("CLOSED")]
@@ -254,7 +254,7 @@ impl ResponseError for Error {
             Error::Tungstenite(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::Gateway(err) => match err {
                 // TODO: Check if the associated statuscodes are okay
-                GatewayError::UnexpectedMessage => StatusCode::BAD_REQUEST,
+                GatewayError::UnexpectedMessage(_) => StatusCode::BAD_REQUEST,
                 GatewayError::Timeout => StatusCode::BAD_REQUEST,
                 GatewayError::Closed => StatusCode::BAD_REQUEST,
                 GatewayError::Internal => StatusCode::INTERNAL_SERVER_ERROR,
