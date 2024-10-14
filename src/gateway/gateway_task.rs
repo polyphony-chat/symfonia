@@ -26,6 +26,13 @@ pub(super) async fn gateway_task(
         kill_receive.resubscribe(),
     ));
 
+    /*
+    Before we can respond to any gateway event we receive, we need to figure out what kind of event
+    we are dealing with. For a lot of events, this is easy, because we can just look at the opcode
+    and figure out the event type. For the dispatch events however, we also need to look at the event
+    name to find out the exact dispatch event we are dealing with. -bitfl0wer
+     */
+
     loop {
         tokio::select! {
             _ = kill_receive.recv() => {
