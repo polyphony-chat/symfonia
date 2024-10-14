@@ -295,7 +295,7 @@ async fn finish_connecting(
         } else {
             debug!(target: "symfonia::gateway::establish_connection::finish_connecting", "Message could not be decoded as resume, heartbeat or identify.");
 
-            return Err(GatewayError::UnexpectedMessage.into());
+            return Err(GatewayError::UnexpectedMessage("Received payload other than Heartbeat, Identify or Resume before the connection was established".to_string()).into());
         }
     }
 }
