@@ -4,4 +4,4 @@
 - Find out how sequence numbers work and increment them properly
 - Find out where the stupid opcode 2 send comes from
 - On death of connection: Remove session id from database
-  - Maybe this and the "create resumeable" thing can be consolidated?
+  - Maybe this and the "create resumable" thing can be consolidated?
