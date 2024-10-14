@@ -10,16 +10,17 @@ use std::{
 
 use ::serde::{de::DeserializeOwned, Deserialize, Serialize};
 use chorus::types::{
-    ChannelCreate, ChannelDelete, ChannelUpdate, GatewayHeartbeat, GatewayHello,
-    GatewayIdentifyPayload, GatewayInvalidSession, GatewayReady, GatewayRequestGuildMembers,
-    GatewayResume, GuildBanAdd, GuildBanRemove, GuildCreate, GuildDelete, GuildEmojisUpdate,
-    GuildIntegrationsUpdate, GuildMemberAdd, GuildMemberRemove, GuildMemberUpdate,
-    GuildMembersChunk, GuildUpdate, InteractionCreate, InviteCreate, InviteDelete, MessageCreate,
-    MessageDelete, MessageDeleteBulk, MessageReactionAdd, MessageReactionRemove,
-    MessageReactionRemoveAll, MessageReactionRemoveEmoji, MessageUpdate, PresenceUpdate, Snowflake,
-    StageInstanceCreate, StageInstanceDelete, StageInstanceUpdate, ThreadCreate, ThreadDelete,
-    ThreadListSync, ThreadMemberUpdate, ThreadMembersUpdate, ThreadUpdate, TypingStartEvent,
-    UserUpdate, VoiceServerUpdate, VoiceStateUpdate, WebhooksUpdate,
+    ChannelCreate, ChannelDelete, ChannelUpdate, GatewayHeartbeat, GatewayHeartbeatAck,
+    GatewayHello, GatewayIdentifyPayload, GatewayInvalidSession, GatewayReady,
+    GatewayRequestGuildMembers, GatewayResume, GuildBanAdd, GuildBanRemove, GuildCreate,
+    GuildDelete, GuildEmojisUpdate, GuildIntegrationsUpdate, GuildMemberAdd, GuildMemberRemove,
+    GuildMemberUpdate, GuildMembersChunk, GuildUpdate, InteractionCreate, InviteCreate,
+    InviteDelete, MessageCreate, MessageDelete, MessageDeleteBulk, MessageReactionAdd,
+    MessageReactionRemove, MessageReactionRemoveAll, MessageReactionRemoveEmoji, MessageUpdate,
+    Opcode, PresenceUpdate, Snowflake, StageInstanceCreate, StageInstanceDelete,
+    StageInstanceUpdate, ThreadCreate, ThreadDelete, ThreadListSync, ThreadMemberUpdate,
+    ThreadMembersUpdate, ThreadUpdate, TypingStartEvent, UserUpdate, VoiceServerUpdate,
+    VoiceStateUpdate, WebhooksUpdate,
 };
 use futures::{
     stream::{SplitSink, SplitStream},
@@ -60,71 +61,187 @@ use super::ResumableClientsStore;
 /// TODO: This is only temporary. Replace with this enum from chorus, when it is ready.
 pub enum EventType {
     Hello,
-    Ready,
     Heartbeat,
+    Dispatch,
+    Identify,
     Resume,
     InvalidSession,
-    ChannelCreate,
-    ChannelUpdate,
-    ChannelDelete,
-    ChannelPinsUpdate,
-    ThreadCreate,
-    ThreadUpdate,
-    ThreadDelete,
-    ThreadListSync,
-    ThreadMemberUpdate,
-    ThreadMembersUpdate,
-    GuildCreate,
-    GuildUpdate,
-    GuildDelete,
-    GuildBanAdd,
-    GuildBanRemove,
-    GuildEmojisUpdate,
-    GuildIntegrationsUpdate,
-    GuildMemberAdd,
-    GuildMemberRemove,
-    GuildMemberUpdate,
-    GuildMembersChunk,
-    GuildRoleCreate,
-    GuildRoleUpdate,
-    GuildRoleDelete,
-    IntegrationCreate,
-    IntegrationUpdate,
-    IntegrationDelete,
-    InteractionCreate,
-    InviteCreate,
-    InviteDelete,
-    MessageCreate,
-    MessageUpdate,
-    MessageDelete,
-    MessageDeleteBulk,
-    MessageReactionAdd,
-    MessageReactionRemove,
-    MessageReactionRemoveAll,
-    MessageReactionRemoveEmoji,
     PresenceUpdate,
-    TypingStart,
-    UserUpdate,
     VoiceStateUpdate,
-    VoiceServerUpdate,
-    WebhooksUpdate,
-    StageInstanceCreate,
-    StageInstanceUpdate,
-    StageInstanceDelete,
-    GuildMembersRequest,
+    VoiceServerPing,
+    Reconnect,
+    RequestGuildMembers,
+    HeartbeatAck,
+    CallConnect,
+    GuildSubscriptions,
+    LobbyConnect,
+    LobbyDisconnect,
+    LobbyVoiceStates,
+    StreamCreate,
+    StreamDelete,
+    StreamWatch,
+    StreamPing,
+    StreamSetPaused,
+    EmbeddedActivityCreate,
+    EmbeddedActivityUpdate,
+    EmbeddedActivityDelete,
+    RequestForumUnreads,
+    RemoteCommand,
+    RequestDeletedEntityIDs,
+    RequestSoundboardSounds,
+    SpeedTestCreate,
+    SpeedTestDelete,
+    RequestLastMessages,
+    SearchRecentMembers,
+    RequestChannelStatuses,
+}
+
+impl EventType {
+    pub fn op_code(&self) -> Opcode {
+        match self {
+            Self::Hello => Opcode::Hello,
+            Self::Heartbeat => Opcode::Heartbeat,
+            Self::Dispatch => Opcode::Dispatch,
+            Self::Identify => Opcode::Identify,
+            Self::Resume => Opcode::Resume,
+            Self::InvalidSession => Opcode::InvalidSession,
+            Self::PresenceUpdate => Opcode::PresenceUpdate,
+            Self::VoiceStateUpdate => Opcode::VoiceStateUpdate,
+            Self::VoiceServerPing => Opcode::VoiceServerPing,
+            Self::Reconnect => Opcode::Reconnect,
+            Self::RequestGuildMembers => Opcode::RequestGuildMembers,
+            Self::HeartbeatAck => Opcode::HeartbeatAck,
+            Self::CallConnect => Opcode::CallConnect,
+            Self::GuildSubscriptions => Opcode::GuildSubscriptions,
+            Self::LobbyConnect => Opcode::LobbyConnect,
+            Self::LobbyDisconnect => Opcode::LobbyDisconnect,
+            Self::LobbyVoiceStates => Opcode::LobbyVoiceStates,
+            Self::StreamCreate => Opcode::StreamCreate,
+            Self::StreamDelete => Opcode::StreamDelete,
+            Self::StreamWatch => Opcode::StreamWatch,
+            Self::StreamPing => Opcode::StreamPing,
+            Self::StreamSetPaused => Opcode::StreamSetPaused,
+            Self::EmbeddedActivityCreate => Opcode::EmbeddedActivityCreate,
+            Self::EmbeddedActivityUpdate => Opcode::EmbeddedActivityUpdate,
+            Self::EmbeddedActivityDelete => Opcode::EmbeddedActivityDelete,
+            Self::RequestForumUnreads => Opcode::RequestForumUnreads,
+            Self::RemoteCommand => Opcode::RemoteCommand,
+            Self::RequestDeletedEntityIDs => Opcode::RequestDeletedEntityIDs,
+            Self::RequestSoundboardSounds => Opcode::RequestSoundboardSounds,
+            Self::SpeedTestCreate => Opcode::SpeedTestCreate,
+            Self::SpeedTestDelete => Opcode::SpeedTestDelete,
+            Self::RequestLastMessages => Opcode::RequestLastMessages,
+            Self::SearchRecentMembers => Opcode::SearchRecentMembers,
+            Self::RequestChannelStatuses => Opcode::RequestChannelStatuses,
+        }
+    }
+}
+
+impl From<EventType> for Opcode {
+    fn from(event_type: EventType) -> Self {
+        event_type.op_code()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-/// This enum is supposed to represent all possible events that can be received from or sent to the
-/// gateway. If a variant is missing, it might just be because we haven't caught it yet.
+/// This enum is supposed to represent all possible event types/payloads that can be received from
+/// or sent to the gateway.
+///
+/// ## Incompleteness Warning
+///
+/// The types `T` in `GatewayPayload<T>` might not yet be correct or complete for all events. Please
+/// feel free to file a PR or an issue should you find any discrepancies.
 #[serde(rename_all = "PascalCase")]
 pub enum Event {
     Hello(GatewayHello),
     Heartbeat(GatewayHeartbeat),
-    Ready(GatewayPayload<GatewayReady>),
+    Dispatch(DispatchEvent),
     Identify(GatewayPayload<GatewayIdentifyPayload>),
     Resume(GatewayPayload<GatewayResume>),
     InvalidSession(GatewayPayload<GatewayInvalidSession>),
+    PresenceUpdate(GatewayPayload<PresenceUpdate>),
+    VoiceStateUpdate(GatewayPayload<VoiceStateUpdate>),
+    VoiceServerPing(GatewayPayload<VoiceServerUpdate>),
+    Reconnect(GatewayPayload<()>),
+    RequestGuildMembers(GatewayPayload<GatewayRequestGuildMembers>),
+    HeartbeatAck(GatewayPayload<GatewayHeartbeatAck>),
+    CallConnect(GatewayPayload<()>),
+    GuildSubscriptions(GatewayPayload<()>),
+    LobbyConnect(GatewayPayload<()>),
+    LobbyDisconnect(GatewayPayload<()>),
+    LobbyVoiceStates(GatewayPayload<()>),
+    StreamCreate(GatewayPayload<()>),
+    StreamDelete(GatewayPayload<()>),
+    StreamWatch(GatewayPayload<()>),
+    StreamPing(GatewayPayload<()>),
+    StreamSetPaused(GatewayPayload<()>),
+    EmbeddedActivityCreate(GatewayPayload<()>),
+    EmbeddedActivityUpdate(GatewayPayload<()>),
+    EmbeddedActivityDelete(GatewayPayload<()>),
+    RequestForumUnreads(GatewayPayload<()>),
+    RemoteCommand(GatewayPayload<()>),
+    RequestDeletedEntityIDs(GatewayPayload<()>),
+    RequestSoundboardSounds(GatewayPayload<()>),
+    SpeedTestCreate(GatewayPayload<()>),
+    SpeedTestDelete(GatewayPayload<()>),
+    RequestLastMessages(GatewayPayload<()>),
+    SearchRecentMembers(GatewayPayload<()>),
+    RequestChannelStatuses(GatewayPayload<()>),
+}
+
+impl Event {
+    pub fn op_code(&self) -> Opcode {
+        match self {
+            Event::Hello(gateway_hello) => Opcode::Hello,
+            Event::Heartbeat(gateway_heartbeat) => Opcode::Heartbeat,
+            Event::Dispatch(dispatch_event) => Opcode::Dispatch,
+            Event::Identify(gateway_payload) => Opcode::Identify,
+            Event::Resume(gateway_payload) => Opcode::Resume,
+            Event::InvalidSession(gateway_payload) => Opcode::InvalidSession,
+            Event::PresenceUpdate(gateway_payload) => Opcode::PresenceUpdate,
+            Event::VoiceStateUpdate(gateway_payload) => Opcode::VoiceStateUpdate,
+            Event::VoiceServerPing(gateway_payload) => Opcode::VoiceServerPing,
+            Event::Reconnect(gateway_payload) => Opcode::Reconnect,
+            Event::RequestGuildMembers(gateway_payload) => Opcode::RequestGuildMembers,
+            Event::HeartbeatAck(gateway_payload) => Opcode::HeartbeatAck,
+            Event::CallConnect(gateway_payload) => Opcode::CallConnect,
+            Event::GuildSubscriptions(gateway_payload) => Opcode::GuildSubscriptions,
+            Event::LobbyConnect(gateway_payload) => Opcode::LobbyConnect,
+            Event::LobbyDisconnect(gateway_payload) => Opcode::LobbyDisconnect,
+            Event::LobbyVoiceStates(gateway_payload) => Opcode::LobbyVoiceStates,
+            Event::StreamCreate(gateway_payload) => Opcode::StreamCreate,
+            Event::StreamDelete(gateway_payload) => Opcode::StreamDelete,
+            Event::StreamWatch(gateway_payload) => Opcode::StreamWatch,
+            Event::StreamPing(gateway_payload) => Opcode::StreamPing,
+            Event::StreamSetPaused(gateway_payload) => Opcode::StreamSetPaused,
+            Event::EmbeddedActivityCreate(gateway_payload) => Opcode::EmbeddedActivityCreate,
+            Event::EmbeddedActivityUpdate(gateway_payload) => Opcode::EmbeddedActivityUpdate,
+            Event::EmbeddedActivityDelete(gateway_payload) => Opcode::EmbeddedActivityDelete,
+            Event::RequestForumUnreads(gateway_payload) => Opcode::RequestForumUnreads,
+            Event::RemoteCommand(gateway_payload) => Opcode::RemoteCommand,
+            Event::RequestDeletedEntityIDs(gateway_payload) => Opcode::RequestDeletedEntityIDs,
+            Event::RequestSoundboardSounds(gateway_payload) => Opcode::RequestSoundboardSounds,
+            Event::SpeedTestCreate(gateway_payload) => Opcode::SpeedTestCreate,
+            Event::SpeedTestDelete(gateway_payload) => Opcode::SpeedTestDelete,
+            Event::RequestLastMessages(gateway_payload) => Opcode::RequestLastMessages,
+            Event::SearchRecentMembers(gateway_payload) => Opcode::SearchRecentMembers,
+            Event::RequestChannelStatuses(gateway_payload) => Opcode::RequestChannelStatuses,
+        }
+    }
+}
+
+impl From<Event> for u8 {
+    fn from(value: Event) -> Self {
+        value.op_code() as u8
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+/// This enum is supposed to represent all possible dispatch events that can be received from or sent to the
+/// gateway. If a variant is missing, it might just be because we haven't caught it yet.
+#[serde(rename_all = "PascalCase")]
+pub enum DispatchEvent {
+    Ready(GatewayPayload<GatewayReady>),
     ChannelCreate(GatewayPayload<ChannelCreate>),
     ChannelUpdate(GatewayPayload<ChannelUpdate>),
     ChannelDelete(GatewayPayload<ChannelDelete>),
