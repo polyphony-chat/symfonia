@@ -27,9 +27,6 @@ pub(super) async fn gateway_task(
     ));
 
     loop {
-        // TODO remove sleep and implement stuff
-        sleep(Duration::from_secs(3600)).await;
-        todo!();
         tokio::select! {
             _ = kill_receive.recv() => {
                 return;
