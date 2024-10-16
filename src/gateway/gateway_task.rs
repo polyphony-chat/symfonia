@@ -66,7 +66,7 @@ pub(super) async fn gateway_task(
 /// ```
 macro_rules! convert_to {
     ($event_variant:path, $message:expr) => {
-        return Ok($event_variant(from_str(&$message)?))
+        Ok($event_variant(from_str(&$message)?))
     };
 }
 
@@ -82,15 +82,17 @@ async fn match_message_type(message: Message) -> Result<Event, Error> {
     })? {
         Opcode::Heartbeat => return convert_to!(Event::Heartbeat, message_as_string),
         Opcode::Identify => return convert_to!(Event::Heartbeat, message_as_string),
-        Opcode::PresenceUpdate => convert_to!(Event::PresenceUpdate, message_as_string),
-        Opcode::VoiceStateUpdate => convert_to!(Event::VoiceStateUpdate, message_as_string),
-        Opcode::VoiceServerPing => convert_to!(Event::VoiceServerPing, message_as_string),
-        Opcode::Resume => convert_to!(Event::Resume, message_as_string),
-        Opcode::Reconnect => convert_to!(Event::Reconnect, message_as_string),
-        Opcode::RequestGuildMembers => convert_to!(Event::RequestGuildMembers, message_as_string),
-        Opcode::InvalidSession => convert_to!(Event::InvalidSession, message_as_string),
-        Opcode::Hello => convert_to!(Event::Hello, message_as_string),
-        Opcode::HeartbeatAck => convert_to!(Event::HeartbeatAck, message_as_string),
+        Opcode::PresenceUpdate => return convert_to!(Event::PresenceUpdate, message_as_string),
+        Opcode::VoiceStateUpdate => return convert_to!(Event::VoiceStateUpdate, message_as_string),
+        Opcode::VoiceServerPing => return convert_to!(Event::VoiceServerPing, message_as_string),
+        Opcode::Resume => return convert_to!(Event::Resume, message_as_string),
+        Opcode::Reconnect => return convert_to!(Event::Reconnect, message_as_string),
+        Opcode::RequestGuildMembers => {
+            return convert_to!(Event::RequestGuildMembers, message_as_string)
+        }
+        Opcode::InvalidSession => return convert_to!(Event::InvalidSession, message_as_string),
+        Opcode::Hello => return convert_to!(Event::Hello, message_as_string),
+        Opcode::HeartbeatAck => return convert_to!(Event::HeartbeatAck, message_as_string),
         #[allow(deprecated)]
         Opcode::GuildSync => {
             return Err(Error::Gateway(GatewayError::UnexpectedMessage(format!(
@@ -98,16 +100,18 @@ async fn match_message_type(message: Message) -> Result<Event, Error> {
                 raw_gateway_payload.op_code
             ))))
         }
-        Opcode::CallConnect => convert_to!(Event::CallConnect, message_as_string),
-        Opcode::GuildSubscriptions => convert_to!(Event::GuildSubscriptions, message_as_string),
-        Opcode::LobbyConnect => convert_to!(Event::LobbyConnect, message_as_string),
-        Opcode::LobbyDisconnect => convert_to!(Event::LobbyDisconnect, message_as_string),
-        Opcode::LobbyVoiceStates => convert_to!(Event::LobbyVoiceStates, message_as_string),
-        Opcode::StreamCreate => convert_to!(Event::StreamCreate, message_as_string),
-        Opcode::StreamDelete => convert_to!(Event::StreamDelete, message_as_string),
-        Opcode::StreamWatch => convert_to!(Event::StreamWatch, message_as_string),
-        Opcode::StreamPing => convert_to!(Event::StreamPing, message_as_string),
-        Opcode::StreamSetPaused => convert_to!(Event::StreamSetPaused, message_as_string),
+        Opcode::CallConnect => return convert_to!(Event::CallConnect, message_as_string),
+        Opcode::GuildSubscriptions => {
+            return convert_to!(Event::GuildSubscriptions, message_as_string)
+        }
+        Opcode::LobbyConnect => return convert_to!(Event::LobbyConnect, message_as_string),
+        Opcode::LobbyDisconnect => return convert_to!(Event::LobbyDisconnect, message_as_string),
+        Opcode::LobbyVoiceStates => return convert_to!(Event::LobbyVoiceStates, message_as_string),
+        Opcode::StreamCreate => return convert_to!(Event::StreamCreate, message_as_string),
+        Opcode::StreamDelete => return convert_to!(Event::StreamDelete, message_as_string),
+        Opcode::StreamWatch => return convert_to!(Event::StreamWatch, message_as_string),
+        Opcode::StreamPing => return convert_to!(Event::StreamPing, message_as_string),
+        Opcode::StreamSetPaused => return convert_to!(Event::StreamSetPaused, message_as_string),
         #[allow(deprecated)]
         Opcode::LfgSubscriptions => {
             return Err(Error::Gateway(GatewayError::UnexpectedMessage(format!(
@@ -123,28 +127,34 @@ async fn match_message_type(message: Message) -> Result<Event, Error> {
             ))))
         }
         Opcode::EmbeddedActivityCreate => {
-            convert_to!(Event::EmbeddedActivityCreate, message_as_string)
+            return convert_to!(Event::EmbeddedActivityCreate, message_as_string)
         }
         Opcode::EmbeddedActivityDelete => {
-            convert_to!(Event::EmbeddedActivityDelete, message_as_string)
+            return convert_to!(Event::EmbeddedActivityDelete, message_as_string)
         }
         Opcode::EmbeddedActivityUpdate => {
-            convert_to!(Event::EmbeddedActivityUpdate, message_as_string)
+            return convert_to!(Event::EmbeddedActivityUpdate, message_as_string)
         }
-        Opcode::RequestForumUnreads => convert_to!(Event::RequestForumUnreads, message_as_string),
-        Opcode::RemoteCommand => convert_to!(Event::RemoteCommand, message_as_string),
+        Opcode::RequestForumUnreads => {
+            return convert_to!(Event::RequestForumUnreads, message_as_string)
+        }
+        Opcode::RemoteCommand => return convert_to!(Event::RemoteCommand, message_as_string),
         Opcode::RequestDeletedEntityIDs => {
-            convert_to!(Event::RequestDeletedEntityIDs, message_as_string)
+            return convert_to!(Event::RequestDeletedEntityIDs, message_as_string)
         }
         Opcode::RequestSoundboardSounds => {
-            convert_to!(Event::RequestSoundboardSounds, message_as_string)
+            return convert_to!(Event::RequestSoundboardSounds, message_as_string)
         }
-        Opcode::SpeedTestCreate => convert_to!(Event::SpeedTestCreate, message_as_string),
-        Opcode::SpeedTestDelete => convert_to!(Event::SpeedTestDelete, message_as_string),
-        Opcode::RequestLastMessages => convert_to!(Event::RequestLastMessages, message_as_string),
-        Opcode::SearchRecentMembers => convert_to!(Event::SearchRecentMembers, message_as_string),
+        Opcode::SpeedTestCreate => return convert_to!(Event::SpeedTestCreate, message_as_string),
+        Opcode::SpeedTestDelete => return convert_to!(Event::SpeedTestDelete, message_as_string),
+        Opcode::RequestLastMessages => {
+            return convert_to!(Event::RequestLastMessages, message_as_string)
+        }
+        Opcode::SearchRecentMembers => {
+            return convert_to!(Event::SearchRecentMembers, message_as_string)
+        }
         Opcode::RequestChannelStatuses => {
-            convert_to!(Event::RequestChannelStatuses, message_as_string)
+            return convert_to!(Event::RequestChannelStatuses, message_as_string)
         }
         // Dispatch has to be handled differently
         Opcode::Dispatch => (),
