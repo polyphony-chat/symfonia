@@ -41,6 +41,7 @@ use tokio_tungstenite::{
     WebSocketStream,
 };
 
+use crate::errors::Error;
 use crate::{WebSocketReceive, WebSocketSend};
 
 use super::ResumableClientsStore;
@@ -57,9 +58,7 @@ use super::ResumableClientsStore;
     Ord,
     Hash,
 )]
-/// Enum representing all possible* event types that can be received from or sent to the gateway.
-///
-/// TODO: This is only temporary. Replace with this enum from chorus, when it is ready.
+/// Enum representing all possible event types that can be received from or sent to the gateway.
 pub enum EventType {
     Hello,
     Heartbeat,
@@ -459,6 +458,27 @@ impl std::fmt::Display for DispatchEventType {
         let trimmed = serialized.trim_matches('"');
 
         write!(f, "{}", trimmed)
+    }
+}
+
+// TODO(bitfl0wer): Test this!
+impl TryFrom<&str> for DispatchEventType {
+    type Error = Error;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        // (ab)use serde_json to deserialize a Self variant from a SCREAMING_SNAKE_CASE string
+        // we have to wrap the value in quotes to make it a valid JSON string. we also call .trim()
+        // and .to_uppercase() to give a little more leeway to the caller
+        serde_json::from_str::<Self>(&format!("\"{}\"", value.trim().to_uppercase()))
+            .map_err(|e| Error::Custom(e.to_string()))
+    }
+}
+
+impl TryFrom<String> for DispatchEventType {
+    type Error = Error;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        DispatchEventType::try_from(value.as_str())
     }
 }
 
