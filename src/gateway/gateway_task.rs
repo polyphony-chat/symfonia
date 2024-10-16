@@ -9,6 +9,7 @@ use tokio::{sync::Mutex, time::sleep};
 use tokio_tungstenite::tungstenite::{protocol::CloseFrame, Message};
 
 use crate::errors::{Error, GatewayError};
+use crate::gateway::DispatchEventType;
 
 use super::{Event, GatewayClient, GatewayPayload};
 
@@ -156,7 +157,8 @@ async fn match_message_type(message: Message) -> Result<Event, Error> {
         Opcode::RequestChannelStatuses => {
             return convert_to!(Event::RequestChannelStatuses, message_as_string)
         }
-        // Dispatch has to be handled differently
+        // Dispatch has to be handled differently. To not nest further, we just do nothing here,
+        // then handle it outside of this
         Opcode::Dispatch => (),
         o => {
             return Err(GatewayError::UnexpectedMessage(format!(
@@ -166,9 +168,8 @@ async fn match_message_type(message: Message) -> Result<Event, Error> {
             .into())
         }
     };
-    //TODO Process dispatch events
 
-    let event_name = match raw_gateway_payload.event_name {
+    let dispatch_event_name = match raw_gateway_payload.event_name {
         Some(n) => n,
         None => {
             return Err(GatewayError::UnexpectedMessage(format!(
@@ -178,6 +179,8 @@ async fn match_message_type(message: Message) -> Result<Event, Error> {
             .into())
         }
     };
+
+    let dispatch_event_type = DispatchEventType::try_from(dispatch_event_name)?;
 
     todo!()
 }
