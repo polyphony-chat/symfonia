@@ -212,10 +212,9 @@ impl TryFrom<tokio_tungstenite::tungstenite::Message> for Event {
         let message_as_string = message.to_string();
         let raw_gateway_payload: GatewayPayload<String> = from_str(&message_as_string)?;
         match Opcode::try_from(raw_gateway_payload.op_code).map_err(|_| {
-            Error::Gateway(GatewayError::UnexpectedMessage(format!(
-                "Unknown Opcode: {}",
-                raw_gateway_payload.op_code
-            )))
+            Error::Gateway(GatewayError::UnexpectedOpcode(
+                raw_gateway_payload.op_code.into(),
+            ))
         })? {
             Opcode::Heartbeat => return convert_to!(Event::Heartbeat, message_as_string),
             Opcode::Identify => return convert_to!(Event::Heartbeat, message_as_string),
