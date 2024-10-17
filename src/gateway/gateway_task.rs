@@ -71,8 +71,8 @@ macro_rules! convert_to {
     };
 }
 
-/// Takes a message of unknown type as input and tries to figure out what kind of event it is.
-async fn match_message_type(message: Message) -> Result<Event, Error> {
+/// Takes a message of unknown type as input and tries to convert it to an [Event].
+fn match_message_type(message: Message) -> Result<Event, Error> {
     let message_as_string = message.to_string();
     let raw_gateway_payload: GatewayPayload<String> = from_str(&message_as_string)?;
     match Opcode::try_from(raw_gateway_payload.op_code).map_err(|_| {
@@ -180,7 +180,15 @@ async fn match_message_type(message: Message) -> Result<Event, Error> {
         }
     };
 
-    let dispatch_event_type = DispatchEventType::try_from(dispatch_event_name)?;
+    let dispatch_event_type =
+        DispatchEventType::try_from(dispatch_event_name.as_str()).map_err(|_| {
+            GatewayError::UnexpectedMessage(format!(
+                "Unknown dispatch event: {}",
+                dispatch_event_name
+            ))
+        })?;
+
+    // At this point we know what Dispatch event we are dealing with and can try to deserialize it
 
     todo!()
 }
