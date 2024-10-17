@@ -9,7 +9,7 @@ use tokio::{sync::Mutex, time::sleep};
 use tokio_tungstenite::tungstenite::{protocol::CloseFrame, Message};
 
 use crate::errors::{Error, GatewayError};
-use crate::gateway::DispatchEventType;
+use crate::gateway::{DispatchEvent, DispatchEventType};
 
 use super::{Event, GatewayClient, GatewayPayload};
 
@@ -189,6 +189,401 @@ fn match_message_type(message: Message) -> Result<Event, Error> {
         })?;
 
     // At this point we know what Dispatch event we are dealing with and can try to deserialize it
+
+    // TODO: Turn this into a declarative macro if possible to reduce code duplication
+    match dispatch_event_type {
+        DispatchEventType::Ready => {
+            return convert_to!(DispatchEvent::Ready, message_as_string).map(Event::Dispatch)
+        }
+        DispatchEventType::ReadySupplemental => {
+            return convert_to!(DispatchEvent::ReadySupplemental, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::Resumed => {
+            return convert_to!(DispatchEvent::Resumed, message_as_string).map(Event::Dispatch)
+        }
+        DispatchEventType::AuthSessionChange => {
+            return convert_to!(DispatchEvent::AuthSessionChange, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::AuthenticatorCreate => {
+            return convert_to!(DispatchEvent::AuthenticatorCreate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::AuthenticatorUpdate => {
+            return convert_to!(DispatchEvent::AuthenticatorUpdate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::AuthenticatorDelete => {
+            return convert_to!(DispatchEvent::AuthenticatorDelete, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::ApplicationCommandPermissionsUpdate => {
+            return convert_to!(
+                DispatchEvent::ApplicationCommandPermissionsUpdate,
+                message_as_string
+            )
+            .map(Event::Dispatch)
+        }
+        DispatchEventType::AutoModerationRuleCreate => {
+            return convert_to!(DispatchEvent::AutoModerationRuleCreate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::AutoModerationRuleUpdate => {
+            return convert_to!(DispatchEvent::AutoModerationRuleUpdate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::AutoModerationRuleDelete => {
+            return convert_to!(DispatchEvent::AutoModerationRuleDelete, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::AutoModerationActionExecution => {
+            return convert_to!(
+                DispatchEvent::AutoModerationActionExecution,
+                message_as_string
+            )
+            .map(Event::Dispatch)
+        }
+        DispatchEventType::AutoModerationMentionRaidDetection => {
+            return convert_to!(
+                DispatchEvent::AutoModerationMentionRaidDetection,
+                message_as_string
+            )
+            .map(Event::Dispatch)
+        }
+        DispatchEventType::CallCreate => {
+            return convert_to!(DispatchEvent::CallCreate, message_as_string).map(Event::Dispatch)
+        }
+        DispatchEventType::CallUpdate => {
+            return convert_to!(DispatchEvent::CallUpdate, message_as_string).map(Event::Dispatch)
+        }
+        DispatchEventType::CallDelete => {
+            return convert_to!(DispatchEvent::CallDelete, message_as_string).map(Event::Dispatch)
+        }
+        DispatchEventType::ChannelCreate => {
+            return convert_to!(DispatchEvent::ChannelCreate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::ChannelUpdate => {
+            return convert_to!(DispatchEvent::ChannelUpdate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::ChannelDelete => {
+            return convert_to!(DispatchEvent::ChannelDelete, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::ChannelStatuses => {
+            return convert_to!(DispatchEvent::ChannelStatuses, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::VoiceChannelStatusUpdate => {
+            return convert_to!(DispatchEvent::VoiceChannelStatusUpdate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::ChannelPinsUpdate => {
+            return convert_to!(DispatchEvent::ChannelPinsUpdate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::ChannelRecipientAdd => {
+            return convert_to!(DispatchEvent::ChannelRecipientAdd, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::ChannelRecipientRemove => {
+            return convert_to!(DispatchEvent::ChannelRecipientRemove, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::DmSettingsUpsellShow => {
+            return convert_to!(DispatchEvent::DmSettingsUpsellShow, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::ThreadCreate => {
+            return convert_to!(DispatchEvent::ThreadCreate, message_as_string).map(Event::Dispatch)
+        }
+        DispatchEventType::ThreadUpdate => {
+            return convert_to!(DispatchEvent::ThreadUpdate, message_as_string).map(Event::Dispatch)
+        }
+        DispatchEventType::ThreadDelete => {
+            return convert_to!(DispatchEvent::ThreadDelete, message_as_string).map(Event::Dispatch)
+        }
+        DispatchEventType::ThreadListSync => {
+            return convert_to!(DispatchEvent::ThreadListSync, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::ThreadMemberUpdate => {
+            return convert_to!(DispatchEvent::ThreadMemberUpdate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::ThreadMembersUpdate => {
+            return convert_to!(DispatchEvent::ThreadMembersUpdate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::FriendSuggestionCreate => {
+            return convert_to!(DispatchEvent::FriendSuggestionCreate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::FriendSuggestionDelete => {
+            return convert_to!(DispatchEvent::FriendSuggestionDelete, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::GuildCreate => {
+            return convert_to!(DispatchEvent::GuildCreate, message_as_string).map(Event::Dispatch)
+        }
+        DispatchEventType::GuildUpdate => {
+            return convert_to!(DispatchEvent::GuildUpdate, message_as_string).map(Event::Dispatch)
+        }
+        DispatchEventType::GuildDelete => {
+            return convert_to!(DispatchEvent::GuildDelete, message_as_string).map(Event::Dispatch)
+        }
+        DispatchEventType::GuildAuditLogEntryCreate => {
+            return convert_to!(DispatchEvent::GuildAuditLogEntryCreate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::GuildBanAdd => {
+            return convert_to!(DispatchEvent::GuildBanAdd, message_as_string).map(Event::Dispatch)
+        }
+        DispatchEventType::GuildBanRemove => {
+            return convert_to!(DispatchEvent::GuildBanRemove, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::GuildEmojisUpdate => {
+            return convert_to!(DispatchEvent::GuildEmojisUpdate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::GuildStickersUpdate => {
+            return convert_to!(DispatchEvent::GuildStickersUpdate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::GuildJoinRequestCreate => {
+            return convert_to!(DispatchEvent::GuildJoinRequestCreate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::GuildJoinRequestUpdate => {
+            return convert_to!(DispatchEvent::GuildJoinRequestUpdate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::GuildJoinRequestDelete => {
+            return convert_to!(DispatchEvent::GuildJoinRequestDelete, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::GuildMemberAdd => {
+            return convert_to!(DispatchEvent::GuildMemberAdd, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::GuildMemberRemove => {
+            return convert_to!(DispatchEvent::GuildMemberRemove, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::GuildMemberUpdate => {
+            return convert_to!(DispatchEvent::GuildMemberUpdate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::GuildMembersChunk => {
+            return convert_to!(DispatchEvent::GuildMembersChunk, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::GuildRoleCreate => {
+            return convert_to!(DispatchEvent::GuildRoleCreate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::GuildRoleUpdate => {
+            return convert_to!(DispatchEvent::GuildRoleUpdate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::GuildRoleDelete => {
+            return convert_to!(DispatchEvent::GuildRoleDelete, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::GuildScheduledEventCreate => {
+            return convert_to!(DispatchEvent::GuildScheduledEventCreate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::GuildScheduledEventUpdate => {
+            return convert_to!(DispatchEvent::GuildScheduledEventUpdate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::GuildScheduledEventDelete => {
+            return convert_to!(DispatchEvent::GuildScheduledEventDelete, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::GuildScheduledEventUserAdd => {
+            return convert_to!(DispatchEvent::GuildScheduledEventUserAdd, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::GuildScheduledEventUserRemove => {
+            return convert_to!(
+                DispatchEvent::GuildScheduledEventUserRemove,
+                message_as_string
+            )
+            .map(Event::Dispatch)
+        }
+        DispatchEventType::GuildSoundboardSoundCreate => {
+            return convert_to!(DispatchEvent::GuildSoundboardSoundCreate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::GuildSoundboardSoundUpdate => {
+            return convert_to!(DispatchEvent::GuildSoundboardSoundUpdate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::GuildSoundboardSoundDelete => {
+            return convert_to!(DispatchEvent::GuildSoundboardSoundDelete, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::SoundboardSounds => {
+            return convert_to!(DispatchEvent::SoundboardSounds, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::GuildIntegrationsUpdate => {
+            return convert_to!(DispatchEvent::GuildIntegrationsUpdate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::IntegrationCreate => {
+            return convert_to!(DispatchEvent::IntegrationCreate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::IntegrationUpdate => {
+            return convert_to!(DispatchEvent::IntegrationUpdate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::IntegrationDelete => {
+            return convert_to!(DispatchEvent::IntegrationDelete, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::InteractionCreate => {
+            return convert_to!(DispatchEvent::InteractionCreate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::InviteCreate => {
+            return convert_to!(DispatchEvent::InviteCreate, message_as_string).map(Event::Dispatch)
+        }
+        DispatchEventType::InviteDelete => {
+            return convert_to!(DispatchEvent::InviteDelete, message_as_string).map(Event::Dispatch)
+        }
+        DispatchEventType::MessageCreate => {
+            return convert_to!(DispatchEvent::MessageCreate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::MessageUpdate => {
+            return convert_to!(DispatchEvent::MessageUpdate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::MessageDelete => {
+            return convert_to!(DispatchEvent::MessageDelete, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::MessageDeleteBulk => {
+            return convert_to!(DispatchEvent::MessageDeleteBulk, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::MessagePollVoteAdd => {
+            return convert_to!(DispatchEvent::MessagePollVoteAdd, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::MessagePollVoteRemove => {
+            return convert_to!(DispatchEvent::MessagePollVoteRemove, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::MessageReactionAdd => {
+            return convert_to!(DispatchEvent::MessageReactionAdd, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::MessageReactionAddMany => {
+            return convert_to!(DispatchEvent::MessageReactionAddMany, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::MessageReactionRemove => {
+            return convert_to!(DispatchEvent::MessageReactionRemove, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::MessageReactionRemoveAll => {
+            return convert_to!(DispatchEvent::MessageReactionRemoveAll, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::MessageReactionRemoveEmoji => {
+            return convert_to!(DispatchEvent::MessageReactionRemoveEmoji, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::RecentMentionDelete => {
+            return convert_to!(DispatchEvent::RecentMentionDelete, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::LastMessages => {
+            return convert_to!(DispatchEvent::LastMessages, message_as_string).map(Event::Dispatch)
+        }
+        DispatchEventType::Oauth2TokenRevoke => {
+            return convert_to!(DispatchEvent::Oauth2TokenRevoke, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::PresenceUpdate => {
+            return convert_to!(DispatchEvent::PresenceUpdate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::RelationshipAdd => {
+            return convert_to!(DispatchEvent::RelationshipAdd, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::RelationshipUpdate => {
+            return convert_to!(DispatchEvent::RelationshipUpdate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::RelationshipRemove => {
+            return convert_to!(DispatchEvent::RelationshipRemove, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::StageInstanceCreate => {
+            return convert_to!(DispatchEvent::StageInstanceCreate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::StageInstanceUpdate => {
+            return convert_to!(DispatchEvent::StageInstanceUpdate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::StageInstanceDelete => {
+            return convert_to!(DispatchEvent::StageInstanceDelete, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::TypingStart => {
+            return convert_to!(DispatchEvent::TypingStart, message_as_string).map(Event::Dispatch)
+        }
+        DispatchEventType::UserUpdate => {
+            return convert_to!(DispatchEvent::UserUpdate, message_as_string).map(Event::Dispatch)
+        }
+        DispatchEventType::UserApplicationRemove => {
+            return convert_to!(DispatchEvent::UserApplicationRemove, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::UserConnectionsUpdate => {
+            return convert_to!(DispatchEvent::UserConnectionsUpdate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::UserNoteUpdate => {
+            return convert_to!(DispatchEvent::UserNoteUpdate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::UserRequiredActionUpdate => {
+            return convert_to!(DispatchEvent::UserRequiredActionUpdate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::UserSettingsUpdate => {
+            return convert_to!(DispatchEvent::UserSettingsUpdate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::VoiceStateUpdate => {
+            return convert_to!(DispatchEvent::VoiceStateUpdate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::VoiceServerUpdate => {
+            return convert_to!(DispatchEvent::VoiceServerUpdate, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::VoiceChannelEffectSend => {
+            return convert_to!(DispatchEvent::VoiceChannelEffectSend, message_as_string)
+                .map(Event::Dispatch)
+        }
+        DispatchEventType::WebhooksUpdate => {
+            return convert_to!(DispatchEvent::WebhooksUpdate, message_as_string)
+                .map(Event::Dispatch)
+        }
+    }
 
     todo!()
 }
