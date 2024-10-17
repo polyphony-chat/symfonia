@@ -71,6 +71,8 @@ pub enum Error {
 pub enum GatewayError {
     #[error("UNEXPECTED_MESSAGE: {0}")]
     UnexpectedMessage(String),
+    #[error("UNEXPECTED_OPCODE: {0}")]
+    UnexpectedOpcode(u32),
     #[error("TIMEOUT")]
     Timeout,
     #[error("CLOSED")]
@@ -255,6 +257,7 @@ impl ResponseError for Error {
             Error::Gateway(err) => match err {
                 // TODO: Check if the associated statuscodes are okay
                 GatewayError::UnexpectedMessage(_) => StatusCode::BAD_REQUEST,
+                GatewayError::UnexpectedOpcode(_) => StatusCode::BAD_REQUEST,
                 GatewayError::Timeout => StatusCode::BAD_REQUEST,
                 GatewayError::Closed => StatusCode::BAD_REQUEST,
                 GatewayError::Internal => StatusCode::INTERNAL_SERVER_ERROR,
