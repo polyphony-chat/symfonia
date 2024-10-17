@@ -265,7 +265,7 @@ pub enum DispatchEvent {
     ChannelPinsUpdate(GatewayPayload<()>),
     ChannelRecipientAdd(GatewayPayload<()>),
     ChannelRecipientRemove(GatewayPayload<()>),
-    DMSettingsUpsellShow(GatewayPayload<()>),
+    DmSettingsUpsellShow(GatewayPayload<()>),
     ThreadCreate(GatewayPayload<ThreadCreate>),
     ThreadUpdate(GatewayPayload<ThreadUpdate>),
     ThreadDelete(GatewayPayload<ThreadDelete>),
@@ -322,7 +322,7 @@ pub enum DispatchEvent {
     MessageReactionRemoveEmoji(GatewayPayload<MessageReactionRemoveEmoji>),
     RecentMentionDelete(GatewayPayload<()>),
     LastMessages(GatewayPayload<()>),
-    OAuth2TokenRevoke(GatewayPayload<()>),
+    Oauth2TokenRevoke(GatewayPayload<()>),
     PresenceUpdate(GatewayPayload<PresenceUpdate>),
     RelationshipAdd(GatewayPayload<()>),
     RelationshipUpdate(GatewayPayload<()>),
@@ -341,6 +341,12 @@ pub enum DispatchEvent {
     VoiceServerUpdate(GatewayPayload<VoiceServerUpdate>),
     VoiceChannelEffectSend(GatewayPayload<()>),
     WebhooksUpdate(GatewayPayload<WebhooksUpdate>),
+}
+
+impl From<DispatchEvent> for Event {
+    fn from(value: DispatchEvent) -> Self {
+        Self::Dispatch(value)
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
