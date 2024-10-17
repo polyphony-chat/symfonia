@@ -190,7 +190,6 @@ fn match_message_type(message: Message) -> Result<Event, Error> {
 
     // At this point we know what Dispatch event we are dealing with and can try to deserialize it
 
-    // TODO: Turn this into a declarative macro if possible to reduce code duplication
     match dispatch_event_type {
         DispatchEventType::Ready => {
             return convert_to!(DispatchEvent::Ready, message_as_string).map(Event::Dispatch)
