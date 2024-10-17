@@ -1048,6 +1048,7 @@ mod dispatch_event_type_tests {
     fn test_ready() {
         let event = DispatchEventType::Ready;
         assert_eq!(event.to_string(), "READY");
+        // add capitalization randomization and some whitespace at the end
         assert_eq!(
             DispatchEventType::try_from("readY ".to_string()).unwrap(),
             event
