@@ -461,7 +461,6 @@ impl std::fmt::Display for DispatchEventType {
     }
 }
 
-// TODO(bitfl0wer): Test this!
 impl TryFrom<&str> for DispatchEventType {
     type Error = Error;
 
