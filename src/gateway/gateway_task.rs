@@ -6,6 +6,7 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::{from_str, json};
 use tokio::{sync::Mutex, time::sleep};
+use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode;
 use tokio_tungstenite::tungstenite::{protocol::CloseFrame, Message};
 
 use crate::errors::{Error, GatewayError};
@@ -44,8 +45,8 @@ pub(super) async fn gateway_task(
             message_result = connection.receiver.recv() => {
                 match message_result {
                     Ok(message_of_unknown_type) => {
-                        todo!()
-                        // TODO: Do something with the event
+                        let event = unwrap_event(Event::try_from(message_of_unknown_type), connection.clone(), kill_send.clone());
+                        // TODO: Handle event
                     },
                     Err(error) => {
                         connection.sender.send(Message::Close(Some(CloseFrame { code: tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode::Library(4000), reason: "INTERNAL_SERVER_ERROR".into() })));
@@ -58,6 +59,56 @@ pub(super) async fn gateway_task(
     }
 
     todo!()
+}
+
+fn handle_event(
+    event: Event,
+    connection: super::WebSocketConnection,
+    mut kill_send: tokio::sync::broadcast::Sender<()>,
+) {
+    todo!()
+}
+
+/// Unwraps an event from a Result<Event, Error> and handles the error if there is one. Errors will
+/// shut down all tasks belonging to this session and will kill the gateway task through a panic.
+fn unwrap_event(
+    result: Result<Event, Error>,
+    connection: super::WebSocketConnection,
+    mut kill_send: tokio::sync::broadcast::Sender<()>,
+) -> Event {
+    match result {
+        Err(e) => {
+            match e {
+                Error::Gateway(g) => match g {
+                    GatewayError::UnexpectedOpcode(o) => {
+                        log::debug!(target: "symfonia::gateway::gateway_task", "Received an unexpected opcode: {:?}", o);
+                        connection.sender.send(Message::Close(Some(CloseFrame { code: tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode::Library(4001), reason: "UNKNOWN_OPCODE".into() })));
+                        kill_send.send(()).expect("Failed to send kill_send");
+                        panic!("Killing gateway task: Received an unexpected opcode");
+                    }
+                    GatewayError::UnexpectedMessage(m) => {
+                        log::debug!(target: "symfonia::gateway::gateway_task", "Received an unexpected message: {:?}", m);
+                        connection.sender.send(Message::Close(Some(CloseFrame { code: tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode::Library(4002), reason: "DECODE_ERROR".into() })));
+                        kill_send.send(()).expect("Failed to send kill_send");
+                        panic!("Killing gateway task: Received an unexpected message");
+                    }
+                    _ => {
+                        log::debug!(target: "symfonia::gateway::gateway_task", "Received an unexpected error: {:?}", g);
+                        connection.sender.send(Message::Close(Some(CloseFrame { code: tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode::Library(4000), reason: "INTERNAL_SERVER_ERROR".into() })));
+                        kill_send.send(()).expect("Failed to send kill_send");
+                        panic!("Killing gateway task: Received an unexpected error");
+                    }
+                },
+                _ => {
+                    log::debug!(target: "symfonia::gateway::gateway_task", "Received an unexpected error: {:?}", e);
+                    connection.sender.send(Message::Close(Some(CloseFrame { code: tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode::Library(4000), reason: "INTERNAL_SERVER_ERROR".into() })));
+                    kill_send.send(()).expect("Failed to send kill_send");
+                    panic!("Killing gateway task: Received an unexpected error");
+                }
+            }
+        }
+        Ok(event) => event,
+    }
 }
 
 async fn process_inbox(
