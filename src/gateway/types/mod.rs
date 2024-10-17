@@ -475,6 +475,8 @@ impl RoleUserMap {
 pub struct WebSocketConnection {
     pub sender: tokio::sync::broadcast::Sender<Message>,
     pub receiver: tokio::sync::broadcast::Receiver<Message>,
+    pub kill_receive: tokio::sync::broadcast::Receiver<()>,
+    pub kill_send: tokio::sync::broadcast::Sender<()>,
     sender_task: Arc<tokio::task::JoinHandle<()>>,
     receiver_task: Arc<tokio::task::JoinHandle<()>>,
 }
@@ -551,11 +553,14 @@ impl WebSocketConnection {
                 }
             }
         });
+        let (kill_send, kill_receive) = tokio::sync::broadcast::channel(1);
         Self {
             sender,
             receiver,
             sender_task: Arc::new(sender_task),
             receiver_task: Arc::new(receiver_task),
+            kill_receive,
+            kill_send,
         }
     }
 }
@@ -568,6 +573,8 @@ impl Clone for WebSocketConnection {
             receiver: self.receiver.resubscribe(),
             sender_task: self.sender_task.clone(),
             receiver_task: self.receiver_task.clone(),
+            kill_receive: self.kill_receive.resubscribe(),
+            kill_send: self.kill_send.clone(),
         }
     }
 }
