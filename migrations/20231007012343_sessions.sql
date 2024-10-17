@@ -1,6 +1,8 @@
+CREATE SEQUENCE sessions_index_seq;
+
 create table if not exists sessions
 (
-    id          numeric(20, 0) not null constraint chk_id_range check (id >= 0 AND id <= 18446744073709551615) primary key,
+    index       numeric(20, 0) not null default nextval('user_settings_index_seq') constraint chk_index_range check (index >= 0 and index <= 18446744073709551615) primary key,
     user_id     numeric(20, 0) null constraint chk_user_id_range check (user_id >= 0 AND user_id <= 18446744073709551615),
     session_id  numeric(20, 0) not null constraint chk_session_id_range check (session_id >= 0 AND session_id <= 18446744073709551615),
     activities  text         null,

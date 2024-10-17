@@ -1,8 +1,8 @@
 use std::{collections::HashMap, sync::Arc};
 
 use chorus::types::{
-    GatewayHeartbeat, GatewayHeartbeatAck, GatewayHello, GatewayIdentifyPayload, GatewayResume,
-    Snowflake,
+    GatewayHeartbeat, GatewayHeartbeatAck, GatewayHello, GatewayIdentifyPayload, GatewayReady,
+    GatewayResume, Snowflake,
 };
 use futures::{SinkExt, StreamExt};
 use log::{debug, trace};
@@ -22,6 +22,7 @@ use tokio_tungstenite::{
     },
 };
 
+use crate::gateway::ready::create_ready;
 use crate::{
     database::entities::Config,
     errors::{Error, GatewayError},
@@ -64,8 +65,8 @@ pub(super) async fn establish_connection(
 ) -> Result<NewWebSocketConnection, Error> {
     trace!(target: "symfonia::gateway::establish_connection::establish_connection", "Beginning process to establish connection (handshake)");
     // Accept the connection and split it into its sender and receiver halves.
-    let ws_stream = accept_async(stream).await?;
-    let mut connection: WebSocketConnection = ws_stream.split().into();
+    let ws_stream = accept_async(stream).await?.split();
+    let mut connection = WebSocketConnection::new(ws_stream.0, ws_stream.1);
     trace!(target: "symfonia::gateway::establish_connection::establish_connection", "Sending hello message");
     // Hello message
     match connection
@@ -86,11 +87,6 @@ pub(super) async fn establish_connection(
     // Inter-task communication channels. The main gateway task will send received heartbeat related messages
     // to the `HeartbeatHandler` task via the `message_send` channel, which the `HeartbeatHandler` task will
     // then receive and handle.
-    //
-    // TODO: The HeartbeatHandler theoretically does not need a full connection object, but either only the sender
-    // or just these message_* channels. Using the latter approach, the HeartbeatHandler could send Heartbeat
-    // responses to the main gateway task, which in turn would send them to the client. This way, the
-    // connection object might not need to be wraped in an `Arc<Mutex<Connection>>`.
     let (message_send, message_receive) = tokio::sync::broadcast::channel::<GatewayHeartbeat>(4);
 
     let sequence_number = Arc::new(Mutex::new(0u64)); // TODO: Actually use this, as in: Increment it when needed. Currently, this is not being done.
@@ -133,7 +129,7 @@ pub(super) async fn establish_connection(
         // connection establishment process. :(
         new_connection = finish_connecting(heartbeat_handler_handle, state)
          => {
-            log::trace!(target: "symfonia::gateway::establish_connection", "Connection established. We are done here");
+            log::trace!(target: "symfonia::gateway::establish_connection", "Connection established.");
             new_connection
         }
     }
@@ -266,6 +262,16 @@ async fn finish_connecting(
                     return Err(GatewayError::Internal.into());
                 }
             }
+            let formatted_payload = GatewayPayload::<GatewayReady> {
+                op_code: 0,
+                event_data: create_ready(claims.id, &state.db).await?,
+                sequence_number: None,
+                event_name: Some("READY".to_string()),
+            };
+            state
+                .connection
+                .sender
+                .send(Message::Text(json!(formatted_payload).to_string()))?;
             log::trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Done!");
             return Ok(NewWebSocketConnection {
                 user: gateway_user,
@@ -289,7 +295,7 @@ async fn finish_connecting(
         } else {
             debug!(target: "symfonia::gateway::establish_connection::finish_connecting", "Message could not be decoded as resume, heartbeat or identify.");
 
-            return Err(GatewayError::UnexpectedMessage.into());
+            return Err(GatewayError::UnexpectedMessage("Received payload other than Heartbeat, Identify or Resume before the connection was established".to_string()).into());
         }
     }
 }

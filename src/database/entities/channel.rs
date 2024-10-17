@@ -377,4 +377,29 @@ impl Channel {
             .map(|_| ())
             .map_err(Error::from)
     }
+
+    /// Get all private channels of a user. Only queries channels which are not marked as closed.
+    pub async fn get_private_of_user(user_id: Snowflake, db: &PgPool) -> Result<Vec<Self>, Error> {
+        sqlx::query_as(
+            "SELECT c.* FROM recipients r
+            JOIN channels c ON r.channel_id = c.id
+            WHERE r.user_id = $1 AND r.closed = false",
+        )
+        .bind(user_id)
+        .fetch_all(db)
+        .await
+        .map_err(Error::Sqlx)
+    }
+}
+
+#[cfg(test)]
+mod channel_unit_tests {
+    #[sqlx::test(fixtures(path = "../../../fixtures", scripts("private_channels")))]
+    async fn get_private_of_user(pool: sqlx::PgPool) {
+        let channels = super::Channel::get_private_of_user(7250861145186111490.into(), &pool)
+            .await
+            .unwrap();
+        assert_eq!(channels.len(), 1);
+        assert_eq!(channels[0].id, 7250859537236758528.into());
+    }
 }

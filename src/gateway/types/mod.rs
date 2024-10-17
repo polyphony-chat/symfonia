@@ -2,6 +2,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+pub mod dispatchevent;
+pub mod event;
+
+pub use dispatchevent::*;
+pub use event::*;
+
+use std::fmt::Display;
 use std::{
     collections::{HashMap, HashSet},
     ops::{Deref, DerefMut},
@@ -10,13 +17,14 @@ use std::{
 
 use ::serde::{de::DeserializeOwned, Deserialize, Serialize};
 use chorus::types::{
-    ChannelCreate, ChannelDelete, ChannelUpdate, GatewayHeartbeat, GatewayHello,
-    GatewayIdentifyPayload, GatewayInvalidSession, GatewayReady, GatewayRequestGuildMembers,
-    GatewayResume, GuildBanAdd, GuildBanRemove, GuildCreate, GuildDelete, GuildEmojisUpdate,
-    GuildIntegrationsUpdate, GuildMemberAdd, GuildMemberRemove, GuildMemberUpdate,
-    GuildMembersChunk, GuildUpdate, InteractionCreate, InviteCreate, InviteDelete, MessageCreate,
-    MessageDelete, MessageDeleteBulk, MessageReactionAdd, MessageReactionRemove,
-    MessageReactionRemoveAll, MessageReactionRemoveEmoji, MessageUpdate, PresenceUpdate, Snowflake,
+    ChannelCreate, ChannelDelete, ChannelUpdate, GatewayHeartbeat, GatewayHeartbeatAck,
+    GatewayHello, GatewayIdentifyPayload, GatewayInvalidSession, GatewayReady,
+    GatewayReadySupplemental, GatewayRequestGuildMembers, GatewayResume, GuildBanAdd,
+    GuildBanRemove, GuildCreate, GuildDelete, GuildEmojisUpdate, GuildIntegrationsUpdate,
+    GuildMemberAdd, GuildMemberRemove, GuildMemberUpdate, GuildMembersChunk, GuildUpdate,
+    InteractionCreate, InviteCreate, InviteDelete, MessageCreate, MessageDelete, MessageDeleteBulk,
+    MessageReactionAdd, MessageReactionRemove, MessageReactionRemoveAll,
+    MessageReactionRemoveEmoji, MessageUpdate, Opcode, PresenceUpdate, Snowflake,
     StageInstanceCreate, StageInstanceDelete, StageInstanceUpdate, ThreadCreate, ThreadDelete,
     ThreadListSync, ThreadMemberUpdate, ThreadMembersUpdate, ThreadUpdate, TypingStartEvent,
     UserUpdate, VoiceServerUpdate, VoiceStateUpdate, WebhooksUpdate,
@@ -28,6 +36,7 @@ use futures::{
 use log::log;
 use parking_lot::RwLock;
 use pubserve::Subscriber;
+use serde_json::from_str;
 use sqlx::PgPool;
 use sqlx_pg_uint::PgU64;
 use tokio::{net::TcpStream, sync::Mutex};
@@ -39,134 +48,10 @@ use tokio_tungstenite::{
     WebSocketStream,
 };
 
+use crate::errors::{Error, GatewayError};
 use crate::{WebSocketReceive, WebSocketSend};
 
 use super::ResumableClientsStore;
-
-#[derive(
-    Debug,
-    ::serde::Deserialize,
-    ::serde::Serialize,
-    Clone,
-    PartialEq,
-    PartialOrd,
-    Eq,
-    Ord,
-    Copy,
-    Hash,
-)]
-/// Enum representing all possible* event types that can be received from or sent to the gateway.
-///
-/// TODO: This is only temporary. Replace with this enum from chorus, when it is ready.
-pub enum EventType {
-    Hello,
-    Ready,
-    Heartbeat,
-    Resume,
-    InvalidSession,
-    ChannelCreate,
-    ChannelUpdate,
-    ChannelDelete,
-    ChannelPinsUpdate,
-    ThreadCreate,
-    ThreadUpdate,
-    ThreadDelete,
-    ThreadListSync,
-    ThreadMemberUpdate,
-    ThreadMembersUpdate,
-    GuildCreate,
-    GuildUpdate,
-    GuildDelete,
-    GuildBanAdd,
-    GuildBanRemove,
-    GuildEmojisUpdate,
-    GuildIntegrationsUpdate,
-    GuildMemberAdd,
-    GuildMemberRemove,
-    GuildMemberUpdate,
-    GuildMembersChunk,
-    GuildRoleCreate,
-    GuildRoleUpdate,
-    GuildRoleDelete,
-    IntegrationCreate,
-    IntegrationUpdate,
-    IntegrationDelete,
-    InteractionCreate,
-    InviteCreate,
-    InviteDelete,
-    MessageCreate,
-    MessageUpdate,
-    MessageDelete,
-    MessageDeleteBulk,
-    MessageReactionAdd,
-    MessageReactionRemove,
-    MessageReactionRemoveAll,
-    MessageReactionRemoveEmoji,
-    PresenceUpdate,
-    TypingStart,
-    UserUpdate,
-    VoiceStateUpdate,
-    VoiceServerUpdate,
-    WebhooksUpdate,
-    StageInstanceCreate,
-    StageInstanceUpdate,
-    StageInstanceDelete,
-    GuildMembersRequest,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-/// This enum is supposed to represent all possible events that can be received from or sent to the
-/// gateway. If a variant is missing, it might just be because we haven't caught it yet.
-#[serde(rename_all = "PascalCase")]
-pub enum Event {
-    Hello(GatewayHello),
-    Heartbeat(GatewayHeartbeat),
-    Ready(GatewayPayload<GatewayReady>),
-    Identify(GatewayPayload<GatewayIdentifyPayload>),
-    Resume(GatewayPayload<GatewayResume>),
-    InvalidSession(GatewayPayload<GatewayInvalidSession>),
-    ChannelCreate(GatewayPayload<ChannelCreate>),
-    ChannelUpdate(GatewayPayload<ChannelUpdate>),
-    ChannelDelete(GatewayPayload<ChannelDelete>),
-    ThreadCreate(GatewayPayload<ThreadCreate>),
-    ThreadUpdate(GatewayPayload<ThreadUpdate>),
-    ThreadDelete(GatewayPayload<ThreadDelete>),
-    ThreadListSync(GatewayPayload<ThreadListSync>),
-    ThreadMemberUpdate(GatewayPayload<ThreadMemberUpdate>),
-    ThreadMembersUpdate(GatewayPayload<ThreadMembersUpdate>),
-    GuildCreate(GatewayPayload<GuildCreate>),
-    GuildUpdate(GatewayPayload<GuildUpdate>),
-    GuildDelete(GatewayPayload<GuildDelete>),
-    GuildBanAdd(GatewayPayload<GuildBanAdd>),
-    GuildBanRemove(GatewayPayload<GuildBanRemove>),
-    GuildEmojisUpdate(GatewayPayload<GuildEmojisUpdate>),
-    GuildIntegrationsUpdate(GatewayPayload<GuildIntegrationsUpdate>),
-    GuildMemberAdd(GatewayPayload<GuildMemberAdd>),
-    GuildMemberRemove(GatewayPayload<GuildMemberRemove>),
-    GuildMemberUpdate(GatewayPayload<GuildMemberUpdate>),
-    GuildMembersChunk(GatewayPayload<GuildMembersChunk>),
-    GuildMembersRequest(GatewayPayload<GatewayRequestGuildMembers>),
-    InteractionCreate(GatewayPayload<InteractionCreate>),
-    InviteCreate(GatewayPayload<InviteCreate>),
-    InviteDelete(GatewayPayload<InviteDelete>),
-    MessageCreate(GatewayPayload<MessageCreate>),
-    MessageUpdate(GatewayPayload<MessageUpdate>),
-    MessageDelete(GatewayPayload<MessageDelete>),
-    MessageDeleteBulk(GatewayPayload<MessageDeleteBulk>),
-    MessageReactionAdd(GatewayPayload<MessageReactionAdd>),
-    MessageReactionRemove(GatewayPayload<MessageReactionRemove>),
-    MessageReactionRemoveAll(GatewayPayload<MessageReactionRemoveAll>),
-    MessageReactionRemoveEmoji(GatewayPayload<MessageReactionRemoveEmoji>),
-    PresenceUpdate(GatewayPayload<PresenceUpdate>),
-    TypingStart(GatewayPayload<TypingStartEvent>),
-    UserUpdate(GatewayPayload<UserUpdate>),
-    VoiceStateUpdate(GatewayPayload<VoiceStateUpdate>),
-    VoiceServerUpdate(GatewayPayload<VoiceServerUpdate>),
-    WebhooksUpdate(GatewayPayload<WebhooksUpdate>),
-    StageInstanceCreate(GatewayPayload<StageInstanceCreate>),
-    StageInstanceUpdate(GatewayPayload<StageInstanceUpdate>),
-    StageInstanceDelete(GatewayPayload<StageInstanceDelete>),
-}
 
 #[derive(Serialize, Clone, PartialEq, Debug)]
 /// A de-/serializable data payload for transmission over the gateway.
@@ -590,6 +475,8 @@ impl RoleUserMap {
 pub struct WebSocketConnection {
     pub sender: tokio::sync::broadcast::Sender<Message>,
     pub receiver: tokio::sync::broadcast::Receiver<Message>,
+    pub kill_receive: tokio::sync::broadcast::Receiver<()>,
+    pub kill_send: tokio::sync::broadcast::Sender<()>,
     sender_task: Arc<tokio::task::JoinHandle<()>>,
     receiver_task: Arc<tokio::task::JoinHandle<()>>,
 }
@@ -666,11 +553,14 @@ impl WebSocketConnection {
                 }
             }
         });
+        let (kill_send, kill_receive) = tokio::sync::broadcast::channel(1);
         Self {
             sender,
             receiver,
             sender_task: Arc::new(sender_task),
             receiver_task: Arc::new(receiver_task),
+            kill_receive,
+            kill_send,
         }
     }
 }
@@ -683,6 +573,8 @@ impl Clone for WebSocketConnection {
             receiver: self.receiver.resubscribe(),
             sender_task: self.sender_task.clone(),
             receiver_task: self.receiver_task.clone(),
+            kill_receive: self.kill_receive.resubscribe(),
+            kill_send: self.kill_send.clone(),
         }
     }
 }

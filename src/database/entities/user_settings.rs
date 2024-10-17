@@ -46,6 +46,18 @@ impl DerefMut for UserSettings {
 }
 
 impl UserSettings {
+    pub fn as_inner(&self) -> &chorus::types::UserSettings {
+        &self.inner
+    }
+
+    pub fn as_inner_mut(&mut self) -> &mut chorus::types::UserSettings {
+        &mut self.inner
+    }
+
+    pub fn into_inner(self) -> chorus::types::UserSettings {
+        self.inner
+    }
+
     pub fn consume(inner: chorus::types::UserSettings, index: u64) -> Self {
         Self {
             inner,

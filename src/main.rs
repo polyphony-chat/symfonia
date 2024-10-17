@@ -180,6 +180,19 @@ async fn main() {
 
     log::info!(target: "symfonia", "Starting up Symfonia");
 
+    match loglevel {
+        LevelFilter::Debug | LevelFilter::Trace => {
+            log::warn!(target: "symfonia", "⚠️⚠️⚠️ WARNING ⚠️⚠️⚠️");
+            log::warn!(target: "symfonia", "⚠️⚠️⚠️ WARNING ⚠️⚠️⚠️");
+            log::warn!(target: "symfonia", "⚠️⚠️⚠️ WARNING ⚠️⚠️⚠️");
+            log::warn!(target: "symfonia", "WARNING: Running in DEBUG or TRACE modes will leak sensitive information to the logs. Please run symfonia in production mode if you are not currently debugging. This can be done by setting the MODE environment variable to 'PRODUCTION'.");
+            log::warn!(target: "symfonia", "⚠️⚠️⚠️ WARNING ⚠️⚠️⚠️");
+            log::warn!(target: "symfonia", "⚠️⚠️⚠️ WARNING ⚠️⚠️⚠️");
+            log::warn!(target: "symfonia", "⚠️⚠️⚠️ WARNING ⚠️⚠️⚠️");
+        }
+        _ => (),
+    };
+
     log::info!(target: "symfonia::db", "Establishing database connection");
     let db = database::establish_connection()
         .await

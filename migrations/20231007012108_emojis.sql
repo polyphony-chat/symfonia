@@ -16,3 +16,6 @@ create table if not exists emojis
     constraint FK_fa7ddd5f9a214e28ce596548421
         foreign key (user_id) references users (id)
 );
+
+ALTER TABLE channels
+ADD CONSTRAINT FK_emoji_id_emojis_id FOREIGN KEY (default_reaction_emoji) REFERENCES emojis(id);

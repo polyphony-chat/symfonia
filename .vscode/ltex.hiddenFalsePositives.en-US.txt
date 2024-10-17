@@ -1,0 +1,1 @@
+{"rule":"MORFOLOGIK_RULE_EN_US","sentence":"^\\Qreturn Ok(Event::Heartbeat(from_str(&message)?))\\E$"}

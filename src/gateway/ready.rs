@@ -1,7 +1,10 @@
-use chorus::types::{GatewayReady, Snowflake};
+use std::collections::HashMap;
+
+use chorus::types::{GatewayReady, Snowflake, UserNote};
+use serde_json::json;
 use sqlx::PgPool;
 
-use crate::database::entities::Guild;
+use crate::database::entities::{Channel, Guild, Note, Relationship};
 use crate::{database::entities::User, errors::Error};
 
 pub async fn create_ready(user_id: Snowflake, db: &PgPool) -> Result<GatewayReady, Error> {
@@ -22,36 +25,45 @@ pub async fn create_ready(user_id: Snowflake, db: &PgPool) -> Result<GatewayRead
         });
     }
 
+    let relationships = Relationship::get_all_by_id(user_id, db)
+        .await?
+        .into_iter()
+        .map(|x| x.into_inner())
+        .collect();
+
+    let private_channels = Channel::get_private_of_user(user_id, db)
+        .await?
+        .into_iter()
+        .map(|x| x.into_inner())
+        .collect();
+
+    let notes_vec: Vec<UserNote> = Note::get_by_author_id(user_id, db)
+        .await?
+        .into_iter()
+        .map(|x| x.into_inner())
+        .collect();
+
+    let mut notes = HashMap::new();
+    for note in notes_vec.into_iter() {
+        notes.insert(note.target_id, note.content);
+    }
+
+    // TODO: The session ID needs to be stored in the database and also removed on
+    // session disconnect. This is a temporary solution.
+    let session_id = Snowflake::generate().to_string();
+
+    // TODO: There are a lot of missing fields here. Ideally, all of the fields should be
+    // populated with the correct data.
     let ready = GatewayReady {
-        analytics_token: todo!(),
-        auth_session_id_hash: todo!(),
-        country_code: todo!(),
-        api_version: todo!(),
-        user: user.to_inner(),
+        user: user.clone().to_inner(),
         guilds,
-        presences: todo!(),
-        sessions: todo!(),
-        session_id: todo!(),
-        session_type: todo!(),
-        resume_gateway_url: todo!(),
-        shard: todo!(),
-        user_settings: Some(*user.settings),
-        user_settings_proto: todo!(),
-        relationships: todo!(),
-        friend_suggestion_count: todo!(),
-        private_channels: todo!(),
-        notes: todo!(),
-        merged_presences: todo!(),
-        users: todo!(),
-        auth_token: todo!(),
-        authenticator_types: todo!(),
-        required_action: todo!(),
-        geo_ordered_rtc_regions: todo!(),
-        tutorial: todo!(),
-        api_code_version: todo!(),
-        experiments: todo!(),
-        guild_experiments: todo!(),
-        _trace: todo!(),
+        session_id,
+        user_settings: Some(user.settings.into_inner()),
+        relationships,
+        private_channels,
+        notes,
+        ..Default::default()
     };
-    todo!()
+    log::debug!(target: "symfonia::gateway::ready::create_ready", "Created READY json payload: {:#?}", json!(ready));
+    Ok(ready)
 }

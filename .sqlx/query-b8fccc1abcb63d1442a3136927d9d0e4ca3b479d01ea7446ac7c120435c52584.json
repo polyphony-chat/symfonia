@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT guild_id FROM members where id = $1 LIMIT 1000",
+  "query": "SELECT guild_id FROM members where id = $1 LIMIT $2",
   "describe": {
     "columns": [
       {
@@ -11,12 +11,13 @@
     ],
     "parameters": {
       "Left": [
-        "Numeric"
+        "Numeric",
+        "Int8"
       ]
     },
     "nullable": [
       false
     ]
   },
-  "hash": "8d127613251411c2dae324bc92105869cd4456e849b3527c9bfbe342879d4418"
+  "hash": "b8fccc1abcb63d1442a3136927d9d0e4ca3b479d01ea7446ac7c120435c52584"
 }

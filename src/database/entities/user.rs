@@ -5,6 +5,7 @@
  */
 
 use super::*;
+use crate::QUERY_UPPER_LIMIT;
 
 use std::{
     default::Default,
@@ -210,8 +211,9 @@ impl User {
     /// avoid memory exhaustion.
     pub async fn get_guild_ids(&self, db: &PgPool) -> Result<Vec<Snowflake>, Error> {
         sqlx::query!(
-            "SELECT guild_id FROM members where id = $1 LIMIT 1000",
-            BigDecimal::from(u64::from(self.id))
+            "SELECT guild_id FROM members where id = $1 LIMIT $2",
+            BigDecimal::from(u64::from(self.id)),
+            i64::from(QUERY_UPPER_LIMIT)
         )
         .fetch_all(db)
         .await
