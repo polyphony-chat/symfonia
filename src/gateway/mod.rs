@@ -5,6 +5,7 @@
  */
 
 static RESUME_RECONNECT_WINDOW_SECONDS: u8 = 90;
+static DEFAULT_GATEWAY_BIND: &str = "0.0.0.0:3003";
 
 mod establish_connection;
 mod gateway_task;
@@ -102,7 +103,10 @@ pub async fn start_gateway(
     // TODO(bitfl0wer): Add log messages throughout the method for debugging the gateway
     info!(target: "symfonia::gateway", "Starting gateway server");
 
-    let bind = std::env::var("GATEWAY_BIND").unwrap_or_else(|_| String::from("localhost:3003"));
+    let bind = &std::env::var("GATEWAY_BIND").unwrap_or_else(|_| {
+        log::warn!(target: "symfonia::db", "You did not specify GATEWAY_BIND environment variable. Defaulting to '{DEFAULT_GATEWAY_BIND}'.");
+        DEFAULT_GATEWAY_BIND.to_string()
+    });
     let try_socket = TcpListener::bind(&bind).await;
     let listener = try_socket.expect("Failed to bind to address");
 
