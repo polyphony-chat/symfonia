@@ -86,7 +86,7 @@ pub async fn start_api(
         .with(NormalizePath::new(TrailingSlash::Trim))
         .catch_all_error(custom_error);
 
-    let bind = std::env::var("API_BIND").unwrap_or_else(|_| String::from("localhost:3001"));
+    let bind = std::env::var("API_BIND").unwrap_or_else(|_| String::from("0.0.0.0:3001"));
     let bind_clone = bind.clone();
 
     log::info!(target: "symfonia::api", "Starting HTTP Server");
