@@ -4,6 +4,8 @@
  *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+static DEFAULT_API_BIND: &str = "0.0.0.0:3001";
+
 use poem::{
     listener::TcpListener,
     middleware::{NormalizePath, TrailingSlash},
@@ -86,7 +88,10 @@ pub async fn start_api(
         .with(NormalizePath::new(TrailingSlash::Trim))
         .catch_all_error(custom_error);
 
-    let bind = std::env::var("API_BIND").unwrap_or_else(|_| String::from("0.0.0.0:3001"));
+    let bind = &std::env::var("API_BIND").unwrap_or_else(|_| {
+        log::warn!(target: "symfonia::db", "You did not specify API_BIND environment variable. Defaulting to '{DEFAULT_API_BIND}'.");
+        DEFAULT_API_BIND.to_string()
+    });
     let bind_clone = bind.clone();
 
     log::info!(target: "symfonia::api", "Starting HTTP Server");
