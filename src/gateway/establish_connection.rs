@@ -42,8 +42,6 @@ struct State {
     config: Config,
     connected_users: ConnectedUsers,
     sequence_number: Arc<Mutex<u64>>,
-    kill_send: Sender<()>,
-    kill_receive: tokio::sync::broadcast::Receiver<()>,
     /// Receiver for heartbeat messages. The `HeartbeatHandler` will receive messages from this channel.
     heartbeat_receive: tokio::sync::broadcast::Receiver<GatewayHeartbeat>,
     /// Sender for heartbeat messages. The main gateway task will send messages to this channel for the `HeartbeatHandler` to receive and handle.
@@ -100,8 +98,6 @@ pub(super) async fn establish_connection(
         config: config.clone(),
         connected_users: connected_users.clone(),
         sequence_number: sequence_number.clone(),
-        kill_send: kill_send.clone(),
-        kill_receive: kill_receive.resubscribe(),
         heartbeat_receive: message_receive.resubscribe(),
         heartbeat_send: message_send.clone(),
         session_id_send: session_id_send.clone(),
@@ -150,7 +146,11 @@ async fn finish_connecting(
             Ok(next) => next,
             Err(_) => {
                 log::debug!(target: "symfonia::gateway::finish_connecting", "Encountered error when trying to receive message. Sending kill signal...");
-                state.kill_send.send(()).expect("Failed to send kill_send");
+                state
+                    .connection
+                    .kill_send
+                    .send(())
+                    .expect("Failed to send kill_send");
                 return Err(GatewayError::Timeout.into());
             }
         };
@@ -172,8 +172,6 @@ async fn finish_connecting(
                     heartbeat_handler_handle = Some(tokio::spawn({
                         let mut heartbeat_handler = HeartbeatHandler::new(
                             state.connection.clone(),
-                            state.kill_receive.resubscribe(),
-                            state.kill_send.clone(),
                             state.heartbeat_receive.resubscribe(),
                             state.sequence_number.clone(),
                             state.session_id_receive.resubscribe(),
@@ -205,6 +203,7 @@ async fn finish_connecting(
                 Err(_) => {
                     log::trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Failed to verify token");
                     state
+                        .connection
                         .kill_send
                         .send(())
                         .expect("Failed to send kill signal");
@@ -217,8 +216,6 @@ async fn finish_connecting(
             let main_task_handle = tokio::spawn(gateway_task::gateway_task(
                 state.connection.clone(),
                 gateway_user.lock().await.inbox.resubscribe(),
-                state.kill_receive.resubscribe(),
-                state.kill_send.clone(),
                 state.heartbeat_send.clone(),
                 state.sequence_number.clone(),
             ));
@@ -235,8 +232,6 @@ async fn finish_connecting(
                             log::trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "No heartbeat_handler yet. Creating one...");
                             let mut heartbeat_handler = HeartbeatHandler::new(
                                 state.connection.clone(),
-                                state.kill_receive.resubscribe(),
-                                state.kill_send.clone(),
                                 state.heartbeat_receive.resubscribe(),
                                 state.sequence_number.clone(),
                                 state.session_id_receive.resubscribe(),
@@ -246,7 +241,6 @@ async fn finish_connecting(
                             }
                         }),
                     },
-                    state.kill_send.clone(),
                     &identify.event_data.token,
                     state.sequence_number.clone(),
                 )
@@ -256,6 +250,7 @@ async fn finish_connecting(
                 Err(_) => {
                     log::error!(target: "symfonia::gateway::establish_connection::finish_connecting", "Failed to send session_id to heartbeat handler");
                     state
+                        .connection
                         .kill_send
                         .send(())
                         .expect("Failed to send kill signal");
@@ -289,6 +284,7 @@ async fn finish_connecting(
                         .into(),
                 })))?;
             state
+                .connection
                 .kill_send
                 .send(())
                 .expect("Failed to send kill signal");

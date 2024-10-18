@@ -18,17 +18,11 @@ use super::{Event, GatewayClient, GatewayPayload};
 pub(super) async fn gateway_task(
     mut connection: super::WebSocketConnection,
     mut inbox: tokio::sync::broadcast::Receiver<Event>,
-    mut kill_receive: tokio::sync::broadcast::Receiver<()>,
-    mut kill_send: tokio::sync::broadcast::Sender<()>,
     mut heartbeat_send: tokio::sync::broadcast::Sender<GatewayHeartbeat>,
     last_sequence_number: Arc<Mutex<u64>>,
 ) {
     log::trace!(target: "symfonia::gateway::gateway_task", "Started a new gateway task!");
-    let inbox_processor = tokio::spawn(process_inbox(
-        connection.clone(),
-        inbox.resubscribe(),
-        kill_receive.resubscribe(),
-    ));
+    let inbox_processor = tokio::spawn(process_inbox(connection.clone(), inbox.resubscribe()));
 
     /*
     Before we can respond to any gateway event we receive, we need to figure out what kind of event
@@ -39,18 +33,18 @@ pub(super) async fn gateway_task(
 
     loop {
         tokio::select! {
-            _ = kill_receive.recv() => {
+            _ = connection.kill_receive.recv() => {
                 return;
             },
             message_result = connection.receiver.recv() => {
                 match message_result {
                     Ok(message_of_unknown_type) => {
-                        let event = unwrap_event(Event::try_from(message_of_unknown_type), connection.clone(), kill_send.clone());
+                        let event = unwrap_event(Event::try_from(message_of_unknown_type), connection.clone(), connection.kill_send.clone());
                         // TODO: Handle event
                     },
                     Err(error) => {
                         connection.sender.send(Message::Close(Some(CloseFrame { code: tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode::Library(4000), reason: "INTERNAL_SERVER_ERROR".into() })));
-                        kill_send.send(()).expect("Failed to send kill_send");
+                        connection.kill_send.send(()).expect("Failed to send kill_send");
                         return;
                     },
                 }
@@ -112,13 +106,12 @@ fn unwrap_event(
 }
 
 async fn process_inbox(
-    connection: super::WebSocketConnection,
+    mut connection: super::WebSocketConnection,
     mut inbox: tokio::sync::broadcast::Receiver<Event>,
-    mut kill_receive: tokio::sync::broadcast::Receiver<()>,
 ) {
     loop {
         tokio::select! {
-            _ = kill_receive.recv() => {
+            _ = connection.kill_receive.recv() => {
                 return;
             }
             event = inbox.recv() => {

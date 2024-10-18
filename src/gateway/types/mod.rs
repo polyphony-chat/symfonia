@@ -147,8 +147,6 @@ pub struct GatewayClient {
     main_task_handle: tokio::task::JoinHandle<()>,
     // Handle to the heartbeat task for this client
     heartbeat_task_handle: tokio::task::JoinHandle<()>,
-    // Kill switch to disconnect the client
-    pub kill_send: tokio::sync::broadcast::Sender<()>,
     /// Token of the session token used for this connection
     pub session_token: String,
     /// The last sequence number received from the client. Shared between the main task, heartbeat
@@ -283,7 +281,6 @@ impl ConnectedUsers {
         connection: WebSocketConnection,
         main_task_handle: tokio::task::JoinHandle<()>,
         heartbeat_task_handle: tokio::task::JoinHandle<()>,
-        kill_send: tokio::sync::broadcast::Sender<()>,
         session_token: &str,
         last_sequence: Arc<Mutex<u64>>,
     ) -> Arc<Mutex<GatewayClient>> {
@@ -292,7 +289,6 @@ impl ConnectedUsers {
             parent: Arc::downgrade(&user),
             main_task_handle,
             heartbeat_task_handle,
-            kill_send,
             session_token: session_token.to_string(),
             last_sequence,
         };
@@ -326,7 +322,7 @@ impl GatewayClient {
     /// Disconnects a [GatewayClient] properly, including un-registering it from the memory store
     /// and creating a resumeable session.
     pub async fn die(mut self, connected_users: ConnectedUsers) {
-        self.kill_send.send(()).unwrap();
+        self.connection.kill_send.send(()).unwrap();
         let disconnect_info = DisconnectInfo {
             session_token: self.session_token.clone(),
             disconnected_at_sequence: *self.last_sequence.lock().await,
