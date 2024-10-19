@@ -40,7 +40,13 @@ pub(super) async fn gateway_task(
                 match message_result {
                     Ok(message_of_unknown_type) => {
                         let event = unwrap_event(Event::try_from(message_of_unknown_type), connection.clone(), connection.kill_send.clone());
-                        // TODO: Handle event
+                        if event.op_code() == Opcode::Dispatch {
+                            // Receiving a dispatch event from a client is never correct
+                            log::debug!(target: "symfonia::gateway::gateway_task", "Received an unexpected message: {:?}", event);
+                            connection.sender.send(Message::Close(Some(CloseFrame { code: tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode::Library(4002), reason: "DECODE_ERROR".into() })));
+                            connection.kill_send.send(()).expect("Failed to send kill_send");
+                            panic!("Killing gateway task: Received an unexpected message");
+                        }
                     },
                     Err(error) => {
                         connection.sender.send(Message::Close(Some(CloseFrame { code: tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode::Library(4000), reason: "INTERNAL_SERVER_ERROR".into() })));
