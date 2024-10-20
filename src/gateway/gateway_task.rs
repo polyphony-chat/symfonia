@@ -42,13 +42,32 @@ pub(super) async fn gateway_task(
                         log::trace!(target: "symfonia::gateway::gateway_task", "Received raw message {:?}", message_of_unknown_type);
                         let event = unwrap_event(Event::try_from(message_of_unknown_type), connection.clone(), connection.kill_send.clone());
                         log::trace!(target: "symfonia::gateway::gateway_task", "Event type of received message: {:?}", event);
-                        if event.op_code() == Opcode::Dispatch {
-                            // Receiving a dispatch event from a client is never correct
-                            log::debug!(target: "symfonia::gateway::gateway_task", "Received an unexpected message: {:?}", event);
-                            connection.sender.send(Message::Close(Some(CloseFrame { code: tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode::Library(4002), reason: "DECODE_ERROR".into() })));
-                            connection.kill_send.send(()).expect("Failed to send kill_send");
-                            panic!("Killing gateway task: Received an unexpected message");
+                        match event {
+                            Event::Dispatch(_) => {
+                                // Receiving a dispatch event from a client is never correct
+                                log::debug!(target: "symfonia::gateway::gateway_task", "Received an unexpected message: {:?}", event);
+                                connection.sender.send(Message::Close(Some(CloseFrame { code: tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode::Library(4002), reason: "DECODE_ERROR".into() })));
+                                connection.kill_send.send(()).expect("Failed to send kill_send");
+                                panic!("Killing gateway task: Received an unexpected message");
+                            },
+                            Event::Heartbeat(hearbeat_event) => {
+                                match heartbeat_send.send(hearbeat_event) {
+                                    Err(e) => {
+                                        log::debug!(target: "symfonia::gateway::gateway_task", "Received Heartbeat but HeartbeatHandler seems to be dead?");
+                                        connection.sender.send(Message::Close(Some(CloseFrame { code: tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode::Library(4002), reason: "DECODE_ERROR".into() })));
+                                        connection.kill_send.send(()).expect("Failed to send kill_send");
+                                        panic!("Killing gateway task: Received an unexpected message");
+                                    },
+                                    Ok(_) => {
+                                        log::trace!(target: "symfonia::gateway::gateway_task", "Forwarded heartbeat message to HeartbeatHandler!");
+                                    }
+                                }
+                            }
+                            _ => {
+                                log::error!(target: "symfonia::gateway::gateway_task", "Received an event type for which no code is yet implemented in the gateway_task. Please open a issue or PR at the symfonia repository. {:?}", event);
+                            }
                         }
+
                     },
                     Err(error) => {
                         connection.sender.send(Message::Close(Some(CloseFrame { code: tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode::Library(4000), reason: "INTERNAL_SERVER_ERROR".into() })));

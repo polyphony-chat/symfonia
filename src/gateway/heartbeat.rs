@@ -134,7 +134,6 @@ impl HeartbeatHandler {
                                     }
                                 };
                                 self.connection.kill_send.send(()).expect("Failed to send kill signal in heartbeat_handler");
-                                return;
                             }
                         }
                     }
