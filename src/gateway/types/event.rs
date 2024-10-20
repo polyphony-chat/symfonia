@@ -108,7 +108,7 @@ impl From<EventType> for Opcode {
 ///
 /// The types `T` in `GatewayPayload<T>` might not yet be correct or complete for all events. Please
 /// feel free to file a PR or an issue should you find any discrepancies.
-#[serde(rename_all = "PascalCase")]
+#[serde(untagged)]
 pub enum Event {
     Hello(GatewayHello),
     Heartbeat(GatewayHeartbeat),
