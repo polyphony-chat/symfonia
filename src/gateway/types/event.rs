@@ -210,7 +210,9 @@ impl TryFrom<tokio_tungstenite::tungstenite::Message> for Event {
     fn try_from(message: tokio_tungstenite::tungstenite::Message) -> Result<Self, Self::Error> {
         /// Takes a message of unknown type as input and tries to convert it to an [Event].
         let message_as_string = message.to_string();
-        let raw_gateway_payload: GatewayPayload<String> = from_str(&message_as_string)?;
+        // Payload type of option string is okay, since raw_gateway_payload is only used to look at
+        // the opcode and, if the opcode is 0 (= dispatch), the event name in the received message
+        let raw_gateway_payload: GatewayPayload<Option<String>> = from_str(&message_as_string)?;
         match Opcode::try_from(raw_gateway_payload.op_code).map_err(|_| {
             Error::Gateway(GatewayError::UnexpectedOpcode(
                 raw_gateway_payload.op_code.into(),
