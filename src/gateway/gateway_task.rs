@@ -41,6 +41,7 @@ pub(super) async fn gateway_task(
                     Ok(message_of_unknown_type) => {
                         log::trace!(target: "symfonia::gateway::gateway_task", "Received raw message {:?}", message_of_unknown_type);
                         let event = unwrap_event(Event::try_from(message_of_unknown_type), connection.clone(), connection.kill_send.clone());
+                        log::trace!(target: "symfonia::gateway::gateway_task", "Event type of received message: {:?}", event);
                         if event.op_code() == Opcode::Dispatch {
                             // Receiving a dispatch event from a client is never correct
                             log::debug!(target: "symfonia::gateway::gateway_task", "Received an unexpected message: {:?}", event);
