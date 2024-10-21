@@ -50,6 +50,8 @@ DATABASE_PORT=[Postgres port, usually 5432]
 DATABASE_USERNAME=[Your Postgres username]
 DATABASE_PASSWORD=[Your Postgres password]
 DATABASE_NAME=[Your Postgres database name]
+API_BIND=[ip:port to bind the HTTP API server to. Defaults to 0.0.0.0:3001 if not set]
+GATEWAY_BIND=[ip:port to bind the Gateway server to. Defaults to 0.0.0.0:3003 if not set]
 ```
 
 4. Install the sqlx CLI with `cargo install sqlx-cli`

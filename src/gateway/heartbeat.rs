@@ -20,8 +20,6 @@ static LATENCY_BUFFER: std::time::Duration = std::time::Duration::from_secs(5);
 
 pub(super) struct HeartbeatHandler {
     connection: WebSocketConnection,
-    kill_receive: tokio::sync::broadcast::Receiver<()>,
-    kill_send: tokio::sync::broadcast::Sender<()>,
     message_receive: tokio::sync::broadcast::Receiver<GatewayHeartbeat>,
     last_heartbeat: std::time::Instant,
     /// The current sequence number of the gateway connection.
@@ -35,9 +33,7 @@ impl HeartbeatHandler {
     /// This method initializes a new heartbeat handler with the provided connection, kill signals, and message receiver. It sets up the internal state for tracking the last heartbeat time.
     ///
     /// # Parameters
-    /// - `connection`: A shared reference to a mutex-protected connection object.
-    /// - `kill_receive`: A channel receiver for signaling the shutdown of the heartbeat handler.
-    /// - `kill_send`: A channel sender for sending signals to shut down the heartbeat handler.
+    /// - `connection`: A shared connection object.
     /// - `message_receive`: An MPSC (Multiple Producer Single Consumer) channel receiver for receiving heartbeat messages.
     /// - `session_id_receive`: A oneshot channel receiver for receiving the session ID. The heartbeat handler may start
     ///    running before an identify or resume message with a session ID is received, so this channel is used to wait for
@@ -64,8 +60,6 @@ impl HeartbeatHandler {
     /// ```
     pub(super) fn new(
         connection: WebSocketConnection,
-        kill_receive: tokio::sync::broadcast::Receiver<()>,
-        kill_send: tokio::sync::broadcast::Sender<()>,
         message_receive: tokio::sync::broadcast::Receiver<GatewayHeartbeat>,
         last_sequence_number: Arc<Mutex<u64>>,
         session_id_receive: tokio::sync::broadcast::Receiver<String>,
@@ -73,8 +67,6 @@ impl HeartbeatHandler {
         trace!(target: "symfonia::gateway::heartbeat_handler", "New heartbeat handler created");
         Self {
             connection,
-            kill_receive,
-            kill_send,
             message_receive,
             last_heartbeat: std::time::Instant::now(),
             sequence_number: last_sequence_number,
@@ -101,25 +93,6 @@ impl HeartbeatHandler {
     /// initialization. The corresponding `kill_receive` can be used by other tasks to signal that
     /// the Gateway connection should be closed. In the context of symfonia, this is being done to
     /// close the [GatewayTask].
-    ///
-    ///
-    /// ## Example
-    /// ```rust
-    /// use std::sync::Arc;
-    /// use tokio::sync::broadcast;
-    /// use tokio::sync::mpsc;
-    /// use chorus::types::GatewayHeartbeat;
-    /// use super::Connection;
-    /// use super::HeartbeatHandler;
-    ///
-    /// let connection = Arc::new(Mutex::new(Connection::new()));
-    /// let (kill_send, kill_receive) = broadcast::channel(1);
-    /// let (message_send, message_receive) = mpsc::channel(16);
-    ///
-    /// let mut handler = HeartbeatHandler::new(connection, kill_receive, kill_send, message_receive).await;
-    /// tokio::spawn(async move {
-    ///     handler.run();
-    /// });
     /// ```
     pub(super) async fn run(&mut self) {
         trace!(target: "symfonia::gateway::heartbeat_handler", "Heartbeat handler started");
@@ -133,7 +106,7 @@ impl HeartbeatHandler {
             //
             // I would consider "way off" to be a difference of more than or equal to 3.
             tokio::select! {
-                _ = self.kill_receive.recv() => {
+                _ = self.connection.kill_receive.recv() => {
                     trace!("Received kill signal in heartbeat_handler. Stopping heartbeat handler");
                     break;
                 }
@@ -157,11 +130,10 @@ impl HeartbeatHandler {
                                     Ok(_) => (),
                                     Err(e) => {
                                         trace!("Failed to send reconnect message in heartbeat_handler. Stopping gateway_task and heartbeat_handler");
-                                        self.kill_send.send(()).expect("Failed to send kill signal in heartbeat_handler");
+                                        self.connection.kill_send.send(()).expect("Failed to send kill signal in heartbeat_handler");
                                     }
                                 };
-                                self.kill_send.send(()).expect("Failed to send kill signal in heartbeat_handler");
-                                return;
+                                self.connection.kill_send.send(()).expect("Failed to send kill signal in heartbeat_handler");
                             }
                         }
                     }
@@ -172,7 +144,7 @@ impl HeartbeatHandler {
                         Ok(_) => (),
                         Err(_) => {
                             trace!("Failed to send heartbeat ack in heartbeat_handler. Stopping gateway_task and heartbeat_handler");
-                            self.kill_send.send(()).expect("Failed to send kill signal in heartbeat_handler");
+                            self.connection.kill_send.send(()).expect("Failed to send kill signal in heartbeat_handler");
                         },
                     }
 
@@ -184,7 +156,7 @@ impl HeartbeatHandler {
                     let elapsed = std::time::Instant::now() - self.last_heartbeat;
                     if elapsed > std::time::Duration::from_secs(45) {
                         trace!("Heartbeat timed out in heartbeat_handler. Stopping gateway_task and heartbeat_handler");
-                        self.kill_send.send(()).expect("Failed to send kill signal in heartbeat_handler");;
+                        self.connection.kill_send.send(()).expect("Failed to send kill signal in heartbeat_handler");;
                         break;
                     }
                 }
@@ -211,7 +183,8 @@ impl HeartbeatHandler {
             Ok(_) => (),
             Err(_) => {
                 trace!("Failed to send heartbeat ack in heartbeat_handler. Stopping gateway_task and heartbeat_handler");
-                self.kill_send
+                self.connection
+                    .kill_send
                     .send(())
                     .expect("Failed to send kill signal in heartbeat_handler");
             }
