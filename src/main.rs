@@ -31,6 +31,7 @@ use log4rs::{
     filter::Filter,
     Config,
 };
+use logo::print_logo;
 use parking_lot::RwLock;
 use pubserve::Publisher;
 use tokio::sync::Mutex;
@@ -40,6 +41,7 @@ mod cdn;
 mod database;
 mod errors;
 mod gateway;
+mod logo;
 mod util;
 
 pub type SharedEventPublisher = Arc<RwLock<Publisher<Event>>>;
@@ -179,6 +181,7 @@ async fn main() {
     let _handle = log4rs::init_config(config).unwrap();
 
     log::info!(target: "symfonia", "Starting up Symfonia");
+    print_logo();
 
     match loglevel {
         LevelFilter::Debug | LevelFilter::Trace => {
