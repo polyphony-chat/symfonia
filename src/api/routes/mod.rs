@@ -9,6 +9,7 @@ pub mod channels;
 pub mod guilds;
 pub mod health;
 pub mod invites;
+pub mod ping;
 pub mod policies;
 pub mod users;
 pub mod version;
