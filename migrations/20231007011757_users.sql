@@ -35,7 +35,6 @@ create table if not exists users (
     fingerprints        text               not null,
     extended_settings   json               not null,
     settings_index      numeric(20, 0)     null constraint chk_settings_index_range check (settings_index >= 0 AND settings_index <= 18446744073709551615),
-    relevant_events     json               not null default '[]',
     constraint users_settings_index_uindex unique (settings_index),
     constraint users_user_settings_index_fk foreign key (settings_index) references user_settings (index),
     constraint check_theme_colors_elements check (
