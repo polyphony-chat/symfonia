@@ -433,6 +433,16 @@ impl RoleUserMap {
     /// Due to the possibly large number of roles and users returned by the database, this method
     /// should only be executed once. The [RoleUserMap] should be kept synchronized with the database
     /// through means that do not involve this method.
+    ///
+    /// TODO:
+    /// Things that need to be accounted for:
+    /// - Users who delete or deactivate their accounts
+    /// - Users who are deleted from the database
+    /// - Users creating an account while the server is running
+    ///
+    /// If any of these are not accounted for, the RoleUserMap could get out of sync with the database.
+    /// This could result in users not receiving events or errors when trying to send an event to
+    /// a user that no longer exists.
     pub async fn init(&mut self, db: &PgPool) -> Result<(), crate::errors::Error> {
         // First, get all role ids from the roles table and insert them into the map
         let all_role_ids: Vec<PgU64> = sqlx::query_as("SELECT id FROM roles")
