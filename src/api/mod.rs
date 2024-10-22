@@ -6,12 +6,14 @@
 
 static DEFAULT_API_BIND: &str = "0.0.0.0:3001";
 
+use poem::middleware::Cors;
 use poem::{
     listener::TcpListener,
     middleware::{NormalizePath, TrailingSlash},
     web::Json,
     EndpointExt, IntoResponse, Route, Server,
 };
+use reqwest::Method;
 use serde_json::json;
 use sqlx::PgPool;
 
@@ -30,6 +32,13 @@ use crate::{
 
 mod middleware;
 mod routes;
+
+lazy_static::lazy_static! {
+    pub static ref BIND_API: String = std::env::var("API_BIND").unwrap_or_else(|_| {
+        log::warn!(target: "symfonia::db", "You did not specify API_BIND environment variable. Defaulting to '{DEFAULT_API_BIND}'.");
+        DEFAULT_API_BIND.to_string()
+    });
+}
 
 pub async fn start_api(
     db: PgPool,
@@ -86,25 +95,30 @@ pub async fn start_api(
         .data(config)
         .data(connected_users)
         .with(NormalizePath::new(TrailingSlash::Trim))
+        .with(Cors::new().allow_methods(&[
+            Method::CONNECT,
+            Method::DELETE,
+            Method::GET,
+            Method::HEAD,
+            Method::OPTIONS,
+            Method::PATCH,
+            Method::POST,
+            Method::PUT,
+            Method::TRACE,
+        ]))
         .catch_all_error(custom_error);
-
-    let bind = &std::env::var("API_BIND").unwrap_or_else(|_| {
-        log::warn!(target: "symfonia::db", "You did not specify API_BIND environment variable. Defaulting to '{DEFAULT_API_BIND}'.");
-        DEFAULT_API_BIND.to_string()
-    });
-    let bind_clone = bind.clone();
 
     log::info!(target: "symfonia::api", "Starting HTTP Server");
 
     tokio::task::spawn(async move {
-        Server::new(TcpListener::bind(bind_clone))
+        Server::new(TcpListener::bind(BIND_API.to_string()))
             .run(v9_api)
             .await
             .expect("Failed to start HTTP server");
         log::info!(target: "symfonia::api", "HTTP Server stopped");
     });
 
-    log::info!(target: "symfonia::api", "HTTP Server listening on {bind}");
+    log::info!(target: "symfonia::api", "HTTP Server listening on {}", BIND_API.as_str());
     Ok(())
 }
 

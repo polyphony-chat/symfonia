@@ -25,21 +25,21 @@ INSERT INTO users (
     mfa_enabled, webauthn_enabled, totp_secret, totp_last_ticket, created_at,
     premium_since, verified, disabled, deleted, email, flags, public_flags,
     purchased_flags, premium_usage_flags, rights, data, fingerprints, extended_settings,
-    settings_index, relevant_events
+    settings_index
 )
 VALUES
     (7250861145186111490, 'john_doe_private_channels', '1296', 'avatar1.png', 16777215, 'banner1.png', NULL,
      'he/him', '+1234567890', true, false, true, 1, false, 'This is my bio', false,
      true, true, true, 'secret123', 'ticket456', '2024-01-01 12:00:00',
      '2024-01-02 12:00:00', true, false, false, 'john_doe_private_channels@example.com', 100, 10,
-     5, 1, 100, '{"hash": "$2b$14$AbcNYTh5GcOYaB4v4P7OWeGW0hQkd/ysvmY4fGyIA/tyEnK0chGNu", "valid_tokens_since": "2024-10-07T20:22:06.162070616Z"}', 'fingerprint1', '{"setting": "value"}', 7250861145186111495,
-     '[]'),
+     5, 1, 100, '{"hash": "$2b$14$AbcNYTh5GcOYaB4v4P7OWeGW0hQkd/ysvmY4fGyIA/tyEnK0chGNu", "valid_tokens_since": "2024-10-07T20:22:06.162070616Z"}', 'fingerprint1', '{"setting": "value"}', 7250861145186111495
+     ),
     (7250861145186111491, 'jane_smith_private_channels', '5678', 'avatar2.png', 123456, NULL, NULL,
      'she/her', NULL, false, true, false, 0, false, '', false,
      false, false, false, NULL, NULL, '2024-02-01 15:30:00',
      NULL, false, false, false, 'jane_smith_private_channels@example.com', 50, 5,
-     0, 0, 50, '{"hash": "$2b$14$AbcNYTh5GcOYaB4v4P7OWeGW0hQkd/ysvmY4fGyIA/tyEnK0chGNu", "valid_tokens_since": "2024-10-07T20:22:06.162070616Z"}', 'fingerprint2', '{"setting": "another_value"}', 7250861145186111496,
-     '[]');
+     0, 0, 50, '{"hash": "$2b$14$AbcNYTh5GcOYaB4v4P7OWeGW0hQkd/ysvmY4fGyIA/tyEnK0chGNu", "valid_tokens_since": "2024-10-07T20:22:06.162070616Z"}', 'fingerprint2', '{"setting": "another_value"}', 7250861145186111496
+     );
 COMMIT;
 
 INSERT INTO channels (
