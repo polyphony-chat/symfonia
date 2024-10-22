@@ -86,7 +86,6 @@ pub async fn start_api(
         )
         .nest("/policies", routes::policies::setup_routes())
         .nest("/-", routes::health::setup_routes())
-        .nest("/.well-known", routes::well_known::setup_routes())
         .at("/version", routes::version::setup_routes());
 
     let v9_api = Route::new()
