@@ -12,4 +12,3 @@ pub mod invites;
 pub mod policies;
 pub mod users;
 pub mod version;
-pub mod well_known;
