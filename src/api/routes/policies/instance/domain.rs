@@ -18,26 +18,28 @@ pub async fn domain(
     Data(db): Data<&sqlx::PgPool>,
     Data(cfg): Data<&Config>,
 ) -> Result<impl IntoResponse, APIError> {
-    let cdn = if let Some(endpoint) = &cfg.cdn.endpoint_public {
-        endpoint.to_owned()
-    } else if let Ok(endpoint) = std::env::var("CDN") {
+    let cdn = if let Ok(endpoint) = std::env::var("CDN") {
         endpoint
+    } else if let Some(endpoint) = &cfg.cdn.endpoint_public {
+        endpoint.to_owned()
+    } else {
+        "http://localhost:3002".to_string()
+    };
+
+    let gateway = if let Ok(endpoint) = std::env::var("GATEWAY") {
+        endpoint
+    } else if let Some(endpoint) = &cfg.gateway.endpoint_public {
+        endpoint.to_owned()
+    } else {
+        "http://localhost:3003".to_string()
+    };
+
+    let api = if let Ok(endpoint) = std::env::var("API") {
+        endpoint
+    } else if let Some(endpoint) = &cfg.api.endpoint_public {
+        endpoint.to_owned()
     } else {
         "http://localhost:3001".to_string()
-    };
-
-    let gateway = if let Some(endpoint) = &cfg.gateway.endpoint_public {
-        endpoint.to_owned()
-    } else if let Ok(endpoint) = std::env::var("GATEWAY") {
-        endpoint
-    } else {
-        "ws://localhost:3001".to_string()
-    };
-
-    let api = if let Some(endpoint) = &cfg.api.endpoint_public {
-        endpoint.to_owned()
-    } else {
-        "http://localhost:3001/api".to_string()
     };
 
     Ok(Json(json!({
