@@ -218,6 +218,8 @@ async fn finish_connecting(
                 gateway_user.lock().await.inbox.resubscribe(),
                 state.heartbeat_send.clone(),
                 state.sequence_number.clone(),
+                state.connected_users.clone(),
+                claims.id,
             ));
             log::trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Creating gateway_client");
             let gateway_client = state
