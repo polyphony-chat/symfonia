@@ -11,7 +11,9 @@ use std::ops::{Deref, DerefMut};
 use chorus::types::{PermissionFlags, Snowflake};
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Row};
+use sqlx_pg_uint::PgU64;
 
+use crate::QUERY_UPPER_LIMIT;
 use crate::{eq_shared_event_publisher, errors::Error, SharedEventPublisherMap};
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
@@ -114,6 +116,42 @@ impl Role {
             .fetch_all(db)
             .await
             .map_err(Error::Sqlx)
+    }
+
+    /// Retrieve all roles associated with a specific user.
+    // TODO(bitfl0wer): Write test
+    pub async fn get_by_user(db: &PgPool, user_id: Snowflake) -> Result<Vec<Self>, Error> {
+        sqlx::query_as(
+            "SELECT r.* FROM roles r
+                JOIN member_roles mr ON r.id = mr.role_id
+                WHERE mr.index IN (
+                    SELECT m.index FROM members m WHERE m.id = $1
+                ) LIMIT $2;",
+        )
+        .bind(user_id)
+        .bind(QUERY_UPPER_LIMIT)
+        .fetch_all(db)
+        .await
+        .map_err(Error::Sqlx)
+    }
+
+    /// Retrieve the role ids of all roles associated with a specific user.
+    // TODO(bitfl0wer): Write test
+    pub async fn get_ids_by_user(db: &PgPool, user_id: Snowflake) -> Result<Vec<Snowflake>, Error> {
+        Ok(sqlx::query_as(
+            "SELECT mr.role_id
+                FROM member_roles mr
+                JOIN members m ON mr.index = m.index
+                WHERE m.id = $1 LIMIT $2;",
+        )
+        .bind(user_id)
+        .bind(QUERY_UPPER_LIMIT)
+        .fetch_all(db)
+        .await
+        .map_err(Error::Sqlx)?
+        .iter()
+        .map(|x: &PgU64| Snowflake::from(x.to_uint()))
+        .collect())
     }
 
     pub async fn count_by_guild(db: &PgPool, guild_id: Snowflake) -> Result<i32, Error> {
