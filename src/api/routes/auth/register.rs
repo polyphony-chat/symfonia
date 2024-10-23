@@ -4,6 +4,8 @@
  *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use std::collections::HashSet;
+
 use chorus::types::{jwt::generate_token, APIError, AuthError, RegisterSchema};
 use poem::{
     handler,
@@ -12,12 +14,14 @@ use poem::{
 };
 use serde_json::json;
 
-use crate::database::entities::{Config, User};
+use crate::database::entities::{Config, Role, User};
+use crate::gateway::ConnectedUsers;
 
 #[handler]
 pub async fn register(
     Data(db): Data<&sqlx::PgPool>,
     Data(cfg): Data<&Config>,
+    Data(connected_users): Data<&ConnectedUsers>,
     Json(payload): Json<RegisterSchema>,
     req: &Request,
 ) -> Result<impl IntoResponse, APIError> {
@@ -51,6 +55,29 @@ pub async fn register(
     .await
     .expect("Failed to create user");
 
+    // TODO: I wonder if there is a way to first send the token response to the user and *then*
+    // do this extra processing -bitfl0wer
+    // Put the new user into the role_user_map
+    let mut role_user_map = connected_users.role_user_map.lock().await;
+    let role_ids = Role::get_ids_by_user(db, user.id)
+        .await
+        .expect("Please report this error to the symfonia developers");
+    // Add the user to each role they are in
+    for role_id in role_ids.iter() {
+        // Check if the role exists in the map
+        let maybe_role_entry = role_user_map.get_mut(role_id);
+        match maybe_role_entry {
+            // Role exists - add user
+            Some(role_entry) => {
+                role_entry.insert(user.id);
+            }
+            // Role doesn't exist - create role and add user to it
+            None => {
+                role_user_map.insert(*role_id, HashSet::new());
+                role_user_map.get_mut(role_id).unwrap().insert(user.id);
+            }
+        };
+    }
     // TODO: Invite
 
     let token = generate_token(
