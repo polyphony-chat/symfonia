@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use chorus::types::{ClientInfo, GatewayReady, Session, Snowflake, UserNote};
+use chorus::types::{ClientInfo, GatewayReady, ReadState, Session, Snowflake, UserNote};
 use serde_json::json;
 use sqlx::PgPool;
 
@@ -71,6 +71,11 @@ pub async fn create_ready(user_id: Snowflake, db: &PgPool) -> Result<GatewayRead
         private_channels,
         notes,
         sessions: Some([session].into()),
+        read_state: ReadState {
+            entries: Default::default(),
+            partial: false,
+            version: 0,
+        },
         ..Default::default()
     };
     log::debug!(target: "symfonia::gateway::ready::create_ready", "Created READY json payload: {:#?}", json!(ready));
