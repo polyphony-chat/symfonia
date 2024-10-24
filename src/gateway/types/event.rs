@@ -212,14 +212,15 @@ impl TryFrom<tokio_tungstenite::tungstenite::Message> for Event {
         let message_as_string = message.to_string();
         // Payload type of option string is okay, since raw_gateway_payload is only used to look at
         // the opcode and, if the opcode is 0 (= dispatch), the event name in the received message
-        let raw_gateway_payload: GatewayPayload<Option<String>> = from_str(&message_as_string)?;
+        let raw_gateway_payload: GatewayPayload<Option<serde_json::Value>> =
+            from_str(&message_as_string)?;
         match Opcode::try_from(raw_gateway_payload.op_code).map_err(|_| {
             Error::Gateway(GatewayError::UnexpectedOpcode(
                 raw_gateway_payload.op_code.into(),
             ))
         })? {
             Opcode::Heartbeat => return convert_to!(Event::Heartbeat, message_as_string),
-            Opcode::Identify => return convert_to!(Event::Heartbeat, message_as_string),
+            Opcode::Identify => return convert_to!(Event::Identify, message_as_string),
             Opcode::PresenceUpdate => return convert_to!(Event::PresenceUpdate, message_as_string),
             Opcode::VoiceStateUpdate => {
                 return convert_to!(Event::VoiceStateUpdate, message_as_string)
@@ -707,5 +708,34 @@ impl TryFrom<tokio_tungstenite::tungstenite::Message> for Event {
                 convert_to!(DispatchEvent::WebhooksUpdate, message_as_string).map(Event::Dispatch)
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use serde_json::Value;
+
+    use super::*;
+    #[test]
+    fn identify_from_raw_json() {
+        let json = r#"{"op":2,"d":{"token":"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE3Mjk4Njg3MzQsImlhdCI6MTcyOTc4MjMzNCwiZW1haWwiOiJkZmdkc2Znc2RmZ0Bkc2Zmc2Rmc2QuZGUiLCJpZCI6IjEyOTkwMjYwMDU1MzIzNDg0MTYifQ.3mFo83e0ehI4JWUFy631hUXPJKxjJWUSIT5laDTbzzU","capabilities":16381,"properties":{"browser":"Spacebar Web","client_build_number":0,"release_channel":"dev","browser_user_agent":"Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"},"compress":false,"presence":{"status":"online","since":1729782873344,"activities":[],"afk":false}}}"#;
+        let message = Message::Text(json.to_string());
+        let gateway_payload_string =
+            from_str::<GatewayPayload<Option<Value>>>(&message.to_string()).unwrap();
+        dbg!(gateway_payload_string);
+        let event = Event::try_from(message).unwrap();
+        dbg!(event);
+    }
+
+    #[test]
+    fn heartbeat_from_raw_json() {
+        let json = r#"{"op":1}"#;
+        let message = Message::Text(json.to_string());
+        let gateway_payload_string =
+            from_str::<GatewayPayload<Option<Value>>>(&message.to_string()).unwrap();
+        dbg!(gateway_payload_string);
+        let event = Event::try_from(message).unwrap();
+        dbg!(event);
     }
 }
