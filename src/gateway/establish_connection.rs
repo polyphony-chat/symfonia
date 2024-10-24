@@ -23,6 +23,7 @@ use tokio_tungstenite::{
 };
 
 use crate::gateway::ready::create_ready;
+use crate::gateway::Event;
 use crate::{
     database::entities::Config,
     errors::{Error, GatewayError},
@@ -155,8 +156,8 @@ async fn finish_connecting(
             }
         };
         debug!(target: "symfonia::gateway::establish_connection::finish_connecting", "Received message");
-
-        if let Ok(heartbeat) = from_str::<GatewayHeartbeat>(&raw_message.to_string()) {
+        let event = Event::try_from(raw_message.clone())?;
+        if let Event::Heartbeat(heartbeat) = event {
             log::trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Received heartbeat");
             match heartbeat_handler_handle {
                 None => {
@@ -185,9 +186,7 @@ async fn finish_connecting(
                     state.heartbeat_send.send(heartbeat);
                 }
             }
-        } else if let Ok(identify) =
-            from_str::<GatewayPayload<GatewayIdentifyPayload>>(&raw_message.to_string())
-        {
+        } else if let Event::Identify(identify) = event {
             log::trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Received identify payload");
             let claims = match check_token(
                 &state.db,
@@ -274,7 +273,7 @@ async fn finish_connecting(
                 user: gateway_user,
                 client: gateway_client.clone(),
             });
-        } else if let Ok(resume) = from_str::<GatewayResume>(&raw_message.to_string()) {
+        } else if let Event::Resume(resume) = event {
             log::trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Received resume payload");
             log::warn!(target: "symfonia::gateway::establish_connection::finish_connecting", "Resuming connections is not yet implemented. Telling client to identify instead.");
             state
@@ -291,8 +290,7 @@ async fn finish_connecting(
                 .send(())
                 .expect("Failed to send kill signal");
         } else {
-            debug!(target: "symfonia::gateway::establish_connection::finish_connecting", "Message could not be decoded as resume, heartbeat or identify.");
-            debug!(target: "symfonia::gateway::establish_connection::finish_connecting",  "Message: {}", raw_message);
+            debug!(target: "symfonia::gateway::establish_connection::finish_connecting", "Message could not be decoded as resume, heartbeat or identify: {}", raw_message);
             return Err(GatewayError::UnexpectedMessage("Received payload other than Heartbeat, Identify or Resume before the connection was established".to_string()).into());
         }
     }
