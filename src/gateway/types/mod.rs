@@ -61,14 +61,29 @@ where
 {
     #[serde(rename = "op")]
     pub op_code: u8,
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "d")]
-    pub event_data: T,
+    pub event_data: Option<T>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "s")]
     pub sequence_number: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "t")]
     pub event_name: Option<String>,
+}
+
+impl<T: Serialize + DeserializeOwned> GatewayPayload<T> {
+    pub fn has_data(&self) -> bool {
+        self.event_data.is_some()
+    }
+
+    pub fn has_sequence(&self) -> bool {
+        self.sequence_number.is_some()
+    }
+
+    pub fn has_event_name(&self) -> bool {
+        self.event_name.is_some()
+    }
 }
 
 impl<'de, T: DeserializeOwned + Serialize> Deserialize<'de> for GatewayPayload<T> {
@@ -83,7 +98,7 @@ impl<'de, T: DeserializeOwned + Serialize> Deserialize<'de> for GatewayPayload<T
                 Ok(t) => t,
                 Err(e) => return Err(::serde::de::Error::custom(e)),
             },
-            None => return Err(::serde::de::Error::missing_field("d")),
+            None => None,
         };
         let sequence_number = value.get("s").cloned().map(|v| v.as_u64().unwrap());
         let event_name = match value.get("t") {
@@ -433,6 +448,16 @@ impl RoleUserMap {
     /// Due to the possibly large number of roles and users returned by the database, this method
     /// should only be executed once. The [RoleUserMap] should be kept synchronized with the database
     /// through means that do not involve this method.
+    ///
+    /// TODO:
+    /// Things that need to be accounted for:
+    /// - Users who delete or deactivate their accounts
+    /// - Users who are deleted from the database
+    /// - Users creating an account while the server is running
+    ///
+    /// If any of these are not accounted for, the RoleUserMap could get out of sync with the database.
+    /// This could result in users not receiving events or errors when trying to send an event to
+    /// a user that no longer exists.
     pub async fn init(&mut self, db: &PgPool) -> Result<(), crate::errors::Error> {
         // First, get all role ids from the roles table and insert them into the map
         let all_role_ids: Vec<PgU64> = sqlx::query_as("SELECT id FROM roles")

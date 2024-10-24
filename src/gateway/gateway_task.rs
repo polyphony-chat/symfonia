@@ -1,7 +1,8 @@
 use std::{sync::Arc, time::Duration};
 
-use chorus::types::{GatewayHeartbeat, GatewaySendPayload, Opcode};
+use chorus::types::{GatewayHeartbeat, GatewaySendPayload, Opcode, Snowflake};
 use futures::StreamExt;
+use log::debug;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::{from_str, json};
@@ -12,7 +13,7 @@ use tokio_tungstenite::tungstenite::{protocol::CloseFrame, Message};
 use crate::errors::{Error, GatewayError};
 use crate::gateway::{DispatchEvent, DispatchEventType};
 
-use super::{Event, GatewayClient, GatewayPayload};
+use super::{ConnectedUsers, Event, GatewayClient, GatewayPayload};
 
 /// Handles all messages a client sends to the gateway post-handshake.
 pub(super) async fn gateway_task(
@@ -20,6 +21,8 @@ pub(super) async fn gateway_task(
     mut inbox: tokio::sync::broadcast::Receiver<Event>,
     mut heartbeat_send: tokio::sync::broadcast::Sender<GatewayHeartbeat>,
     last_sequence_number: Arc<Mutex<u64>>,
+    connected_users: ConnectedUsers,
+    user_id: Snowflake,
 ) {
     log::trace!(target: "symfonia::gateway::gateway_task", "Started a new gateway task!");
     let inbox_processor = tokio::spawn(process_inbox(connection.clone(), inbox.resubscribe()));
@@ -34,6 +37,11 @@ pub(super) async fn gateway_task(
     loop {
         tokio::select! {
             _ = connection.kill_receive.recv() => {
+                let mut store_lock = connected_users.store.write();
+                store_lock.users.remove(&user_id);
+                store_lock.inboxes.remove(&user_id);
+                // TODO(bitfl0wer) Add the user to the disconnected sessions
+                drop(store_lock);
                 return;
             },
             message_result = connection.receiver.recv() => {
@@ -48,7 +56,6 @@ pub(super) async fn gateway_task(
                                 log::debug!(target: "symfonia::gateway::gateway_task", "Received an unexpected message: {:?}", event);
                                 connection.sender.send(Message::Close(Some(CloseFrame { code: tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode::Library(4002), reason: "DECODE_ERROR".into() })));
                                 connection.kill_send.send(()).expect("Failed to send kill_send");
-                                panic!("Killing gateway task: Received an unexpected message");
                             },
                             Event::Heartbeat(hearbeat_event) => {
                                 match heartbeat_send.send(hearbeat_event) {
@@ -56,7 +63,6 @@ pub(super) async fn gateway_task(
                                         log::debug!(target: "symfonia::gateway::gateway_task", "Received Heartbeat but HeartbeatHandler seems to be dead?");
                                         connection.sender.send(Message::Close(Some(CloseFrame { code: tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode::Library(4002), reason: "DECODE_ERROR".into() })));
                                         connection.kill_send.send(()).expect("Failed to send kill_send");
-                                        panic!("Killing gateway task: Received an unexpected message");
                                     },
                                     Ok(_) => {
                                         log::trace!(target: "symfonia::gateway::gateway_task", "Forwarded heartbeat message to HeartbeatHandler!");
@@ -72,7 +78,6 @@ pub(super) async fn gateway_task(
                     Err(error) => {
                         connection.sender.send(Message::Close(Some(CloseFrame { code: tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode::Library(4000), reason: "INTERNAL_SERVER_ERROR".into() })));
                         connection.kill_send.send(()).expect("Failed to send kill_send");
-                        return;
                     },
                 }
             }
@@ -132,6 +137,7 @@ fn unwrap_event(
     }
 }
 
+/// Process events triggered by the HTTP API.
 async fn process_inbox(
     mut connection: super::WebSocketConnection,
     mut inbox: tokio::sync::broadcast::Receiver<Event>,
@@ -144,8 +150,14 @@ async fn process_inbox(
             event = inbox.recv() => {
                 match event {
                     Ok(event) => {
-                        todo!();
-                        // TODO: Process event
+                        let send_result = connection.sender.send(Message::Text(json!(event).to_string()));
+                        match send_result {
+                            Ok(_) => (), // TODO: Increase sequence number here
+                            Err(_) => {
+                                debug!("Failed to send event to WebSocket. Sending kill_send");
+                                connection.kill_send.send(()).expect("Failed to send kill_send");
+                            },
+                        }
                     }
                     Err(_) => {
                         return;

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use chorus::types::{GatewayReady, Snowflake, UserNote};
+use chorus::types::{ClientInfo, GatewayReady, ReadState, Session, Snowflake, UserNote};
 use serde_json::json;
 use sqlx::PgPool;
 
@@ -52,6 +52,14 @@ pub async fn create_ready(user_id: Snowflake, db: &PgPool) -> Result<GatewayRead
     // session disconnect. This is a temporary solution.
     let session_id = Snowflake::generate().to_string();
 
+    // TODO: This is also just temporary.
+    let session = Session {
+        activities: None,
+        client_info: ClientInfo::default(),
+        session_id: session_id.clone(),
+        status: "Testing symfonia".to_string(),
+    };
+
     // TODO: There are a lot of missing fields here. Ideally, all of the fields should be
     // populated with the correct data.
     let ready = GatewayReady {
@@ -62,6 +70,12 @@ pub async fn create_ready(user_id: Snowflake, db: &PgPool) -> Result<GatewayRead
         relationships,
         private_channels,
         notes,
+        sessions: Some([session].into()),
+        read_state: ReadState {
+            entries: Default::default(),
+            partial: false,
+            version: 0,
+        },
         ..Default::default()
     };
     log::debug!(target: "symfonia::gateway::ready::create_ready", "Created READY json payload: {:#?}", json!(ready));
