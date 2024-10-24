@@ -727,4 +727,15 @@ mod tests {
         let event = Event::try_from(message).unwrap();
         dbg!(event);
     }
+
+    #[test]
+    fn heartbeat_from_raw_json() {
+        let json = r#"{"op":1}"#;
+        let message = Message::Text(json.to_string());
+        let gateway_payload_string =
+            from_str::<GatewayPayload<Option<Value>>>(&message.to_string()).unwrap();
+        dbg!(gateway_payload_string);
+        let event = Event::try_from(message).unwrap();
+        dbg!(event);
+    }
 }

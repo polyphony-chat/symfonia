@@ -61,14 +61,29 @@ where
 {
     #[serde(rename = "op")]
     pub op_code: u8,
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "d")]
-    pub event_data: T,
+    pub event_data: Option<T>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "s")]
     pub sequence_number: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "t")]
     pub event_name: Option<String>,
+}
+
+impl<T: Serialize + DeserializeOwned> GatewayPayload<T> {
+    pub fn has_data(&self) -> bool {
+        self.event_data.is_some()
+    }
+
+    pub fn has_sequence(&self) -> bool {
+        self.sequence_number.is_some()
+    }
+
+    pub fn has_event_name(&self) -> bool {
+        self.event_name.is_some()
+    }
 }
 
 impl<'de, T: DeserializeOwned + Serialize> Deserialize<'de> for GatewayPayload<T> {
@@ -83,7 +98,7 @@ impl<'de, T: DeserializeOwned + Serialize> Deserialize<'de> for GatewayPayload<T
                 Ok(t) => t,
                 Err(e) => return Err(::serde::de::Error::custom(e)),
             },
-            None => return Err(::serde::de::Error::missing_field("d")),
+            None => None,
         };
         let sequence_number = value.get("s").cloned().map(|v| v.as_u64().unwrap());
         let event_name = match value.get("t") {

@@ -199,7 +199,7 @@ async fn finish_connecting(
             log::trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Received identify payload");
             let claims = match check_token(
                 &state.db,
-                &identify.event_data.token,
+                &identify.event_data.as_ref().unwrap().token,
                 &state.config.security.jwt_secret,
             )
             .await
@@ -251,11 +251,14 @@ async fn finish_connecting(
                             }
                         }),
                     },
-                    &identify.event_data.token,
+                    &identify.event_data.as_ref().unwrap().token,
                     state.sequence_number.clone(),
                 )
                 .await;
-            match state.session_id_send.send(identify.event_data.token) {
+            match state
+                .session_id_send
+                .send(identify.event_data.unwrap().token)
+            {
                 Ok(_) => (),
                 Err(_) => {
                     log::error!(target: "symfonia::gateway::establish_connection::finish_connecting", "Failed to send session_id to heartbeat handler");
@@ -269,7 +272,7 @@ async fn finish_connecting(
             }
             let formatted_payload = GatewayPayload::<GatewayReady> {
                 op_code: 0,
-                event_data: create_ready(claims.id, &state.db).await?,
+                event_data: Some(create_ready(claims.id, &state.db).await?),
                 sequence_number: None,
                 event_name: Some("READY".to_string()),
             };
