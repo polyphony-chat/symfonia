@@ -2,6 +2,7 @@ use std::{sync::Arc, time::Duration};
 
 use chorus::types::{GatewayHeartbeat, GatewaySendPayload, Opcode, Snowflake};
 use futures::StreamExt;
+use log::debug;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::{from_str, json};
@@ -136,6 +137,7 @@ fn unwrap_event(
     }
 }
 
+/// Process events triggered by the HTTP API.
 async fn process_inbox(
     mut connection: super::WebSocketConnection,
     mut inbox: tokio::sync::broadcast::Receiver<Event>,
@@ -148,8 +150,14 @@ async fn process_inbox(
             event = inbox.recv() => {
                 match event {
                     Ok(event) => {
-                        todo!();
-                        // TODO: Process event
+                        let send_result = connection.sender.send(Message::Text(json!(event).to_string()));
+                        match send_result {
+                            Ok(_) => (), // TODO: Increase sequence number here
+                            Err(_) => {
+                                debug!("Failed to send event to WebSocket. Sending kill_send");
+                                connection.kill_send.send(()).expect("Failed to send kill_send");
+                            },
+                        }
                     }
                     Err(_) => {
                         return;
