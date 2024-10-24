@@ -156,7 +156,16 @@ async fn finish_connecting(
             }
         };
         debug!(target: "symfonia::gateway::establish_connection::finish_connecting", "Received message");
-        let event = Event::try_from(raw_message.clone())?;
+        trace!("Message: {}", raw_message);
+        let event = match Event::try_from(raw_message.clone()) {
+            Ok(event) => event,
+            Err(e) => {
+                log::debug!("Message could not be deserialized to Event: {e}");
+                return Err(Error::Gateway(GatewayError::UnexpectedMessage(
+                    e.to_string(),
+                )));
+            }
+        };
         if let Event::Heartbeat(heartbeat) = event {
             log::trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Received heartbeat");
             match heartbeat_handler_handle {
