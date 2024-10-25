@@ -37,6 +37,8 @@ pub(super) async fn gateway_task(
     loop {
         tokio::select! {
             _ = connection.kill_receive.recv() => {
+                // Since callsites handle closing the connection, we don't need to do that here.
+                // Perform cleanup and return
                 let mut store_lock = connected_users.store.write();
                 store_lock.users.remove(&user_id);
                 store_lock.inboxes.remove(&user_id);
@@ -154,7 +156,8 @@ async fn process_inbox(
                         match send_result {
                             Ok(_) => (), // TODO: Increase sequence number here
                             Err(_) => {
-                                debug!("Failed to send event to WebSocket. Sending kill_send");
+                                debug!("Failed to send event to WebSocket. Closing connection and killing tasks");
+                                connection.sender.send(Message::Close(Some(CloseFrame { code: CloseCode::Library(4000), reason: "WebSocket error".into() })));
                                 connection.kill_send.send(()).expect("Failed to send kill_send");
                             },
                         }

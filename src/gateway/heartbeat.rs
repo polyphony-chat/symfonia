@@ -114,7 +114,9 @@ impl HeartbeatHandler {
                     trace!("Received heartbeat message in heartbeat_handler");
                     if let Some(received_sequence_number) = heartbeat.d {
                         let mut sequence = self.sequence_number.lock().await;
-                        match Self::compare_sequence_numbers(*sequence, received_sequence_number) {
+                        // TODO: As long as sequence numbers are not increased server-side, this code
+                        // is not useful.
+                        /* match Self::compare_sequence_numbers(*sequence, received_sequence_number) {
                             SequenceNumberComparison::Correct => {
                                 self.send_ack().await;
                             }
@@ -135,7 +137,7 @@ impl HeartbeatHandler {
                                 };
                                 self.connection.kill_send.send(()).expect("Failed to send kill signal in heartbeat_handler");
                             }
-                        }
+                        } */
                     }
                     self.last_heartbeat = std::time::Instant::now();
                     match self.connection.sender.send(Message::Text(
@@ -144,6 +146,7 @@ impl HeartbeatHandler {
                         Ok(_) => (),
                         Err(_) => {
                             trace!("Failed to send heartbeat ack in heartbeat_handler. Stopping gateway_task and heartbeat_handler");
+                            self.connection.sender.send(Message::Close(Some(CloseFrame { code: tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode::Library(4000), reason: "WebSocket error".into() })));
                             self.connection.kill_send.send(()).expect("Failed to send kill signal in heartbeat_handler");
                         },
                     }
@@ -156,6 +159,7 @@ impl HeartbeatHandler {
                     let elapsed = std::time::Instant::now() - self.last_heartbeat;
                     if elapsed > std::time::Duration::from_secs(45) {
                         trace!("Heartbeat timed out in heartbeat_handler. Stopping gateway_task and heartbeat_handler");
+                        self.connection.sender.send(Message::Close(Some(CloseFrame { code: tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode::Library(4009), reason: "Heartbeat timeout".into() })));
                         self.connection.kill_send.send(()).expect("Failed to send kill signal in heartbeat_handler");;
                         break;
                     }
