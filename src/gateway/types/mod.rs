@@ -497,6 +497,8 @@ pub struct WebSocketConnection {
     pub sender: tokio::sync::broadcast::Sender<Message>,
     pub receiver: tokio::sync::broadcast::Receiver<Message>,
     pub kill_receive: tokio::sync::broadcast::Receiver<()>,
+    /// Callsites of `kill_send` are always responsible for sending a close message to the
+    /// client.
     pub kill_send: tokio::sync::broadcast::Sender<()>,
     sender_task: Arc<tokio::task::JoinHandle<()>>,
     receiver_task: Arc<tokio::task::JoinHandle<()>>,

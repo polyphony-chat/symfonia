@@ -149,6 +149,13 @@ async fn finish_connecting(
                 log::debug!(target: "symfonia::gateway::finish_connecting", "Encountered error when trying to receive message. Sending kill signal...");
                 state
                     .connection
+                    .sender
+                    .send(Message::Close(Some(CloseFrame {
+                        code: CloseCode::Library(4002),
+                        reason: "Failed to decode payload".into(),
+                    })));
+                state
+                    .connection
                     .kill_send
                     .send(())
                     .expect("Failed to send kill_send");
@@ -212,6 +219,14 @@ async fn finish_connecting(
                     log::trace!(target: "symfonia::gateway::establish_connection::finish_connecting", "Failed to verify token");
                     state
                         .connection
+                        .sender
+                        .send(Message::Close(Some(CloseFrame {
+                            code: CloseCode::Library(4004),
+                            reason: "The token you sent in your identify payload is incorrect."
+                                .into(),
+                        })));
+                    state
+                        .connection
                         .kill_send
                         .send(())
                         .expect("Failed to send kill signal");
@@ -264,6 +279,13 @@ async fn finish_connecting(
                     log::error!(target: "symfonia::gateway::establish_connection::finish_connecting", "Failed to send session_id to heartbeat handler");
                     state
                         .connection
+                        .sender
+                        .send(Message::Close(Some(CloseFrame {
+                            code: CloseCode::Library(4000),
+                            reason: "Internal server error".into(),
+                        })));
+                    state
+                        .connection
                         .kill_send
                         .send(())
                         .expect("Failed to send kill signal");
@@ -292,7 +314,7 @@ async fn finish_connecting(
                 .connection
                 .sender
                 .send(Message::Close(Some(CloseFrame {
-                    code: CloseCode::from(4007u16),
+                    code: CloseCode::from(4000),
                     reason: "Resuming connections is not yet implemented. Please identify instead."
                         .into(),
                 })))?;
