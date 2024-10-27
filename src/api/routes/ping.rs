@@ -1,19 +1,20 @@
 use std::env;
 
-use chorus::types::{PingInstance, PingReturn};
-use poem::{handler, web::Json, IntoResponse, Route};
-use poem::web::Data;
-use serde::Serialize;
 use crate::database::entities::Config;
+use chorus::types::{PingInstance, PingReturn};
+use poem::{
+    handler,
+    web::{Data, Json},
+    IntoResponse, Route,
+};
+use serde::Serialize;
 
 pub fn setup_routes() -> Route {
     Route::new().at("/ping", ping)
 }
 
 #[handler]
-pub async fn ping(
-    Data(config): Data<&Config>
-) -> poem::Result<impl IntoResponse> {
+pub async fn ping(Data(config): Data<&Config>) -> poem::Result<impl IntoResponse> {
     let ping_response = PingReturn {
         ping: "pong!".to_string(),
         instance: PingInstance {
