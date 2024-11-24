@@ -1,5 +1,3 @@
-use std::env;
-
 use crate::database::entities::Config;
 use chorus::types::{PingInstance, PingReturn};
 use poem::{

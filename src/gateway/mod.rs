@@ -47,11 +47,11 @@ use crate::database::entities::Config;
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 use crate::{
+    configuration::SymfoniaConfiguration,
     errors::{Error, GatewayError},
     util::token::check_token,
     SharedEventPublisherMap, WebSocketReceive, WebSocketSend,
 };
-
 /* NOTES (bitfl0wer) [These will be removed]
 The gateway is supposed to be highly concurrent. It will be handling a lot of connections at once.
 Thus, it makes sense to have each user connection be handled in a separate task.
@@ -103,10 +103,7 @@ pub async fn start_gateway(
     // TODO(bitfl0wer): Add log messages throughout the method for debugging the gateway
     info!(target: "symfonia::gateway", "Starting gateway server");
 
-    let bind = &std::env::var("GATEWAY_BIND").unwrap_or_else(|_| {
-        log::warn!(target: "symfonia::db", "You did not specify GATEWAY_BIND environment variable. Defaulting to '{DEFAULT_GATEWAY_BIND}'.");
-        DEFAULT_GATEWAY_BIND.to_string()
-    });
+    let bind = &SymfoniaConfiguration::get().gateway.to_string();
     let try_socket = TcpListener::bind(&bind).await;
     let listener = try_socket.expect("Failed to bind to address");
 

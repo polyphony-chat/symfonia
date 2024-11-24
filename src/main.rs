@@ -14,6 +14,7 @@ use std::{
 use chorus::types::Snowflake;
 use clap::Parser;
 
+use crate::configuration::SymfoniaConfiguration;
 use gateway::{ConnectedUsers, Event};
 use log::LevelFilter;
 use log4rs::{
@@ -38,6 +39,7 @@ use tokio::sync::Mutex;
 
 mod api;
 mod cdn;
+mod configuration;
 mod database;
 mod errors;
 mod gateway;
@@ -89,6 +91,8 @@ async fn main() {
     let args = Args::parse();
     dotenv::dotenv().ok();
 
+    SymfoniaConfiguration::load().expect("Failed to load configuration");
+
     let stdout = ConsoleAppender::builder()
         .target(Target::Stdout)
         .encoder(Box::new(PatternEncoder::new(
@@ -129,8 +133,7 @@ async fn main() {
         )
         .unwrap();
 
-    let env_mode = std::env::var("MODE").unwrap_or("DEBUG".to_string());
-    let loglevel = match env_mode.to_uppercase().as_str() {
+    let loglevel = match SymfoniaConfiguration::get().mode.to_uppercase().as_str() {
         "DEBUG" => LevelFilter::Debug,
         "PRODUCTION" => LevelFilter::Warn,
         "VERBOSE" => LevelFilter::Trace,
@@ -188,7 +191,7 @@ async fn main() {
             log::warn!(target: "symfonia", "⚠️⚠️⚠️ WARNING ⚠️⚠️⚠️");
             log::warn!(target: "symfonia", "⚠️⚠️⚠️ WARNING ⚠️⚠️⚠️");
             log::warn!(target: "symfonia", "⚠️⚠️⚠️ WARNING ⚠️⚠️⚠️");
-            log::warn!(target: "symfonia", "WARNING: Running in DEBUG or TRACE modes will leak sensitive information to the logs. Please run symfonia in production mode if you are not currently debugging. This can be done by setting the MODE environment variable to 'PRODUCTION'.");
+            log::warn!(target: "symfonia", "WARNING: Running in DEBUG or TRACE modes will leak sensitive information to the logs. Please run symfonia in production mode if you are not currently debugging. This can be done by setting the `mode` option in your config to 'PRODUCTION'.");
             log::warn!(target: "symfonia", "⚠️⚠️⚠️ WARNING ⚠️⚠️⚠️");
             log::warn!(target: "symfonia", "⚠️⚠️⚠️ WARNING ⚠️⚠️⚠️");
             log::warn!(target: "symfonia", "⚠️⚠️⚠️ WARNING ⚠️⚠️⚠️");

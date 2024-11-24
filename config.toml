@@ -1,0 +1,16 @@
+mode="DEBUG"
+
+[database]
+host="127.0.0.1"
+port=5432
+username="symfonia"
+password="symfonia"
+database="symfonia"
+
+[gateway]
+host="127.0.0.1"
+port=3003
+
+[api]
+host="127.0.0.1"
+port=3001
