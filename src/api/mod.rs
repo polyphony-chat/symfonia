@@ -4,8 +4,6 @@
  *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-static DEFAULT_API_BIND: &str = "0.0.0.0:3001";
-
 use poem::{
     listener::TcpListener,
     middleware::{Cors, NormalizePath, TrailingSlash},
@@ -23,6 +21,7 @@ use crate::{
         },
         routes::{auth, channels, guilds, users},
     },
+    configuration::SymfoniaConfiguration,
     database::entities::Config,
     errors::Error,
     gateway::ConnectedUsers,
@@ -31,13 +30,6 @@ use crate::{
 
 mod middleware;
 mod routes;
-
-lazy_static::lazy_static! {
-    pub static ref BIND_API: String = std::env::var("API_BIND").unwrap_or_else(|_| {
-        log::warn!(target: "symfonia::db", "You did not specify API_BIND environment variable. Defaulting to '{DEFAULT_API_BIND}'.");
-        DEFAULT_API_BIND.to_string()
-    });
-}
 
 pub async fn start_api(
     db: PgPool,
@@ -112,14 +104,16 @@ pub async fn start_api(
     log::info!(target: "symfonia::api", "Starting HTTP Server");
 
     tokio::task::spawn(async move {
-        Server::new(TcpListener::bind(BIND_API.to_string()))
-            .run(v9_api)
-            .await
-            .expect("Failed to start HTTP server");
+        Server::new(TcpListener::bind(
+            SymfoniaConfiguration::get().api.to_string(),
+        ))
+        .run(v9_api)
+        .await
+        .expect("Failed to start HTTP server");
         log::info!(target: "symfonia::api", "HTTP Server stopped");
     });
 
-    log::info!(target: "symfonia::api", "HTTP Server listening on {}", BIND_API.as_str());
+    log::info!(target: "symfonia::api", "HTTP Server listening on {}", SymfoniaConfiguration::get().api.to_string());
     Ok(())
 }
 

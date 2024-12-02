@@ -4,9 +4,8 @@
  *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use crate::{configuration::SymfoniaConfiguration, errors::Error};
 use sqlx::{postgres::PgConnectOptions, Database, Executor, PgPool, Row};
-
-use crate::errors::Error;
 
 pub mod entities;
 
@@ -14,35 +13,13 @@ pub trait Queryer<'c, DB: Database>: Executor<'c, Database = DB> {}
 
 impl<'c> Queryer<'c, sqlx::Postgres> for &PgPool {}
 
-static DEFAULT_CONNECTION_HOST: &str = "localhost";
-static DEFAULT_CONNECTION_USERNAME: &str = "symfonia";
-static DEFAULT_CONNECTION_PASSWORD: &str = "symfonia";
-static DEFAULT_CONNECTION_NAME: &str = "symfonia";
-static DEFAULT_CONNECTION_PORT: u16 = 5432;
-
 pub async fn establish_connection() -> Result<sqlx::PgPool, Error> {
-    let db_url = std::env::var("DATABASE_HOST").unwrap_or_else(|_| {
-        log::warn!(target: "symfonia::db", "You did not specify DATABASE_HOST environment variable, defaulting to '{DEFAULT_CONNECTION_HOST}'.");
-        DEFAULT_CONNECTION_HOST.to_string()
-    });
     let connect_options = PgConnectOptions::new()
-        .host(&db_url)
-        .port(std::env::var("DATABASE_PORT").unwrap_or_else(|_| {
-            log::warn!(target: "symfonia::db", "You did not specify DATABASE_PORT environment variable. Defaulting to '{DEFAULT_CONNECTION_PORT}'.");
-            DEFAULT_CONNECTION_PORT.to_string()
-        }).parse::<u16>().expect("DATABASE_PORT must be a valid 16 bit unsigned integer."))
-        .username(&std::env::var("DATABASE_USERNAME").unwrap_or_else(|_| {
-            log::warn!(target: "symfonia::db", "You did not specify DATABASE_USERNAME environment variable. Defaulting to '{DEFAULT_CONNECTION_USERNAME}'.");
-            DEFAULT_CONNECTION_USERNAME.to_string()
-        }))
-        .password(&std::env::var("DATABASE_PASSWORD").unwrap_or_else(|_| {
-            log::warn!(target: "symfonia::db", "You did not specify DATABASE_PASSWORD environment variable. Defaulting to '{DEFAULT_CONNECTION_PASSWORD}'.");
-            DEFAULT_CONNECTION_PASSWORD.to_string()
-        }))
-        .database(&std::env::var("DATABASE_NAME").unwrap_or_else(|_| {
-            log::warn!(target: "symfonia::db", "You did not specify DATABASE_NAME environment variable. Defaulting to '{DEFAULT_CONNECTION_NAME}'.");
-            DEFAULT_CONNECTION_NAME.to_string()
-        }));
+        .host(&SymfoniaConfiguration::get().database.host)
+        .port(SymfoniaConfiguration::get().database.port)
+        .username(&SymfoniaConfiguration::get().database.username)
+        .password(&SymfoniaConfiguration::get().database.password)
+        .database(&SymfoniaConfiguration::get().database.database);
     let pool = PgPool::connect_with(connect_options).await?;
     //install_default_drivers();
 

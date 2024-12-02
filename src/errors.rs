@@ -7,7 +7,7 @@
 use std::{error::Error as StdError, fmt::Display};
 
 use chorus::types::{APIError, AuthError, Rights};
-use poem::{error::ResponseError, http::StatusCode, Response};
+use poem::{error::ResponseError, http::StatusCode, web::Json, IntoResponse, Response};
 use tokio::sync::broadcast::error::SendError;
 
 #[derive(Debug, thiserror::Error)]
@@ -38,6 +38,9 @@ pub enum Error {
 
     #[error("serde: {0}")]
     Serde(#[from] serde_json::Error),
+
+    #[error("toml: {0}")]
+    Toml(#[from] toml::de::Error),
 
     #[error(transparent)]
     IO(#[from] std::io::Error),
@@ -264,6 +267,9 @@ impl ResponseError for Error {
             },
             Error::SqlxPgUint(_) => StatusCode::BAD_REQUEST,
             Error::Custom(_) => StatusCode::BAD_REQUEST,
+            Error::Toml(_) => unreachable!(
+                "This should never trigger, as toml is only used before the api is started"
+            ),
         }
     }
 
