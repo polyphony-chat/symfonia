@@ -27,6 +27,8 @@ services:
       - 3002:3002
       - 3003:3003/tcp
       - 3003:3003/udp
+    volumes:
+      - ./config.toml:/app/config.toml
 
 volumes:
   postgres:
