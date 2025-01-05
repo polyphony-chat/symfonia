@@ -3,7 +3,7 @@ name: docker compose smoketest
 on:
   schedule:
     - cron: "0 12 1,10,20 * *"
-
+  workflow_dispatch:
 jobs:
   deploy_compose:
     runs-on: ubuntu-latest
