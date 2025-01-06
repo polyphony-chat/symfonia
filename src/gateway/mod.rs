@@ -29,7 +29,7 @@ use futures::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
 };
-use log::info;
+use log::{info, trace};
 use pubserve::Subscriber;
 use serde_json::{from_str, json};
 use sqlx::PgPool;
@@ -104,7 +104,8 @@ pub async fn start_gateway(
     info!(target: "symfonia::gateway", "Starting gateway server");
 
     let bind = &SymfoniaConfiguration::get().gateway.to_string();
-    let try_socket = TcpListener::bind(&bind).await;
+    // .trim() needs to be called because \n is appended to the .to_string(), messing up the binding
+    let try_socket = TcpListener::bind(&bind.trim()).await;
     let listener = try_socket.expect("Failed to bind to address");
 
     info!(target: "symfonia::gateway", "Gateway server listening on port {bind}");

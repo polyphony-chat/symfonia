@@ -104,8 +104,9 @@ pub async fn start_api(
     log::info!(target: "symfonia::api", "Starting HTTP Server");
 
     tokio::task::spawn(async move {
+        // .trim() needs to be called because \n is appended to the .to_string(), messing up the binding
         Server::new(TcpListener::bind(
-            SymfoniaConfiguration::get().api.to_string(),
+            SymfoniaConfiguration::get().api.to_string().trim(),
         ))
         .run(v9_api)
         .await
