@@ -204,7 +204,7 @@ async fn main() {
 
     log::info!(target: "symfonia::db", "Establishing database connection");
     let db = DATABASE
-        .get_or_init(async || {
+        .get_or_init(|| async {
             database::establish_connection()
                 .await
                 .expect("Could not establish a connection to the database")
