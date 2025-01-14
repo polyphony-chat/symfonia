@@ -209,10 +209,9 @@ async fn main() {
                 .await
                 .expect("Could not establish a connection to the database")
         })
-        .await
-        .clone();
+        .await;
 
-    if database::check_migrating_from_spacebar(&db)
+    if database::check_migrating_from_spacebar(db)
         .await
         .expect("Failed to check migrating from spacebar")
     {
@@ -221,40 +220,40 @@ async fn main() {
             std::process::exit(0);
         } else {
             log::warn!(target: "symfonia::db", "Migrating from spacebar to symfonia");
-            database::delete_spacebar_migrations(&db)
+            database::delete_spacebar_migrations(db)
                 .await
                 .expect("Failed to delete spacebar migrations table");
             log::info!(target: "symfonia::db", "Running migrations");
             sqlx::migrate!("./spacebar-migrations")
-                .run(&db)
+                .run(db)
                 .await
                 .expect("Failed to run migrations");
         }
     } else {
         sqlx::migrate!()
-            .run(&db)
+            .run(db)
             .await
             .expect("Failed to run migrations");
     }
 
-    if database::check_fresh_db(&db)
+    if database::check_fresh_db(db)
         .await
         .expect("Failed to check fresh db")
     {
         log::info!(target: "symfonia::db", "Fresh database detected.  Seeding database with config data");
-        database::seed_config(&db)
+        database::seed_config(db)
             .await
             .expect("Failed to seed config");
     }
 
-    let symfonia_config = crate::database::entities::Config::init(&db)
+    let symfonia_config = crate::database::entities::Config::init(db)
         .await
         .unwrap_or_default();
 
     let connected_users = ConnectedUsers::default();
     log::debug!(target: "symfonia", "Initializing Role->User map...");
     connected_users
-        .init_role_user_map(&db)
+        .init_role_user_map(db)
         .await
         .expect("Failed to init role user map");
     log::trace!(target: "symfonia", "Role->User map initialized with {} entries", connected_users.role_user_map.lock().await.len());
