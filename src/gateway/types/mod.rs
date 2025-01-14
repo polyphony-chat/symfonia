@@ -155,6 +155,16 @@ pub struct GatewayUser {
     connected_users: ConnectedUsers,
 }
 
+impl GatewayUser {
+    /// Kills a user by ending all of their clients' sessions.
+    pub async fn kill(&mut self) {
+        for (_, client_mutex) in self.clients.iter() {
+            let mut client = client_mutex.lock().await;
+            client.die(self.connected_users.clone()).await
+        }
+    }
+}
+
 /// A concrete session, that a [GatewayUser] is connected to the Gateway with.
 pub struct GatewayClient {
     connection: WebSocketConnection,
@@ -338,7 +348,7 @@ impl Eq for GatewayUser {}
 impl GatewayClient {
     /// Disconnects a [GatewayClient] properly, including un-registering it from the memory store
     /// and creating a resumeable session.
-    pub async fn die(mut self, connected_users: ConnectedUsers) {
+    pub async fn die(&mut self, connected_users: ConnectedUsers) {
         self.connection.kill_send.send(()).unwrap();
         let disconnect_info = DisconnectInfo {
             session_token: self.session_token.clone(),
