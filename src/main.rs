@@ -13,6 +13,7 @@ use std::{
 
 use chorus::types::Snowflake;
 use clap::Parser;
+use sqlx::PgPool;
 
 use crate::configuration::SymfoniaConfiguration;
 use gateway::{ConnectedUsers, Event};
@@ -35,7 +36,7 @@ use log4rs::{
 use logo::print_logo;
 use parking_lot::RwLock;
 use pubserve::Publisher;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, OnceCell};
 
 mod api;
 mod cdn;
@@ -65,6 +66,8 @@ pub fn eq_shared_event_publisher(a: &SharedEventPublisher, b: &SharedEventPublis
 // TODO: Use this in more places
 /// The maximum number of rows that can be returned in most queries
 static QUERY_UPPER_LIMIT: i32 = 10000;
+
+static DATABASE: OnceCell<PgPool> = OnceCell::const_new();
 
 #[derive(Debug)]
 struct LogFilter;
@@ -200,11 +203,15 @@ async fn main() {
     };
 
     log::info!(target: "symfonia::db", "Establishing database connection");
-    let db = database::establish_connection()
-        .await
-        .expect("Failed to establish database connection");
+    let db = DATABASE
+        .get_or_init(|| async {
+            database::establish_connection()
+                .await
+                .expect("Could not establish a connection to the database")
+        })
+        .await;
 
-    if database::check_migrating_from_spacebar(&db)
+    if database::check_migrating_from_spacebar(db)
         .await
         .expect("Failed to check migrating from spacebar")
     {
@@ -213,40 +220,40 @@ async fn main() {
             std::process::exit(0);
         } else {
             log::warn!(target: "symfonia::db", "Migrating from spacebar to symfonia");
-            database::delete_spacebar_migrations(&db)
+            database::delete_spacebar_migrations(db)
                 .await
                 .expect("Failed to delete spacebar migrations table");
             log::info!(target: "symfonia::db", "Running migrations");
             sqlx::migrate!("./spacebar-migrations")
-                .run(&db)
+                .run(db)
                 .await
                 .expect("Failed to run migrations");
         }
     } else {
         sqlx::migrate!()
-            .run(&db)
+            .run(db)
             .await
             .expect("Failed to run migrations");
     }
 
-    if database::check_fresh_db(&db)
+    if database::check_fresh_db(db)
         .await
         .expect("Failed to check fresh db")
     {
         log::info!(target: "symfonia::db", "Fresh database detected.  Seeding database with config data");
-        database::seed_config(&db)
+        database::seed_config(db)
             .await
             .expect("Failed to seed config");
     }
 
-    let symfonia_config = crate::database::entities::Config::init(&db)
+    let symfonia_config = crate::database::entities::Config::init(db)
         .await
         .unwrap_or_default();
 
     let connected_users = ConnectedUsers::default();
     log::debug!(target: "symfonia", "Initializing Role->User map...");
     connected_users
-        .init_role_user_map(&db)
+        .init_role_user_map(db)
         .await
         .expect("Failed to init role user map");
     log::trace!(target: "symfonia", "Role->User map initialized with {} entries", connected_users.role_user_map.lock().await.len());

@@ -186,3 +186,89 @@ async fn purge_expired_disconnects(connected_users: ConnectedUsers) {
         }
     }
 }
+
+/// Tells every user-/client specific tokio task spawned by the symfonia binary to yield so that the
+/// server may shut down in an orderly fashion.
+///
+/// ## #\[allow(clippy::await_holding_lock)]
+///
+/// We hold the lock of `inner.write()` across an await point `user_mutex.lock().await`. The lock
+/// is held across the await point right before shutting down the application.
+/// It should be okay to do this. The inevitable shutdown of the application should guarantee no contention.
+///
+/// TODO: This is currently unused. We cannot use this, as the future created by this function is not
+/// `Send`. This is because of the whole "holding mutex across await" thing. We need to find a better
+/// solution for this.
+#[allow(clippy::await_holding_lock)]
+pub async fn tokio_task_killer(connected_users: ConnectedUsers) {
+    exit_signal_detected().await;
+    log::debug!("Exit signal detected!");
+    let inner = connected_users.inner();
+    let mut users = &mut inner.write().users;
+    for (_, mut user_mutex) in users.iter() {
+        let mut user = user_mutex.lock().await;
+        user.kill().await;
+    }
+}
+
+/// Detects when an exit signal is sent by the operating system. The future will complete when an
+/// exit signal is detected.
+async fn exit_signal_detected() {
+    #[cfg(all(unix, windows))]
+    {
+        panic!("Unsupported platform; How did you get here?");
+    }
+
+    #[cfg(unix)]
+    {
+        // All these signals should shut down an application on UNIX-like systems
+        use tokio::signal::unix::{signal, SignalKind};
+        let mut sig_alarm = signal(SignalKind::alarm()).unwrap();
+        let mut sig_hangup = signal(SignalKind::hangup()).unwrap();
+        let mut sig_interrupt = signal(SignalKind::interrupt()).unwrap();
+        let mut sig_pipe = signal(SignalKind::interrupt()).unwrap();
+        let mut sig_quit = signal(SignalKind::quit()).unwrap();
+        let mut sig_terminate = signal(SignalKind::terminate()).unwrap();
+        let mut sig_user_defined1 = signal(SignalKind::user_defined1()).unwrap();
+        let mut sig_user_defined2 = signal(SignalKind::user_defined2()).unwrap();
+        let ctrl_c = tokio::signal::ctrl_c();
+
+        tokio::select! {
+            // If we receive any of these signals, yield
+            _ = sig_alarm.recv() => (),
+            _ = sig_hangup.recv() => (),
+            _ = sig_interrupt.recv() => (),
+            _ = sig_pipe.recv() => (),
+            _ = sig_quit.recv() => (),
+            _ = sig_terminate.recv() => (),
+            _ = sig_user_defined1.recv() => (),
+            _ = sig_user_defined2.recv() => (),
+            event = ctrl_c => event.expect("Failed to listen to CTRL-c event"),
+        }
+    }
+
+    #[cfg(windows)]
+    {
+        // All these signals should shut down an application on Windows
+        use tokio::signal::windows::{ctrl_break, ctrl_close, ctrl_logoff, ctrl_shutdown};
+        let mut sig_break = ctrl_break().unwrap();
+        let ctrl_c = tokio::signal::ctrl_c();
+        let mut sig_close = ctrl_close().unwrap();
+        let mut sig_logoff = ctrl_logoff().unwrap();
+        let mut sig_shutdown = ctrl_shutdown().unwrap();
+
+        tokio::select! {
+            // If we receive any of these signals, yield
+            _ = sig_break.recv() => (),
+            event = ctrl_c => event.expect("Failed to listen to CTRL-c event"),
+            _ = sig_close.recv() => (),
+            _ = sig_logoff.recv() => (),
+            _ = sig_shutdown.recv() => (),
+        }
+    }
+
+    #[cfg(not(any(unix, windows)))]
+    {
+        panic!("Unsupported platform");
+    }
+}
