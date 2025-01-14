@@ -13,6 +13,7 @@ use std::{
 
 use chorus::types::Snowflake;
 use clap::Parser;
+use sqlx::PgPool;
 
 use crate::configuration::SymfoniaConfiguration;
 use gateway::{ConnectedUsers, Event};
@@ -35,7 +36,7 @@ use log4rs::{
 use logo::print_logo;
 use parking_lot::RwLock;
 use pubserve::Publisher;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, OnceCell};
 
 mod api;
 mod cdn;
@@ -65,6 +66,8 @@ pub fn eq_shared_event_publisher(a: &SharedEventPublisher, b: &SharedEventPublis
 // TODO: Use this in more places
 /// The maximum number of rows that can be returned in most queries
 static QUERY_UPPER_LIMIT: i32 = 10000;
+
+static DATABASE: OnceCell<PgPool> = OnceCell::const_new();
 
 #[derive(Debug)]
 struct LogFilter;
@@ -200,9 +203,14 @@ async fn main() {
     };
 
     log::info!(target: "symfonia::db", "Establishing database connection");
-    let db = database::establish_connection()
+    let db = DATABASE
+        .get_or_init(async || {
+            database::establish_connection()
+                .await
+                .expect("Could not establish a connection to the database")
+        })
         .await
-        .expect("Failed to establish database connection");
+        .clone();
 
     if database::check_migrating_from_spacebar(&db)
         .await
