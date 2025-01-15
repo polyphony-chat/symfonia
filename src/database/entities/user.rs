@@ -14,7 +14,7 @@ use std::{
 };
 
 use argon2::{
-    password_hash::{PasswordHash, PasswordHasher, SaltString},
+    password_hash::{self, PasswordHash, PasswordHasher, SaltString},
     Argon2,
 };
 use bigdecimal::BigDecimal;
@@ -80,7 +80,7 @@ impl User {
         let user_settings = UserSettings::create(db, "en-US").await?;
 
         let argon2 = Argon2::default();
-        let salt = crate::database::get_password_salt().await?;
+        let salt = SaltString::generate(password_hash::rand_core::OsRng);
         let cooked_password = match password {
             Some(password) => Some(
                 argon2
