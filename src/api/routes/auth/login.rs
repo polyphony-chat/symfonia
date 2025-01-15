@@ -4,6 +4,7 @@
  *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use chorus::types::{jwt, APIError, AuthError, LoginSchema};
 use poem::{
     handler,
@@ -40,14 +41,22 @@ pub async fn login(
         return Err(APIError::Auth(AuthError::InvalidLogin));
     };
 
-    if !user
-        .data
-        .hash
-        .as_ref()
-        .map(|hash| bcrypt::verify(payload.password, hash).unwrap_or_default())
-        .unwrap_or_default()
-    {
-        return Err(APIError::Auth(AuthError::InvalidLogin));
+    if user.data.hash.is_some() {
+        let actual_hash = PasswordHash::parse(
+            user.data.hash.as_ref().unwrap(),
+            argon2::password_hash::Encoding::B64,
+        )
+        .map_err(|_| AuthError::InvalidLogin)?; // TODO This probably should not return InvalidLogin but we either need to change the function header or add a variant in chorus
+        let salt = crate::database::get_password_salt()
+            .await
+            .map_err(|_| AuthError::InvalidLogin)?; // TODO as above ^
+        let computed_hash = Argon2::default()
+            .hash_password(payload.password.as_bytes(), &salt)
+            .map_err(|_| AuthError::InvalidLogin)?; // TODO as above ^
+
+        if actual_hash != computed_hash {
+            return Err(APIError::Auth(AuthError::InvalidLogin));
+        }
     }
 
     if cfg.login.require_verification && !user.verified.unwrap_or_default() {
