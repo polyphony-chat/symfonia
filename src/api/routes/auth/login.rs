@@ -41,22 +41,17 @@ pub async fn login(
         return Err(APIError::Auth(AuthError::InvalidLogin));
     };
 
-    if user.data.hash.is_some() {
-        let actual_hash = PasswordHash::parse(
-            user.data.hash.as_ref().unwrap(),
-            argon2::password_hash::Encoding::B64,
-        )
-        .map_err(|_| AuthError::InvalidLogin)?; // TODO This probably should not return InvalidLogin but we either need to change the function header or add a variant in chorus
-        let salt = crate::database::get_password_salt()
-            .await
-            .map_err(|_| AuthError::InvalidLogin)?; // TODO as above ^
-        let computed_hash = Argon2::default()
-            .hash_password(payload.password.as_bytes(), &salt)
-            .map_err(|_| AuthError::InvalidLogin)?; // TODO as above ^
-
-        if actual_hash != computed_hash {
-            return Err(APIError::Auth(AuthError::InvalidLogin));
-        }
+    if let Some(hash) = &user.data.hash {
+        let password_hash = match PasswordHash::parse(hash, argon2::password_hash::Encoding::B64) {
+            Ok(pw_hash) => pw_hash,
+            Err(e) => {
+                log::warn!("Couldn't parse hash for user id {}: {e}", user.id);
+                return Err(AuthError::InvalidLogin.into());
+            }
+        };
+        Argon2::default()
+            .verify_password(payload.password.as_bytes(), &password_hash)
+            .map_err(|_| AuthError::InvalidLogin)?;
     }
 
     if cfg.login.require_verification && !user.verified.unwrap_or_default() {
