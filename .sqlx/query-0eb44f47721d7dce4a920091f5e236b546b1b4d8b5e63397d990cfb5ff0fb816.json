@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT value FROM config WHERE key = 'security_salt LIMIT 1'",
+  "query": "SELECT value FROM config WHERE key = 'security_salt' LIMIT 1",
   "describe": {
     "columns": [
       {
@@ -16,5 +16,5 @@
       true
     ]
   },
-  "hash": "e61261e55b9bcd1ec1213d60c1955afa2a0a375e44d56244c3341fbc338e25b9"
+  "hash": "0eb44f47721d7dce4a920091f5e236b546b1b4d8b5e63397d990cfb5ff0fb816"
 }
