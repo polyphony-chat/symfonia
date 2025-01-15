@@ -5,7 +5,7 @@
  */
 
 use crate::{configuration::SymfoniaConfiguration, errors::Error};
-use sqlx::{postgres::PgConnectOptions, Database, Executor, PgPool, Row};
+use sqlx::{postgres::PgConnectOptions, types::Json, Database, Executor, PgPool, Row};
 
 pub mod entities;
 
@@ -496,6 +496,15 @@ pub async fn seed_config(db: &PgPool) -> Result<(), Error> {
     )
     .execute(db)
     .await?;
+    sqlx::query(r#"INSERT INTO config (key, value) VALUES ('security_salt', $1);"#)
+        .bind(Json::from(
+            argon2::password_hash::SaltString::generate(
+                &mut argon2::password_hash::rand_core::OsRng,
+            )
+            .to_string(),
+        ))
+        .execute(db)
+        .await?;
     sqlx::query(r#"INSERT INTO config (key, value) VALUES ('security_twoFactor_generateBackupCodes', 'true');"#).execute(db).await?;
     sqlx::query(r#"INSERT INTO config (key, value) VALUES ('sentry_enabled', 'false');"#)
         .execute(db)

@@ -66,8 +66,17 @@ pub enum Error {
     #[error(transparent)]
     SqlxPgUint(#[from] sqlx_pg_uint::Error),
 
+    #[error("Password hashing error: {0}")]
+    PasswordHash(argon2::password_hash::Error),
+
     #[error("{0}")]
     Custom(String),
+}
+
+impl From<argon2::password_hash::Error> for Error {
+    fn from(value: argon2::password_hash::Error) -> Self {
+        Self::PasswordHash(value)
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -270,6 +279,7 @@ impl ResponseError for Error {
             Error::Toml(_) => unreachable!(
                 "This should never trigger, as toml is only used before the api is started"
             ),
+            Error::PasswordHash(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 
