@@ -4,7 +4,8 @@
  *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::{configuration::SymfoniaConfiguration, errors::Error};
+use crate::{configuration::SymfoniaConfiguration, errors::Error, DATABASE};
+use argon2::password_hash::SaltString;
 use sqlx::{postgres::PgConnectOptions, types::Json, Database, Executor, PgPool, Row};
 
 pub mod entities;
@@ -47,6 +48,52 @@ pub async fn delete_spacebar_migrations(db: &PgPool) -> Result<(), Error> {
     sqlx::query("DROP TABLE migrations").execute(db).await?;
 
     Ok(())
+}
+
+/// Get the password salt from the database.
+///
+/// ## Errors
+///
+/// This function will fail if:
+///
+/// - A row `security_salt` does not exist in a table called `config`
+/// - The salt is insufficient (too short/too little entropy, >= 16bits required)
+/// - The `value` column for the `security_salt` row is not of type `TEXT` or comparable (e.g. varchar)
+pub async fn get_password_salt() -> Result<SaltString, Error> {
+    let db = DATABASE
+        .get()
+        .expect("Database has not been initialized? Exiting");
+    let salt_record_from_db =
+        match sqlx::query!("SELECT value FROM config WHERE key = 'security_salt' LIMIT 1")
+            .fetch_one(db)
+            .await
+        {
+            Ok(record) => record.value,
+            Err(e) => {
+                log::error!("Password salt could not be fetched from database: {e}");
+                return Err(e.into());
+            }
+        };
+
+    let salt_value = match salt_record_from_db {
+        Some(value) => value,
+        None => {
+            return Err(Error::Custom(
+                "Password salt could not be fetched from database".to_string(),
+            ))
+        }
+    };
+
+    let salt_as_str = match salt_value.as_str() {
+        Some(strslice) => strslice,
+        None => {
+            return Err(Error::Custom(
+                "Password salt could not be fetched from database: Column security_salt is not of type TEXT (or comparable)".to_string(),
+            ))
+        }
+    };
+
+    SaltString::from_b64(salt_as_str.trim()).map_err(|e| e.into())
 }
 
 pub async fn seed_config(db: &PgPool) -> Result<(), Error> {
