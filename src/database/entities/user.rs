@@ -18,7 +18,7 @@ use argon2::{
     Argon2,
 };
 use bigdecimal::BigDecimal;
-use chorus::types::{PremiumType, PresenceUpdate, PublicUser, Rights, Snowflake, UserData};
+use chorus::types::{PremiumType, PublicUser, Rights, Snowflake, UserData};
 use chrono::{NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{from_str, Map, Value};
@@ -46,9 +46,6 @@ pub struct User {
     #[sqlx(skip)]
     #[serde(skip)]
     pub publisher: SharedEventPublisher,
-    #[sqlx(skip)]
-    #[serde(skip)]
-    pub presence: PresenceUpdate,
 }
 
 impl Deref for User {
@@ -115,13 +112,6 @@ impl User {
             settings_index: user_settings.index.clone(),
             extended_settings: sqlx::types::Json(Value::Object(Map::default())),
             settings: user_settings.clone(),
-            presence: PresenceUpdate {
-                user: PublicUser {
-                    id: user_id,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
             ..Default::default()
         };
 
