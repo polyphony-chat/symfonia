@@ -203,13 +203,7 @@ async fn main() {
     };
 
     log::info!(target: "symfonia::db", "Establishing database connection");
-    let db = DATABASE
-        .get_or_init(|| async {
-            database::establish_connection()
-                .await
-                .expect("Could not establish a connection to the database")
-        })
-        .await;
+    let db = db_pool().await;
 
     if database::check_migrating_from_spacebar(db)
         .await
@@ -275,4 +269,15 @@ async fn main() {
             .expect("Failed to start server")
             .expect("Failed to start server");
     }
+}
+
+/// Retrieve a `static` reference to the [PgPool].
+pub async fn db_pool() -> &'static PgPool {
+    DATABASE
+        .get_or_init(|| async {
+            database::establish_connection()
+                .await
+                .expect("Could not establish a connection to the database")
+        })
+        .await
 }
