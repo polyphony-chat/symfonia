@@ -237,6 +237,7 @@
     "jwtSecret": "7CYWGvQ8pB9f6B3EkTvbYvZUhA3AwXc8cAsg8KFvHTcH7pN7hK0DSk1w+h+A1bI3WYmdV2UqFWBvFajT3IZ3EqzI8h4Ttq/iNB5PsSC1YPpg4geG58fOFF691Me3aE7MmUAFxDpAfUAMNjG7sX6V3YTEaIWYTfGiDZPr2X6P7QRNlo8sEJ833kXXMCGz0/Zs5uZGlbm7/qFeNNRBCS3QW9hALZqf72rB0rc2zEB7S/I48WW1UTwQOLhqAc/neHz/PTIPYHPxnDvWfReaSzWGVuOXYrP/2YR6DKCwbulzL8/Lt4LdJcSf9ZyVfGoOm4uZ5Ynk3xElYFfuNgCTs0Lujg==",
     "mfaBackupCodeCount": 10,
     "requestSignature": "q5AyKYvr6oILJeQJbeEKjAInwahdGhZmr+FGO8RBRuo=",
+    "salt": "ik0PS/2vsa1hTgEzbxMTEw",
     "statsWorldReadable": true,
     "twoFactor": {
       "generateBackupCodes": true
