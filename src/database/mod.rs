@@ -4,8 +4,9 @@
  *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::{configuration::SymfoniaConfiguration, errors::Error};
-use sqlx::{postgres::PgConnectOptions, Database, Executor, PgPool, Row};
+use crate::{configuration::SymfoniaConfiguration, errors::Error, DATABASE};
+use argon2::password_hash::SaltString;
+use sqlx::{postgres::PgConnectOptions, types::Json, Database, Executor, PgPool, Row};
 
 pub mod entities;
 

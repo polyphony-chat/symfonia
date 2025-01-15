@@ -13,6 +13,10 @@ use std::{
     str::FromStr,
 };
 
+use argon2::{
+    password_hash::{self, PasswordHash, PasswordHasher, SaltString},
+    Argon2,
+};
 use bigdecimal::BigDecimal;
 use chorus::types::{PremiumType, PublicUser, Rights, Snowflake, UserData};
 use chrono::{NaiveDate, Utc};
@@ -75,7 +79,18 @@ impl User {
         // TODO: dynamically figure out locale
         let user_settings = UserSettings::create(db, "en-US").await?;
 
-        let password = password.map(|password| bcrypt::hash(password, 14).unwrap());
+        let argon2 = Argon2::default();
+        let salt = SaltString::generate(password_hash::rand_core::OsRng);
+        let cooked_password = match password {
+            Some(password) => Some(
+                argon2
+                    .hash_password(password.as_bytes(), &salt)?
+                    .to_string(),
+            ),
+            None => None,
+        };
+
+        let user_id = Snowflake::default();
 
         let user = Self {
             inner: chorus::types::User {
@@ -89,7 +104,7 @@ impl User {
                 ..Default::default()
             },
             data: sqlx::types::Json(UserData {
-                hash: password,
+                hash: cooked_password,
                 valid_tokens_since: Utc::now(),
             }),
             fingerprints: fingerprint.unwrap_or_default(),
