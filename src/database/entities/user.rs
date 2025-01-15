@@ -82,50 +82,16 @@ impl User {
         // TODO: dynamically figure out locale
         let user_settings = UserSettings::create(db, "en-US").await?;
 
-        let salt_record_from_db =
-            match sqlx::query!("SELECT value FROM config WHERE key = 'security_salt LIMIT 1'")
-                .fetch_one(db)
-                .await
-            {
-                Ok(record) => record.value,
-                Err(e) => {
-                    log::error!(
-                        "Error when creating user: Could not get password salt from database: {e}"
-                    );
-                    return Err(e.into());
-                }
-            };
-
-        let salt_string = match salt_record_from_db {
-            Some(db_value) => {
-                let value = db_value.clone();
-                match value.as_str() {
-                    Some(stringslice) => stringslice,
-                    None => {
-                        log::error!("Error when creating user: Could not get password salt from database: Password salt is not of type TEXT (or comparable) in database.");
-                        return Err(Error::Custom(
-                        "Error when creating user: Could not get password salt from database: Password salt is not of type TEXT (or comparable) in database."
-                            .to_string(),
-                    ));
-                    }
-                }
-            }
-            None => {
-                log::error!("Error when creating user: Could not get password salt from database.");
-                return Err(Error::Custom(
-                    "Error when creating user: Could not get password salt from database."
-                        .to_string(),
-                ));
-            }
-        };
-
-        let salt = SaltString::from_b64(salt_string)?;
-
         let argon2 = Argon2::default();
-
-        let cooked_password = argon2
-            .hash_password(password.unwrap_or("".to_string()).as_bytes(), &salt)?
-            .to_string();
+        let salt = crate::database::get_password_salt().await?;
+        let cooked_password = match password {
+            Some(password) => Some(
+                argon2
+                    .hash_password(password.as_bytes(), &salt)?
+                    .to_string(),
+            ),
+            None => None,
+        };
 
         let user_id = Snowflake::default();
 
@@ -141,7 +107,7 @@ impl User {
                 ..Default::default()
             },
             data: sqlx::types::Json(UserData {
-                hash: password,
+                hash: cooked_password,
                 valid_tokens_since: Utc::now(),
             }),
             fingerprints: fingerprint.unwrap_or_default(),
