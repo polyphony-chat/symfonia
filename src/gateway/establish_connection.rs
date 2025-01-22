@@ -1,11 +1,13 @@
-use std::{collections::HashMap, sync::Arc};
-use std::net::IpAddr;
-use chorus::types::{GatewayHeartbeat, GatewayHeartbeatAck, GatewayHello, GatewayIdentifyPayload, GatewayIntents, GatewayReady, GatewayResume, Snowflake};
+use chorus::types::{
+    GatewayHeartbeat, GatewayHeartbeatAck, GatewayHello, GatewayIdentifyPayload, GatewayIntents,
+    GatewayReady, GatewayResume, Snowflake,
+};
 use futures::{SinkExt, StreamExt};
 use log::{debug, trace};
 use rand::seq;
 use serde_json::{from_str, json};
 use sqlx::PgPool;
+use std::{collections::HashMap, net::IpAddr, sync::Arc};
 use tokio::{
     net::TcpStream,
     sync::{broadcast::Sender, Mutex},
@@ -61,7 +63,7 @@ pub(super) async fn establish_connection(
     config: Config,
     connected_users: ConnectedUsers,
 ) -> Result<NewWebSocketConnection, Error> {
-    let user_ip = stream.peer_addr()?.ip();;
+    let user_ip = stream.peer_addr()?.ip();
     trace!(target: "symfonia::gateway::establish_connection::establish_connection", "Beginning process to establish connection (handshake)");
     // Accept the connection and split it into its sender and receiver halves.
     let ws_stream = accept_async(stream).await?.split();
@@ -294,10 +296,20 @@ async fn finish_connecting(
                 }
             }
             let identify_data = identify.event_data.unwrap();
-            
+
             let formatted_payload = GatewayPayload::<GatewayReady> {
                 op_code: 0,
-                event_data: Some(create_ready(claims.id, state.connected_ip, &state.config, identify_data.intents.unwrap_or(GatewayIntents::all()), identify_data.capabilities.unwrap_or_default(), &state.db).await?),
+                event_data: Some(
+                    create_ready(
+                        claims.id,
+                        state.connected_ip,
+                        &state.config,
+                        identify_data.intents.unwrap_or(GatewayIntents::all()),
+                        identify_data.capabilities.unwrap_or_default(),
+                        &state.db,
+                    )
+                    .await?,
+                ),
                 sequence_number: None,
                 event_name: Some("READY".to_string()),
             };
