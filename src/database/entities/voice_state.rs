@@ -70,6 +70,14 @@ impl VoiceState {
         .map_err(Error::from)
     }
 
+    pub async fn get_by_guild(db: &PgPool, guild_id: Snowflake) -> Result<Vec<Self>, Error> {
+        sqlx::query_as("SELECT * FROM voice_states WHERE guild_id = ?")
+            .bind(guild_id)
+            .fetch_all(db)
+            .await
+            .map_err(Error::from)
+    }
+
     pub async fn populate_relations(&mut self, db: &PgPool) -> Result<(), Error> {
         if let Some(guild_id) = self.guild_id {
             let guild = Guild::get_by_id(db, guild_id).await?;
@@ -105,5 +113,13 @@ impl VoiceState {
             .await
             .map(|_| ())
             .map_err(Error::from)
+    }
+
+    pub fn into_inner(self) -> chorus::types::VoiceState {
+        self.inner
+    }
+
+    pub fn to_inner(&self) -> chorus::types::VoiceState {
+        self.inner.clone()
     }
 }
