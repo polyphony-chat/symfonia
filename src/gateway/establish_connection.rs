@@ -1,9 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
-
-use chorus::types::{
-    GatewayHeartbeat, GatewayHeartbeatAck, GatewayHello, GatewayIdentifyPayload, GatewayReady,
-    GatewayResume, Snowflake,
-};
+use std::net::IpAddr;
+use chorus::types::{GatewayHeartbeat, GatewayHeartbeatAck, GatewayHello, GatewayIdentifyPayload, GatewayIntents, GatewayReady, GatewayResume, Snowflake};
 use futures::{SinkExt, StreamExt};
 use log::{debug, trace};
 use rand::seq;
@@ -40,6 +37,7 @@ use super::{
 /// Internal use only state struct to pass around data to the `finish_connecting` function.
 struct State {
     connection: WebSocketConnection,
+    connected_ip: IpAddr,
     db: PgPool,
     config: Config,
     connected_users: ConnectedUsers,
@@ -63,6 +61,7 @@ pub(super) async fn establish_connection(
     config: Config,
     connected_users: ConnectedUsers,
 ) -> Result<NewWebSocketConnection, Error> {
+    let user_ip = stream.peer_addr()?.ip();;
     trace!(target: "symfonia::gateway::establish_connection::establish_connection", "Beginning process to establish connection (handshake)");
     // Accept the connection and split it into its sender and receiver halves.
     let ws_stream = accept_async(stream).await?.split();
@@ -97,6 +96,7 @@ pub(super) async fn establish_connection(
     let state = State {
         connection: connection.clone(),
         db: db.clone(),
+        connected_ip: user_ip,
         config: config.clone(),
         connected_users: connected_users.clone(),
         sequence_number: sequence_number.clone(),
@@ -273,7 +273,7 @@ async fn finish_connecting(
                 .await;
             match state
                 .session_id_send
-                .send(identify.event_data.unwrap().token)
+                .send(identify.event_data.as_ref().unwrap().token.to_owned())
             {
                 Ok(_) => (),
                 Err(_) => {
@@ -293,9 +293,11 @@ async fn finish_connecting(
                     return Err(GatewayError::Internal.into());
                 }
             }
+            let identify_data = identify.event_data.unwrap();
+            
             let formatted_payload = GatewayPayload::<GatewayReady> {
                 op_code: 0,
-                event_data: Some(create_ready(claims.id, &state.db).await?),
+                event_data: Some(create_ready(claims.id, state.connected_ip, &state.config, identify_data.intents.unwrap_or(GatewayIntents::all()), identify_data.capabilities.unwrap_or_default(), &state.db).await?),
                 sequence_number: None,
                 event_name: Some("READY".to_string()),
             };
