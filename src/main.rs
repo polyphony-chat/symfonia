@@ -194,7 +194,7 @@ async fn main() {
             log::warn!(target: "symfonia", "⚠️⚠️⚠️ WARNING ⚠️⚠️⚠️");
             log::warn!(target: "symfonia", "⚠️⚠️⚠️ WARNING ⚠️⚠️⚠️");
             log::warn!(target: "symfonia", "⚠️⚠️⚠️ WARNING ⚠️⚠️⚠️");
-            log::warn!(target: "symfonia", "WARNING: Running in DEBUG or TRACE modes will leak sensitive information to the logs. Please run symfonia in production mode if you are not currently debugging. This can be done by setting the `mode` option in your config to 'PRODUCTION'.");
+            log::warn!(target: "symfonia", r#"WARNING: Running in "DEBUG" or "VERBOSE" modes will leak sensitive information to the logs. Please run symfonia in production mode if you are not currently debugging. This can be done by setting the `mode` option in your config to "PRODUCTION"."#);
             log::warn!(target: "symfonia", "⚠️⚠️⚠️ WARNING ⚠️⚠️⚠️");
             log::warn!(target: "symfonia", "⚠️⚠️⚠️ WARNING ⚠️⚠️⚠️");
             log::warn!(target: "symfonia", "⚠️⚠️⚠️ WARNING ⚠️⚠️⚠️");
