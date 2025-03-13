@@ -31,7 +31,7 @@ pub async fn domain(
     } else if let Some(endpoint) = &cfg.gateway.endpoint_public {
         endpoint.to_owned()
     } else {
-        "http://localhost:3003".to_string()
+        "ws://localhost:3003".to_string()
     };
 
     let api = if let Ok(endpoint) = std::env::var("API") {
@@ -39,7 +39,7 @@ pub async fn domain(
     } else if let Some(endpoint) = &cfg.api.endpoint_public {
         endpoint.to_owned()
     } else {
-        "http://localhost:3001".to_string()
+        "http://localhost:3001/api".to_string()
     };
 
     Ok(Json(json!({

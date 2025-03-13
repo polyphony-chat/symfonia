@@ -49,41 +49,11 @@ pub async fn start_api(
         ));
     }
 
-    let routes = Route::new()
-        .nest("/auth", auth::setup_routes())
-        .nest(
-            "/users",
-            users::setup_routes()
-                .with(AuthenticationMiddleware)
-                .with(CurrentUserMiddleware),
-        )
-        .nest(
-            "/guilds",
-            guilds::setup_routes()
-                .with(AuthenticationMiddleware)
-                .with(CurrentUserMiddleware),
-        )
-        .nest(
-            "/channels",
-            channels::setup_routes()
-                .with(AuthenticationMiddleware)
-                .with(CurrentUserMiddleware),
-        )
-        .nest(
-            "/invites",
-            routes::invites::setup_routes()
-                .with(AuthenticationMiddleware)
-                .with(CurrentUserMiddleware),
-        )
-        .nest("/policies", routes::policies::setup_routes())
-        .nest("/-", routes::health::setup_routes())
-        .at("/version", routes::version::setup_routes())
-        .at("/ping", routes::ping::setup_routes());
-
     let v9_api = Route::new()
         .at("/ping", routes::ping::setup_routes())
         .at("/version", routes::version::setup_routes())
-        .nest("/api/v9", routes)
+        .nest("/api", setup_api_routes())
+        .nest("/api/v9", setup_api_routes())
         .data(db)
         .data(config)
         .data(connected_users)
@@ -116,6 +86,39 @@ pub async fn start_api(
 
     log::info!(target: "symfonia::api", "HTTP Server listening on {}", SymfoniaConfiguration::get().api.to_string());
     Ok(())
+}
+
+fn setup_api_routes() -> Route {
+    Route::new()
+        .nest("/auth", auth::setup_routes())
+        .nest(
+            "/users",
+            users::setup_routes()
+                .with(AuthenticationMiddleware)
+                .with(CurrentUserMiddleware),
+        )
+        .nest(
+            "/guilds",
+            guilds::setup_routes()
+                .with(AuthenticationMiddleware)
+                .with(CurrentUserMiddleware),
+        )
+        .nest(
+            "/channels",
+            channels::setup_routes()
+                .with(AuthenticationMiddleware)
+                .with(CurrentUserMiddleware),
+        )
+        .nest(
+            "/invites",
+            routes::invites::setup_routes()
+                .with(AuthenticationMiddleware)
+                .with(CurrentUserMiddleware),
+        )
+        .nest("/policies", routes::policies::setup_routes())
+        .nest("/-", routes::health::setup_routes())
+        .at("/version", routes::version::setup_routes())
+        .at("/ping", routes::ping::setup_routes())
 }
 
 async fn custom_error(err: poem::Error) -> impl IntoResponse {

@@ -100,13 +100,11 @@ pub async fn login(
         &cfg.security.jwt_secret,
     );
 
-    //let user_settings = user.get_settings()
-
     Ok(Response::builder()
         .body(
             json!({
                 "token": token,
-                "settings": {}
+                "settings": user.settings
             })
             .to_string(),
         )
