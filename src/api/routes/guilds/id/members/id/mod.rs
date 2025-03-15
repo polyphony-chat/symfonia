@@ -74,7 +74,7 @@ pub async fn modify_member(
         .await?
         .ok_or(Error::Guild(GuildError::MemberNotFound))?;
 
-    if let Some(nick) = payload.nick {
+    if let Some(nick) = payload.nickname {
         if !authed_member
             .permissions
             .has_permission(PermissionFlags::MANAGE_NICKNAMES)

@@ -5,8 +5,8 @@
  */
 
 use chorus::types::{
-    jwt::Claims, GuildBanBulkCreateSchema, GuildBanCreateSchema, GuildBansQuery,
-    GuildBansSearchQuery, Snowflake,
+    jwt::Claims, BulkGuildBanSchema, GetGuildBansQuery, GuildBanCreateSchema, GuildBansSearchQuery,
+    Snowflake,
 };
 use poem::{
     handler,
@@ -26,7 +26,7 @@ pub async fn get_bans(
     Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path(guild_id): Path<Snowflake>,
-    Query(query): Query<GuildBansQuery>,
+    Query(query): Query<GetGuildBansQuery>,
 ) -> poem::Result<impl IntoResponse> {
     let mut bans =
         GuildBan::get_by_guild(db, guild_id, query.before, query.after, query.limit).await?;
@@ -95,7 +95,7 @@ pub async fn bulk_ban(
     Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path(guild_id): Path<Snowflake>,
-    Json(payload): Json<GuildBanBulkCreateSchema>,
+    Json(payload): Json<BulkGuildBanSchema>,
 ) -> poem::Result<impl IntoResponse> {
     let guild = Guild::get_by_id(db, guild_id)
         .await?

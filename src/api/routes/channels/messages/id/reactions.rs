@@ -166,12 +166,10 @@ pub async fn get_reaction(
 
     let Some(reaction) = message.reactions.as_ref().and_then(|reactions| {
         reactions.iter().find(|r| {
-            if let Some(id) = emoji.id {
-                r.emoji.id == id
-            } else if let Some(name) = &r.emoji.name {
-                emoji.name.eq(name)
+            if emoji.id.is_some() && r.emoji.id.is_some() {
+                emoji.id == r.emoji.id
             } else {
-                false
+                emoji.name.eq(&r.emoji.name)
             }
         })
     }) else {
