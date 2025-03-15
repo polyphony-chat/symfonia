@@ -38,7 +38,7 @@ pub async fn change_nickname(
             .permissions
             .has_permission(PermissionFlags::CHANGE_NICKNAME)
     {
-        authed_member.nick = payload.nick;
+        authed_member.nick = payload.nickname;
     } else if authed_member
         .permissions
         .has_permission(PermissionFlags::MANAGE_NICKNAMES)
@@ -48,7 +48,7 @@ pub async fn change_nickname(
             .get_member(db, snowflake)
             .await?
             .ok_or(Error::Guild(GuildError::MemberNotFound))?;
-        authed_member.nick = payload.nick;
+        authed_member.nick = payload.nickname;
     } else {
         return Err(Error::Guild(GuildError::InsufficientPermissions).into());
     }
