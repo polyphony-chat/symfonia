@@ -308,11 +308,10 @@ impl Message {
         if let Some(reactions) = self.reactions.as_mut() {
             let orig_len = reactions.len();
             reactions.retain(|r| {
-                if let Some(snowflake) = emoji.id {
-                    r.emoji.id != snowflake
+                if emoji.id.is_some() && r.emoji.id.is_some() {
+                    r.emoji.id != emoji.id
                 } else {
-                    // TODO: Bad practice, do this without cloning
-                    r.emoji.name.clone().unwrap_or_default().ne(&emoji.name)
+                    r.emoji.name.ne(&emoji.name)
                 }
             });
             if orig_len == reactions.len() {
@@ -364,11 +363,10 @@ impl Message {
     pub fn get_reaction(&self, emoji: &PartialEmoji) -> Option<&Reaction> {
         if let Some(reactions) = &self.reactions {
             reactions.iter().find(|r| {
-                if let Some(snowflake) = emoji.id {
-                    r.emoji.id == snowflake
+                if emoji.id.is_some() && r.emoji.id.is_some() {
+                    r.emoji.id == emoji.id
                 } else {
-                    // TODO: Bad practice, do this without cloning
-                    r.emoji.name.clone().unwrap_or_default() == emoji.name
+                    r.emoji.name == emoji.name
                 }
             })
         } else {
@@ -379,11 +377,10 @@ impl Message {
     pub fn get_reaction_mut(&mut self, emoji: &PartialEmoji) -> Option<&mut Reaction> {
         if let Some(reactions) = self.reactions.as_mut() {
             reactions.iter_mut().find(|r| {
-                if let Some(snowflake) = emoji.id {
-                    r.emoji.id == snowflake
+                if emoji.id.is_some() && r.emoji.id.is_some() {
+                    r.emoji.id == emoji.id
                 } else {
-                    // TODO: Bad practice, do this without cloning
-                    r.emoji.name.clone().unwrap_or_default() == emoji.name
+                    r.emoji.name == emoji.name
                 }
             })
         } else {

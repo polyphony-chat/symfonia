@@ -9,7 +9,7 @@ use chorus::{
     types::{
         ClientInfo, ClientStatusObject, GatewayCapabilities, GatewayGuild, GatewayIntents,
         GatewayReady, GuildDataMode, PresenceUpdate, ReadState, RelationshipType, Session,
-        Snowflake, UserNote,
+        Snowflake, UserNote, VersionedReadStateOrEntries
     },
     UInt8,
 };
@@ -229,12 +229,12 @@ pub async fn create_ready(
         api_code_version: Default::default(),
         experiments: vec![],
         sessions: Some([session].into()),
-        read_state: ReadState {
+        // Note: Discord.com now just sends Entries, while Spacebar sends VersionedReadState
+        read_state: VersionedReadStateOrEntries::Versioned(ReadState {
             entries: Default::default(),
             partial: false,
             version: 0,
-        },
-
+        }),
         presences: Some(presences.into_iter().map(|(_, p)| p).collect::<Vec<_>>()),
         guild_experiments: vec![],
     };
