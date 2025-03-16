@@ -9,7 +9,7 @@ use chorus::{
     types::{
         ClientInfo, ClientStatusObject, GatewayCapabilities, GatewayGuild, GatewayIntents,
         GatewayReady, GuildDataMode, PresenceUpdate, ReadState, RelationshipType, Session,
-        Snowflake, UserNote, VersionedReadStateOrEntries
+        Snowflake, UserNote, VersionedReadStateOrEntries,
     },
     UInt8,
 };
