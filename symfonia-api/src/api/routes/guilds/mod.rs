@@ -42,7 +42,7 @@ pub fn setup_routes() -> Route {
             "/:guild_id/channels",
             get(id::channels::get_channels)
                 .post(id::channels::create_channel)
-                .patch(id::channels::reoder_channels),
+                .patch(id::channels::reorder_channels_route),
         )
         .at("/:guild_id/invites", get(id::invites::get_invites))
         .at("/:guild_id/bans", get(id::bans::get_bans))

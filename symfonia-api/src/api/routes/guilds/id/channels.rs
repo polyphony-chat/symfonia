@@ -63,7 +63,7 @@ pub async fn create_channel(
 }
 
 #[handler]
-pub async fn reoder_channels(
+pub async fn reorder_channels_route(
     Data(db): Data<&PgPool>,
     Data(claims): Data<&Claims>,
     Path(guild_id): Path<Snowflake>,
@@ -95,7 +95,7 @@ pub async fn reoder_channels(
     Ok(Response::builder().status(StatusCode::NO_CONTENT).finish())
 }
 
-fn reorder_channels(target_id: Snowflake, new_position: i32, channels: &mut Vec<Channel>) {
+pub fn reorder_channels(target_id: Snowflake, new_position: i32, channels: &mut Vec<Channel>) {
     channels.sort_by(|a, b| a.position.cmp(&b.position));
 
     if let Some(channel_idx) = channels.iter().position(|c| c.id == target_id) {
