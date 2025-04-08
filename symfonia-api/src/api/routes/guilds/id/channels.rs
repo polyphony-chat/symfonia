@@ -128,3 +128,74 @@ pub fn reorder_channels(target_id: Snowflake, new_position: i32, channels: &mut 
         channels.insert(insert_pos, target_channel);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use chorus::types::Snowflake;
+
+    use symfonia_util::entities::Channel;
+
+    #[test]
+    fn test_reorder_channels() {
+        let target_id = Snowflake::default();
+
+        let mut channels = vec![
+            Channel {
+                inner: chorus::types::Channel {
+                    id: target_id,
+                    position: Some(0),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            Channel {
+                inner: chorus::types::Channel {
+                    id: Snowflake::default(),
+                    position: Some(1),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            Channel {
+                inner: chorus::types::Channel {
+                    id: Snowflake::default(),
+                    position: Some(2),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            Channel {
+                inner: chorus::types::Channel {
+                    id: Snowflake::default(),
+                    position: Some(3),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            Channel {
+                inner: chorus::types::Channel {
+                    id: Snowflake::default(),
+                    position: Some(4),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            Channel {
+                inner: chorus::types::Channel {
+                    id: Snowflake::default(),
+                    position: Some(5),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        ];
+
+        crate::api::routes::guilds::id::channels::reorder_channels(target_id, 3, &mut channels);
+        println!("{}", serde_json::to_string_pretty(&channels).unwrap());
+
+        assert_eq!(
+            channels.iter().position(|c| c.id == target_id).unwrap_or(0),
+            3
+        );
+    }
+}

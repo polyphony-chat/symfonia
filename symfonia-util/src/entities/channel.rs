@@ -23,7 +23,7 @@ use crate::entities::{
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, Default)]
 pub struct Channel {
     #[sqlx(flatten)]
-    pub(crate) inner: chorus::types::Channel,
+    pub inner: chorus::types::Channel,
     #[sqlx(skip)]
     #[serde(skip)]
     pub publisher: SharedEventPublisher,
@@ -400,74 +400,3 @@ impl Channel {
 //         assert_eq!(channels[0].id, 7250859537236758528.into());
 //     }
 // }
-
-#[cfg(test)]
-mod tests {
-    use chorus::types::Snowflake;
-
-    use crate::entities::Channel;
-
-    #[test]
-    fn test_reorder_channels() {
-        let target_id = Snowflake::default();
-
-        let mut channels = vec![
-            Channel {
-                inner: chorus::types::Channel {
-                    id: target_id,
-                    position: Some(0),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            Channel {
-                inner: chorus::types::Channel {
-                    id: Snowflake::default(),
-                    position: Some(1),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            Channel {
-                inner: chorus::types::Channel {
-                    id: Snowflake::default(),
-                    position: Some(2),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            Channel {
-                inner: chorus::types::Channel {
-                    id: Snowflake::default(),
-                    position: Some(3),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            Channel {
-                inner: chorus::types::Channel {
-                    id: Snowflake::default(),
-                    position: Some(4),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            Channel {
-                inner: chorus::types::Channel {
-                    id: Snowflake::default(),
-                    position: Some(5),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-        ];
-
-        // TODO reorder_channels(target_id, 3, &mut channels);
-        println!("{}", serde_json::to_string_pretty(&channels).unwrap());
-
-        assert_eq!(
-            channels.iter().position(|c| c.id == target_id).unwrap_or(0),
-            3
-        );
-    }
-}
