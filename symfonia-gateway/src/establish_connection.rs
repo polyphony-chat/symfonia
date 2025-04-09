@@ -1,8 +1,6 @@
 use std::sync::Arc;
 
-use chorus::types::{
-    GatewayHeartbeat, GatewayHello, GatewayReady,
-};
+use chorus::types::{GatewayHeartbeat, GatewayHello, GatewayReady};
 use futures::{SinkExt, StreamExt};
 use log::{debug, trace};
 use serde_json::json;
@@ -13,11 +11,7 @@ use symfonia_util::{
     gateway::{GatewayPayload, NewWebSocketConnection, WebSocketConnection, event::Event},
     util::token::check_token,
 };
-use tokio::{
-    net::TcpStream,
-    sync::Mutex,
-    task::JoinHandle,
-};
+use tokio::{net::TcpStream, sync::Mutex, task::JoinHandle};
 use tokio_tungstenite::{
     accept_async,
     tungstenite::{

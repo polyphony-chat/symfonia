@@ -10,11 +10,7 @@ mod ready;
 static RESUME_RECONNECT_WINDOW_SECONDS: u8 = 90;
 static DEFAULT_GATEWAY_BIND: &str = "0.0.0.0:3003";
 
-use std::{
-    collections::HashMap,
-    thread::sleep,
-    time::Duration,
-};
+use std::{collections::HashMap, thread::sleep, time::Duration};
 
 use log::info;
 use sqlx::PgPool;
@@ -25,7 +21,6 @@ use symfonia_util::{
     gateway::{ConnectedUsers, ResumableClientsStore},
 };
 use tokio::net::TcpListener;
-
 
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this

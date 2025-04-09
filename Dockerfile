@@ -1,5 +1,4 @@
-FROM rust:1-bookworm AS chef
-RUN cargo install cargo-chef
+FROM lukemathwalker/cargo-chef:latest-rust-1 AS chef
 RUN update-ca-certificates
 WORKDIR /app
 
@@ -7,23 +6,31 @@ FROM chef AS planner
 COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
-FROM chef AS builder
+# Separate builder stages for each component
+FROM chef AS builder_api
 COPY --from=planner /app/recipe.json recipe.json
-RUN cargo chef cook --release --recipe-path recipe.json
+RUN cargo chef cook --release -p symfonia-api --recipe-path recipe.json
 COPY . .
-RUN SQLX_OFFLINE=true cargo build --release
+RUN SQLX_OFFLINE=true cargo auditable build --release -p symfonia-api
 
-FROM debian:latest AS runtime
+FROM chef AS builder_gateway
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release -p symfonia-gateway --recipe-path recipe.json
+COPY . .
+RUN SQLX_OFFLINE=true cargo auditable build --release -p symfonia-gateway
 
-# API
-EXPOSE 3001
-# CDN
-EXPOSE 3002
-# Gateway
-EXPOSE 3003
-EXPOSE 3003/udp
-
-RUN apt update && apt install -y libssl-dev pkg-config
+# Create a common runtime base image
+FROM debian:latest AS runtime_base
+RUN apt-get update -qq -o Acquire::Languages=none && \
+    env DEBIAN_FRONTEND=noninteractive apt-get install \
+    -yqq \
+        ca-certificates \
+        libssl-dev \
+        pkg-config \
+        tzdata \
+        curl && \
+        rm -rf /var/lib/apt/lists/* && \
+        ln -fs /usr/share/zoneinfo/Etc/UTC /etc/localtime
 
 RUN adduser \
     --disabled-password \
@@ -34,8 +41,16 @@ RUN adduser \
     --uid 10001 \
     "symfonia"
 
-COPY --from=builder --chown=symfonia:symfonia /app/target/release/symfonia /app/symfonia
-
+# Client component image
+FROM runtime_base AS runtime_client-component
+COPY --from=builder_client-component --chown=symfonia:symfonia /app/target/release/symfonia-api /app/symfonia-api
 USER symfonia:symfonia
 WORKDIR /app/
-ENTRYPOINT ["/app/symfonia"]
+ENTRYPOINT ["/app/symfonia-api"]
+
+# Database component image
+FROM runtime_base AS runtime_database-component
+COPY --from=builder_database-component --chown=symfonia:symfonia /app/target/release/symfonia-gateway /app/symfonia-gateway
+USER symfonia:symfonia
+WORKDIR /app/
+ENTRYPOINT ["/app/symfonia-gateway"]

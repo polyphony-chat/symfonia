@@ -6,10 +6,7 @@ use log::*;
 use serde_json::json;
 use symfonia_util::gateway::WebSocketConnection;
 use tokio::sync::Mutex;
-use tokio_tungstenite::tungstenite::{
-    Message,
-    protocol::CloseFrame,
-};
+use tokio_tungstenite::tungstenite::{Message, protocol::CloseFrame};
 
 static HEARTBEAT_INTERVAL: std::time::Duration = std::time::Duration::from_secs(45);
 static LATENCY_BUFFER: std::time::Duration = std::time::Duration::from_secs(5);
