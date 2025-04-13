@@ -11,13 +11,13 @@ FROM chef AS builder_api
 COPY --from=planner /app/recipe.json recipe.json
 RUN cargo chef cook --release -p symfonia-api --recipe-path recipe.json
 COPY . .
-RUN SQLX_OFFLINE=true cargo auditable build --release -p symfonia-api
+RUN SQLX_OFFLINE=true cargo build --release -p symfonia-api
 
 FROM chef AS builder_gateway
 COPY --from=planner /app/recipe.json recipe.json
 RUN cargo chef cook --release -p symfonia-gateway --recipe-path recipe.json
 COPY . .
-RUN SQLX_OFFLINE=true cargo auditable build --release -p symfonia-gateway
+RUN SQLX_OFFLINE=true cargo build --release -p symfonia-gateway
 
 # Create a common runtime base image
 FROM debian:latest AS runtime_base
@@ -42,15 +42,15 @@ RUN adduser \
     "symfonia"
 
 # Client component image
-FROM runtime_base AS runtime_client-component
-COPY --from=builder_client-component --chown=symfonia:symfonia /app/target/release/symfonia-api /app/symfonia-api
+FROM runtime_base AS runtime_api
+COPY --from=builder_api --chown=symfonia:symfonia /app/target/release/symfonia-api /app/symfonia-api
 USER symfonia:symfonia
 WORKDIR /app/
 ENTRYPOINT ["/app/symfonia-api"]
 
 # Database component image
-FROM runtime_base AS runtime_database-component
-COPY --from=builder_database-component --chown=symfonia:symfonia /app/target/release/symfonia-gateway /app/symfonia-gateway
+FROM runtime_base AS runtime_gateway
+COPY --from=builder_gateway --chown=symfonia:symfonia /app/target/release/symfonia-gateway /app/symfonia-gateway
 USER symfonia:symfonia
 WORKDIR /app/
 ENTRYPOINT ["/app/symfonia-gateway"]
