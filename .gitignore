@@ -5,3 +5,4 @@ Cargo.lock
 /.idea
 /firedbg
 debug.json
+rauthy.cfg
