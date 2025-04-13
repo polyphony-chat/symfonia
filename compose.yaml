@@ -1,7 +1,7 @@
 services:
   db:
     env_file: .env
-    image: postgres
+    image: postgres:17
     volumes:
       - "postgres:/var/lib/postgresql/data"
     environment:
@@ -11,17 +11,19 @@ services:
       interval: 3s
       timeout: 3s
       retries: 10
-  app:
+  symfonia:
     env_file: .env
     build: .
     environment:
       - DATABASE_HOST=db
-      - DATABASE_USERNAME=${POSTGRES_USER}
-      - DATABASE_PASSWORD=${POSTGRES_PASSWORD}
-      - DATABASE_NAME=${POSTGRES_DB}
+      - DATABASE_USERNAME=${POSTGRES_USER:?}
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD:?}
+      - DATABASE_NAME=${POSTGRES_DB:?}
     depends_on:
       db:
         condition: service_healthy
+      rauthy:
+        condition: service_started
     ports:
       - 3001:3001
       - 3002:3002
@@ -29,6 +31,19 @@ services:
       - 3003:3003/udp
     volumes:
       - ./config.toml:/app/config.toml
+  rauthy:
+    image: ghcr.io/sebadob/rauthy:0.28.3
+    env_file: .env
+    environment:
+      - COOKIE_MODE=${RAUTHY_COOKIE_MODE:?}
+      - ENC_KEYS=${RAUTHY_ENC_KEYS:?}
+      - ENC_KEY_ACTIVE=${RAUTHY_ENC_KEY_ACTIVE:?}
+    ports:
+      - 8080:8080
+    volumes:
+      - rauthy:/app/data
+      - ./rauthy.cfg:/app/rauthy.cfg
 
 volumes:
+  rauthy:
   postgres:
