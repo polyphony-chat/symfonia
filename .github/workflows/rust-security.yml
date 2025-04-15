@@ -1,0 +1,26 @@
+name: "Rust: Security: Automated dependency analysis"
+
+on:
+  push:
+    branches: ["main", "preserve/*"]
+  pull_request:
+    # The branches below must be a subset of the branches above
+    branches: ["main", "dev"]
+  workflow_dispatch:
+  schedule:
+    - cron: "0 7 * * 1"
+
+jobs:
+  cargo-deny:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install latest, stable Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6
+      - name: Analyze crate dependencies for advisories with cargo-deny
+        uses: EmbarkStudios/cargo-deny-action@34899fc7ba81ca6268d5947a7a16b4649013fea1
+        with:
+          command: check advisories sources bans

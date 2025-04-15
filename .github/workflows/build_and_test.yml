@@ -26,8 +26,10 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           cache-all-crates: "true"
-          prefix-key: "linux"
-      - name: Build and Test with Nextest
+      - uses: taiki-e/install-action@7cb2cdb5024b2b45585f150af1ee02e24b87edd7
+        with:
+          tool: cargo-binstall
+      - name: Build, Test, Publish Coverage
         env:
           DATABASE_HOST: postgres
           DATABASE_USERNAME: symfonia
@@ -38,6 +40,10 @@ jobs:
           # This is only important for tests
           DATABASE_URL: ${{ steps.postgres.outputs.connection-uri }}
         run: |
-          curl -L --proto '=https' --tlsv1.3 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
-          cargo binstall cargo-nextest --secure --no-confirm --force
-          cargo nextest run --all --verbose
+          if [ -n "${{ secrets.COVERALLS_REPO_TOKEN }}" ]; then
+            cargo binstall --no-confirm cargo-tarpaulin --force
+            cargo tarpaulin --all-features --avoid-cfg-tarpaulin --tests --verbose --skip-clean --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }} --timeout 120
+          else
+            echo "Code Coverage step is skipped on PRs from forks."
+            cargo nextest run --verbose --all-features
+          fi
