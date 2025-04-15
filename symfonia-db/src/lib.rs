@@ -38,7 +38,9 @@ pub struct Username {
 }
 
 impl Username {
-    pub fn new(name: &str) -> Result<Self, Box<dyn Display>>
+    pub fn new(name: &str) -> Result<Self, Box<dyn Display>> {
+        todo!()
+    }
 }
 
 pub struct Groupname {
