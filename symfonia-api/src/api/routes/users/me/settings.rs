@@ -10,7 +10,7 @@ use poem::{
     web::{Data, Json},
 };
 use sqlx::PgPool;
-use symfonia_util::{
+use util::{
     entities::User,
     errors::{Error, UserError},
 };
@@ -38,7 +38,7 @@ pub async fn update_settings(
         .ok_or(Error::User(UserError::InvalidUser))?;
 
     user.settings =
-        symfonia_util::entities::UserSettings::consume(settings, user.settings_index.to_uint());
+        util::entities::UserSettings::consume(settings, user.settings_index.to_uint());
     // TODO: user.settings.update(db).await.map_err(Error::Sqlx)?;
 
     Ok(Json(user.settings))

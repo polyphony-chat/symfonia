@@ -3,7 +3,7 @@ use poem::{
     IntoResponse, Route, handler,
     web::{Data, Json},
 };
-use symfonia_util::entities::Config;
+use util::entities::Config;
 
 pub fn setup_routes() -> Route {
     Route::new().at("/ping", ping)

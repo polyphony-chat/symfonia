@@ -14,7 +14,7 @@ use std::{collections::HashMap, thread::sleep, time::Duration};
 
 use log::info;
 use sqlx::PgPool;
-use symfonia_util::{
+use util::{
     configuration::SymfoniaConfiguration,
     entities::Config,
     errors::Error,

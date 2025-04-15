@@ -13,7 +13,7 @@ use poem::{
 use reqwest::Method;
 use serde_json::json;
 use sqlx::PgPool;
-use symfonia_util::{
+use util::{
     configuration::SymfoniaConfiguration, entities::Config, errors::Error, gateway::ConnectedUsers,
 };
 

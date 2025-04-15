@@ -11,7 +11,7 @@ use poem::{
 };
 use sqlx::PgPool;
 
-use symfonia_util::{
+use util::{
     entities::{Channel, Message, User},
     errors::{ChannelError, Error},
 };

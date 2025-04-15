@@ -10,7 +10,7 @@ use poem::{
 };
 use serde_json::json;
 
-use symfonia_util::entities::{Config, Guild, GuildMember, Message, User};
+use util::entities::{Config, Guild, GuildMember, Message, User};
 
 #[handler]
 pub async fn stats(

@@ -15,7 +15,7 @@ use poem::{
 use reqwest::StatusCode;
 use sqlx::PgPool;
 
-use symfonia_util::{
+use util::{
     entities::{Guild, GuildBan},
     errors::{Error, GuildError},
 };

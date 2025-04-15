@@ -13,7 +13,7 @@ use poem::{
 };
 use settings::{get_settings, update_settings};
 use sqlx::PgPool;
-use symfonia_util::{
+use util::{
     entities::User,
     errors::{Error, UserError},
 };

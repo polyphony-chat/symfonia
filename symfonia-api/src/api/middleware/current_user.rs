@@ -8,7 +8,7 @@ use chorus::types::jwt::Claims;
 use poem::{Endpoint, Middleware, Request};
 use sqlx::PgPool;
 
-use symfonia_util::entities::User;
+use util::entities::User;
 
 pub struct CurrentUserMiddleware;
 

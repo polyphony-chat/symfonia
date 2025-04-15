@@ -14,7 +14,7 @@ use poem::{
 use reqwest::StatusCode;
 use sqlx::PgPool;
 
-use symfonia_util::{
+use util::{
     entities::{Channel, Guild},
     errors::{Error, GuildError},
 };
@@ -133,7 +133,7 @@ pub fn reorder_channels(target_id: Snowflake, new_position: i32, channels: &mut 
 mod tests {
     use chorus::types::Snowflake;
 
-    use symfonia_util::entities::Channel;
+    use util::entities::Channel;
 
     #[test]
     fn test_reorder_channels() {

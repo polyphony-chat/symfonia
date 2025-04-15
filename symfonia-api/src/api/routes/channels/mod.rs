@@ -13,7 +13,7 @@ use sqlx::PgPool;
 
 use invites::{create_invite, get_invites};
 
-use symfonia_util::{
+use util::{
     entities::Channel,
     errors::{ChannelError, Error},
 };

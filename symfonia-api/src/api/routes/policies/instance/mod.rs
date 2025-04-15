@@ -13,7 +13,7 @@ use poem::{
     IntoResponse, Route, get, handler,
     web::{Data, Json},
 };
-use symfonia_util::entities::Config;
+use util::entities::Config;
 
 #[handler]
 pub async fn general_config(Data(cfg): Data<&Config>) -> impl IntoResponse {

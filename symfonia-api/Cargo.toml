@@ -57,7 +57,7 @@ sentry = { version = "0.34.0", default-features = false, features = [
 ] }
 clap = { version = "4.5.26", features = ["derive"] }
 chorus = { workspace = true }
-symfonia-util = { path = "../symfonia-util", features = ["poem"] }
+util = { path = "../util", features = ["poem"] }
 serde_path_to_error = "0.1.16"
 percent-encoding = "2.3.1"
 hex = "0.4.3"

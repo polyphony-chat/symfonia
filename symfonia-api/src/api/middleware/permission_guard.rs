@@ -8,7 +8,7 @@ use chorus::types::{PermissionFlags, Snowflake};
 use poem::{Endpoint, Middleware, Request};
 use sqlx::PgPool;
 
-use symfonia_util::entities::User;
+use util::entities::User;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PermissionCheckType {

@@ -10,7 +10,7 @@ use poem::{
     web::{Data, Json},
 };
 use serde_json::json;
-use symfonia_util::entities::Config;
+use util::entities::Config;
 
 #[handler]
 pub async fn domain(

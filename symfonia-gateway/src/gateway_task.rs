@@ -3,7 +3,7 @@ use std::sync::Arc;
 use chorus::types::{GatewayHeartbeat, Snowflake};
 use log::debug;
 use serde_json::json;
-use symfonia_util::{
+use util::{
     errors::{Error, GatewayError},
     gateway::{WebSocketConnection, event::Event},
 };

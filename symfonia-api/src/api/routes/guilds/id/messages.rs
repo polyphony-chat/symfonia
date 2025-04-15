@@ -12,7 +12,7 @@ use poem::{
 use serde_json::json;
 use sqlx::PgPool;
 
-use symfonia_util::{
+use util::{
     entities::{Guild, User},
     errors::{Error, GuildError},
 };

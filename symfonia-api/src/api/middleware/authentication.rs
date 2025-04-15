@@ -7,7 +7,7 @@
 use poem::{Endpoint, Middleware, Request, http::StatusCode};
 use sqlx::PgPool;
 
-use symfonia_util::{
+use util::{
     entities::{Config, User},
     util::token::check_token,
 };

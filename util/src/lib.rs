@@ -236,7 +236,7 @@ struct Args {
 //             .expect("Failed to seed config");
 //     }
 
-//     let symfonia_config = symfonia_util::entities::Config::init(db)
+//     let symfonia_config = util::entities::Config::init(db)
 //         .await
 //         .unwrap_or_default();
 

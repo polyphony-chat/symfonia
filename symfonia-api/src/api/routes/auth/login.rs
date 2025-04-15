@@ -13,7 +13,7 @@ use poem::{
 use reqwest::StatusCode;
 use serde_json::json;
 
-use symfonia_util::entities::{Config, User};
+use util::entities::{Config, User};
 
 #[handler]
 pub async fn login(

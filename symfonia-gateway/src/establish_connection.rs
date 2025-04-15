@@ -5,7 +5,7 @@ use futures::{SinkExt, StreamExt};
 use log::{debug, trace};
 use serde_json::json;
 use sqlx::PgPool;
-use symfonia_util::{
+use util::{
     entities::Config,
     errors::{Error, GatewayError, UserError},
     gateway::{GatewayPayload, NewWebSocketConnection, WebSocketConnection, event::Event},

@@ -5,7 +5,7 @@ use chorus::types::{
 };
 use serde_json::json;
 use sqlx::PgPool;
-use symfonia_util::{
+use util::{
     entities::{Channel, Guild, Note, Relationship, User},
     errors::Error,
 };

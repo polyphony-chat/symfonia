@@ -4,7 +4,7 @@ use chorus::types::{GatewayHeartbeat, GatewayHeartbeatAck};
 use futures::SinkExt;
 use log::*;
 use serde_json::json;
-use symfonia_util::gateway::WebSocketConnection;
+use util::gateway::WebSocketConnection;
 use tokio::sync::Mutex;
 use tokio_tungstenite::tungstenite::{Message, protocol::CloseFrame};
 

@@ -12,7 +12,7 @@ use poem::{
 use reqwest::StatusCode;
 use sqlx::PgPool;
 
-use symfonia_util::{
+use util::{
     entities::{Config, Emoji, Guild},
     errors::{Error, GuildError},
 };

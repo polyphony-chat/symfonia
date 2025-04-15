@@ -13,7 +13,7 @@ use poem::{
 };
 use sqlx::PgPool;
 
-use symfonia_util::{
+use util::{
     entities::{Channel, Config, Guild, Webhook},
     errors::{ChannelError, Error, GuildError},
 };

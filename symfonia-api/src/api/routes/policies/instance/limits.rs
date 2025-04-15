@@ -8,7 +8,7 @@ use poem::{
     IntoResponse, handler,
     web::{Data, Json},
 };
-use symfonia_util::entities::Config;
+use util::entities::Config;
 
 #[handler]
 pub async fn limits(Data(cfg): Data<&Config>) -> impl IntoResponse {

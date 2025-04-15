@@ -11,7 +11,7 @@ use poem::{
 };
 use sqlx::PgPool;
 
-use symfonia_util::{
+use util::{
     SharedEventPublisherMap,
     entities::{Config, Guild, Role, User},
     errors::{Error, GuildError},
