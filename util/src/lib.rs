@@ -37,6 +37,8 @@ use pubserve::Publisher;
 use tokio::sync::{Mutex, OnceCell};
 
 pub mod configuration;
+#[cfg(feature = "database")]
+pub mod database;
 pub mod entities;
 pub mod errors;
 pub mod events;
