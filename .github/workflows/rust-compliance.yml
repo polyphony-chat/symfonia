@@ -30,10 +30,12 @@ jobs:
       - uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6
 
       - name: Install cargo-binstall
-        run: curl -L --proto '=https' --tlsv1.3 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+        uses: taiki-e/install-action@7cb2cdb5024b2b45585f150af1ee02e24b87edd7
+        with:
+          tool: cargo-binstall
 
       - name: Install additionally required components
-        run: cargo binstall clippy-sarif sarif-fmt cargo-deny --only-signed --force -y
+        run: cargo binstall cargo-udeps clippy-sarif sarif-fmt cargo-deny --only-signed --force -y
 
       - name: Run rust-clippy
         run: cargo clippy
@@ -41,13 +43,25 @@ jobs:
           --message-format=json | clippy-sarif | tee rust-clippy-results.sarif | sarif-fmt
         continue-on-error: true
 
+      - name: Upload clippy analysis results to GitHub
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: rust-clippy-results.sarif
+          wait-for-processing: true
+
       - name: Analyze crate dependency licenses with cargo-deny
         uses: EmbarkStudios/cargo-deny-action@34899fc7ba81ca6268d5947a7a16b4649013fea1
         with:
           command: check licenses
 
-      - name: Upload analysis results to GitHub
-        uses: github/codeql-action/upload-sarif@v3
+      - name: Install Rust nightly toolchain
+        uses: dtolnay/rust-toolchain@master
         with:
-          sarif_file: rust-clippy-results.sarif
-          wait-for-processing: true
+          components: clippy
+          toolchain: nightly
+
+      - name: Activate nightly Rust toolchain
+        run: rustup default nightly
+
+      - name: cargo-udeps
+        run: cargo +nightly udeps --all-targets --all-features
