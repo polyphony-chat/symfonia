@@ -6,12 +6,10 @@ edition = "2024"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-atomic = "0.6.0"
 base64 = "0.22.1"
 bigdecimal = "0.4.7"
 bitflags = { version = "2.7.0", features = ["serde"] }
 chrono = { version = "0.4.39", features = ["serde"] }
-dotenv = "0.15.0"
 futures = "0.3.31"
 hostname = "0.4.0"
 jsonwebtoken = "9.3.0"
@@ -27,7 +25,6 @@ num-bigint = "0.4.6"
 num-traits = "0.2.19"
 openssl = "0.10.68"
 poem = "3.1.6"
-utoipa = { version = "5.3.1", features = [] }
 rand = "0.8.5"
 regex = "1.11.1"
 reqwest = { version = "0.12.12", default-features = false, features = [
@@ -71,9 +68,6 @@ parking_lot = { version = "0.12.3", features = ["deadlock_detection"] }
 sqlx-pg-uint = { workspace = true }
 toml = "0.8.19"
 argon2 = "0.5.3"
-
-[dev-dependencies]
-rusty-hook = "0.11.2"
 
 [profile.release]
 lto = true

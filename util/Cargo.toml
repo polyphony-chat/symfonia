@@ -36,10 +36,6 @@ thiserror = "2.0.12"
 tokio = { version = "1.44.2", features = ["net", "rt-multi-thread", "sync"] }
 tokio-tungstenite = { workspace = true }
 toml = "0.8.20"
-
-[dev-dependencies]
-rusty-hook = "0.11.2"
-
 [profile.release]
 lto = true
 opt-level = "s"
