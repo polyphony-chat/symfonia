@@ -1,0 +1,31 @@
+[api]
+enabled = true
+
+[api.database]
+max_connections = 20
+# Override values from [general.database] here
+# user = ""
+# password = ""
+# port = 0
+# host = ""
+
+[gateway]
+enabled = true
+
+[gateway.database]
+max_connections = 20
+# Override values from [general.database] here
+# user = ""
+# password = ""
+# port = 0
+# host = ""
+
+[general]
+log_level = "TRACE"
+node_id = 1
+
+[general.database]
+user = "symfonia"
+password = "symfonia"
+port = 5432
+host = "localhost"
