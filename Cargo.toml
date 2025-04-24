@@ -1,6 +1,6 @@
 [workspace]
-resolver = "2"
-members = ["symfonia-api", "symfonia-gateway", "util"]
+resolver = "3"
+members = ["crates/*"]
 
 [workspace.dependencies]
 chorus = { version = "0.19.0", features = [
