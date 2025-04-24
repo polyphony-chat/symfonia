@@ -1,5 +1,8 @@
 [api]
 enabled = true
+port = 3001
+host = "0.0.0.0"
+tls = false
 
 [api.database]
 max_connections = 20
@@ -8,9 +11,13 @@ max_connections = 20
 # password = ""
 # port = 0
 # host = ""
+# tls = "prefer"
 
 [gateway]
 enabled = true
+port = 3002
+host = "0.0.0.0"
+tls = false
 
 [gateway.database]
 max_connections = 20
@@ -19,13 +26,16 @@ max_connections = 20
 # password = ""
 # port = 0
 # host = ""
+# tls = "prefer"
 
 [general]
 log_level = "TRACE"
 node_id = 1
 
 [general.database]
+database = "symfonia"
 user = "symfonia"
 password = "symfonia"
 port = 5432
 host = "localhost"
+tls = "prefer"
