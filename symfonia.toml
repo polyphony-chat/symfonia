@@ -29,12 +29,12 @@ max_connections = 20
 # tls = "prefer"
 
 [general]
-log_level = "TRACE"
+log_level = "Trace"
 node_id = 1
 
 [general.database]
 database = "symfonia"
-user = "symfonia"
+username = "symfonia"
 password = "symfonia"
 port = 5432
 host = "localhost"
