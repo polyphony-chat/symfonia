@@ -12,7 +12,6 @@ use std::{
 };
 
 use chorus::types::Snowflake;
-use clap::Parser;
 use sqlx::PgPool;
 
 use crate::{configuration::SymfoniaConfiguration, gateway::event::Event};
@@ -37,7 +36,6 @@ use pubserve::Publisher;
 use tokio::sync::{Mutex, OnceCell};
 
 pub mod configuration;
-#[cfg(feature = "database")]
 pub mod database;
 pub mod entities;
 pub mod errors;
@@ -78,13 +76,6 @@ impl Filter for LogFilter {
             log4rs::filter::Response::Reject
         }
     }
-}
-
-#[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-struct Args {
-    #[arg(short, long, default_value = "false")]
-    migrate: bool,
 }
 
 // TODO: This must be rewritten
