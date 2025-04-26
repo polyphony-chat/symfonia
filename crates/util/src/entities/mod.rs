@@ -48,17 +48,17 @@ mod voice_state;
 mod webhook;
 /*#[async_trait]
 pub trait BaseObject<'a>: Sized {
-    const TABLE: &'a str;
-    type UpdateSchema: ?Sized;
+	const TABLE: &'a str;
+	type UpdateSchema: ?Sized;
 
-    async fn get_by_id<'c, C: Queryer<'c>>(db: C, id: &Snowflake) -> Result<Option<Self>, Error> {
-        sqlx::query_as(format!("SELECT * FROM {} WHERE id = ?", BaseObject::TABLE).as_str())
-            .bind(id)
-            .fetch_optional(db)
-            .await
-            .map(|res| res.map(Self::from))
-            .map_err(Error::Sqlx)
-    }
+	async fn get_by_id<'c, C: Queryer<'c>>(db: C, id: &Snowflake) -> Result<Option<Self>, Error> {
+		sqlx::query_as(format!("SELECT * FROM {} WHERE id = ?", BaseObject::TABLE).as_str())
+			.bind(id)
+			.fetch_optional(db)
+			.await
+			.map(|res| res.map(Self::from))
+			.map_err(Error::Sqlx)
+	}
 }
 TODO: Figure this out at some point to cut down on re-written code
 */

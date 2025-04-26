@@ -7,33 +7,33 @@
 #![allow(unused)] // TODO: Remove, I just want to clean up my build output
 
 use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
+	collections::{HashMap, HashSet},
+	sync::Arc,
 };
 
 use chorus::types::Snowflake;
-use sqlx::PgPool;
-
-use crate::{configuration::SymfoniaConfiguration, gateway::event::Event};
 use log::LevelFilter;
 use log4rs::{
-    Config,
-    append::{
-        console::{ConsoleAppender, Target},
-        rolling_file::{
-            RollingFileAppender,
-            policy::compound::{
-                CompoundPolicy, roll::delete::DeleteRoller, trigger::size::SizeTrigger,
-            },
-        },
-    },
-    config::{Appender, Logger, Root},
-    encode::pattern::PatternEncoder,
-    filter::Filter,
+	Config,
+	append::{
+		console::{ConsoleAppender, Target},
+		rolling_file::{
+			RollingFileAppender,
+			policy::compound::{
+				CompoundPolicy, roll::delete::DeleteRoller, trigger::size::SizeTrigger,
+			},
+		},
+	},
+	config::{Appender, Logger, Root},
+	encode::pattern::PatternEncoder,
+	filter::Filter,
 };
 use parking_lot::RwLock;
 use pubserve::Publisher;
+use sqlx::PgPool;
 use tokio::sync::{Mutex, OnceCell};
+
+use crate::{configuration::SymfoniaConfiguration, gateway::event::Event};
 
 pub mod configuration;
 pub mod database;
@@ -47,16 +47,16 @@ pub type SharedEventPublisher = Arc<RwLock<Publisher<Event>>>;
 pub type EventPublisherMap = HashMap<Snowflake, SharedEventPublisher>;
 pub type SharedEventPublisherMap = Arc<RwLock<EventPublisherMap>>;
 pub type WebSocketReceive =
-    futures::stream::SplitStream<tokio_tungstenite::WebSocketStream<tokio::net::TcpStream>>;
+	futures::stream::SplitStream<tokio_tungstenite::WebSocketStream<tokio::net::TcpStream>>;
 pub type WebSocketSend = futures::stream::SplitSink<
-    tokio_tungstenite::WebSocketStream<tokio::net::TcpStream>,
-    tokio_tungstenite::tungstenite::Message,
+	tokio_tungstenite::WebSocketStream<tokio::net::TcpStream>,
+	tokio_tungstenite::tungstenite::Message,
 >;
 
 pub fn eq_shared_event_publisher(a: &SharedEventPublisher, b: &SharedEventPublisher) -> bool {
-    let a = a.read();
-    let b = b.read();
-    *a == *b
+	let a = a.read();
+	let b = b.read();
+	*a == *b
 }
 
 // TODO: Use this in more places
@@ -69,13 +69,13 @@ static DATABASE: OnceCell<PgPool> = OnceCell::const_new();
 struct LogFilter;
 
 impl Filter for LogFilter {
-    fn filter(&self, record: &log::Record) -> log4rs::filter::Response {
-        if record.target().starts_with("symfonia") {
-            log4rs::filter::Response::Accept
-        } else {
-            log4rs::filter::Response::Reject
-        }
-    }
+	fn filter(&self, record: &log::Record) -> log4rs::filter::Response {
+		if record.target().starts_with("symfonia") {
+			log4rs::filter::Response::Accept
+		} else {
+			log4rs::filter::Response::Reject
+		}
+	}
 }
 
 // TODO: This must be rewritten
@@ -125,9 +125,9 @@ impl Filter for LogFilter {
 //         )
 //         .unwrap();
 
-//     let loglevel = match SymfoniaConfiguration::get().mode.to_uppercase().as_str() {
-//         "DEBUG" => LevelFilter::Debug,
-//         "PRODUCTION" => LevelFilter::Warn,
+//     let loglevel = match
+// SymfoniaConfiguration::get().mode.to_uppercase().as_str() {         "DEBUG"
+// => LevelFilter::Debug,         "PRODUCTION" => LevelFilter::Warn,
 //         "VERBOSE" => LevelFilter::Trace,
 //         _ => LevelFilter::Debug,
 //     };
@@ -154,8 +154,8 @@ impl Filter for LogFilter {
 //                 .build("gateway", Box::new(gateway_log)),
 //         )
 //         //.logger(Logger::builder().build("symfonia::db", LevelFilter::Info))
-//         //.logger(Logger::builder().build("symfonia::cfg", LevelFilter::Info))
-//         .logger(
+//         //.logger(Logger::builder().build("symfonia::cfg",
+// LevelFilter::Info))         .logger(
 //             Logger::builder()
 //                 .appender("api")
 //                 .build("symfonia::api", loglevel),
@@ -183,7 +183,10 @@ impl Filter for LogFilter {
 //             log::warn!(target: "symfonia", "⚠️⚠️⚠️ WARNING ⚠️⚠️⚠️");
 //             log::warn!(target: "symfonia", "⚠️⚠️⚠️ WARNING ⚠️⚠️⚠️");
 //             log::warn!(target: "symfonia", "⚠️⚠️⚠️ WARNING ⚠️⚠️⚠️");
-//             log::warn!(target: "symfonia", r#"WARNING: Running in "DEBUG" or "VERBOSE" modes will leak sensitive information to the logs. Please run symfonia in production mode if you are not currently debugging. This can be done by setting the `mode` option in your config to "PRODUCTION"."#);
+//             log::warn!(target: "symfonia", r#"WARNING: Running in "DEBUG" or
+// "VERBOSE" modes will leak sensitive information to the logs. Please run
+// symfonia in production mode if you are not currently debugging. This can be
+// done by setting the `mode` option in your config to "PRODUCTION"."#);
 //             log::warn!(target: "symfonia", "⚠️⚠️⚠️ WARNING ⚠️⚠️⚠️");
 //             log::warn!(target: "symfonia", "⚠️⚠️⚠️ WARNING ⚠️⚠️⚠️");
 //             log::warn!(target: "symfonia", "⚠️⚠️⚠️ WARNING ⚠️⚠️⚠️");
@@ -199,11 +202,12 @@ impl Filter for LogFilter {
 //         .expect("Failed to check migrating from spacebar")
 //     {
 //         if !args.migrate {
-//             log::error!(target: "symfonia::db", "The database seems to be from spacebar.  Please run with --migrate option to migrate the database.  This is not reversible.");
-//             std::process::exit(0);
+//             log::error!(target: "symfonia::db", "The database seems to be
+// from spacebar.  Please run with --migrate option to migrate the database.
+// This is not reversible.");             std::process::exit(0);
 //         } else {
-//             log::warn!(target: "symfonia::db", "Migrating from spacebar to symfonia");
-//             database::delete_spacebar_migrations(db)
+//             log::warn!(target: "symfonia::db", "Migrating from spacebar to
+// symfonia");             database::delete_spacebar_migrations(db)
 //                 .await
 //                 .expect("Failed to delete spacebar migrations table");
 //             log::info!(target: "symfonia::db", "Running migrations");
@@ -223,8 +227,8 @@ impl Filter for LogFilter {
 //         .await
 //         .expect("Failed to check fresh db")
 //     {
-//         log::info!(target: "symfonia::db", "Fresh database detected.  Seeding database with config data");
-//         database::seed_config(db)
+//         log::info!(target: "symfonia::db", "Fresh database detected.  Seeding
+// database with config data");         database::seed_config(db)
 //             .await
 //             .expect("Failed to seed config");
 //     }
@@ -239,7 +243,8 @@ impl Filter for LogFilter {
 //         .init_role_user_map(db)
 //         .await
 //         .expect("Failed to init role user map");
-//     log::trace!(target: "symfonia", "Role->User map initialized with {} entries", connected_users.role_user_map.lock().await.len());
+//     log::trace!(target: "symfonia", "Role->User map initialized with {}
+// entries", connected_users.role_user_map.lock().await.len());
 
 //     let mut tasks = [
 //         tokio::spawn(api::start_api(

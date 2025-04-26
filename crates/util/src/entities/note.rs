@@ -10,50 +10,51 @@ use serde::{Deserialize, Serialize};
 use crate::errors::Error;
 
 #[derive(sqlx::FromRow, Debug, Clone, Serialize, Deserialize)]
-/// A note that a user has written about another user. The target user may be the author of the note.
+/// A note that a user has written about another user. The target user may be
+/// the author of the note.
 pub struct Note {
-    #[sqlx(flatten)]
-    inner: UserNote,
+	#[sqlx(flatten)]
+	inner: UserNote,
 }
 
 impl Deref for Note {
-    type Target = UserNote;
+	type Target = UserNote;
 
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
+	fn deref(&self) -> &Self::Target {
+		&self.inner
+	}
 }
 
 impl DerefMut for Note {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.inner
-    }
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		&mut self.inner
+	}
 }
 
 impl Note {
-    pub fn into_inner(self) -> UserNote {
-        self.inner
-    }
+	pub fn into_inner(self) -> UserNote {
+		self.inner
+	}
 
-    pub fn as_inner(&self) -> &UserNote {
-        &self.inner
-    }
+	pub fn as_inner(&self) -> &UserNote {
+		&self.inner
+	}
 
-    pub fn as_inner_mut(&mut self) -> &mut UserNote {
-        &mut self.inner
-    }
+	pub fn as_inner_mut(&mut self) -> &mut UserNote {
+		&mut self.inner
+	}
 
-    /// Retrieve all notes from a user by their ID
-    pub async fn get_by_author_id(
-        author_id: Snowflake,
-        db: &sqlx::PgPool,
-    ) -> Result<Vec<Self>, Error> {
-        sqlx::query_as("SELECT * from notes WHERE author_id = $1")
-            .bind(author_id)
-            .fetch_all(db)
-            .await
-            .map_err(Error::Sqlx)
-    }
+	/// Retrieve all notes from a user by their ID
+	pub async fn get_by_author_id(
+		author_id: Snowflake,
+		db: &sqlx::PgPool,
+	) -> Result<Vec<Self>, Error> {
+		sqlx::query_as("SELECT * from notes WHERE author_id = $1")
+			.bind(author_id)
+			.fetch_all(db)
+			.await
+			.map_err(Error::Sqlx)
+	}
 }
 
 // TODO: Move to symfonia again
@@ -61,8 +62,8 @@ impl Note {
 // mod note_unit_tests {
 //     #[sqlx::test(fixtures(path = "../../../fixtures", scripts("notes")))]
 //     async fn test_get_by_author_id(db: sqlx::PgPool) {
-//         let notes = super::Note::get_by_author_id(7250861145186111490.into(), &db)
-//             .await
+//         let notes = super::Note::get_by_author_id(7250861145186111490.into(),
+// &db)             .await
 //             .unwrap();
 //         assert_eq!(notes.len(), 1);
 //         let note = notes[0].as_inner();

@@ -8,32 +8,30 @@ mod settings;
 
 use chorus::types::jwt::Claims;
 use poem::{
-    IntoResponse, Route, get, handler,
-    web::{Data, Json},
+	IntoResponse, Route, get, handler,
+	web::{Data, Json},
 };
 use settings::{get_settings, update_settings};
 use sqlx::PgPool;
 use util::{
-    entities::User,
-    errors::{Error, UserError},
+	entities::User,
+	errors::{Error, UserError},
 };
 
 pub fn setup_routes() -> Route {
-    Route::new()
-        .at("/", get(get_data))
-        .at("/settings", get(get_settings).patch(update_settings))
+	Route::new().at("/", get(get_data)).at("/settings", get(get_settings).patch(update_settings))
 }
 
 #[handler]
 pub async fn get_data(
-    Data(db): Data<&PgPool>,
-    Data(claims): Data<&Claims>,
+	Data(db): Data<&PgPool>,
+	Data(claims): Data<&Claims>,
 ) -> poem::Result<impl IntoResponse> {
-    let user = User::get_by_id(db, claims.id)
-        .await
-        .unwrap()
-        .ok_or(Error::User(UserError::InvalidUser))
-        .unwrap();
+	let user = User::get_by_id(db, claims.id)
+		.await
+		.unwrap()
+		.ok_or(Error::User(UserError::InvalidUser))
+		.unwrap();
 
-    Ok(Json(user))
+	Ok(Json(user))
 }

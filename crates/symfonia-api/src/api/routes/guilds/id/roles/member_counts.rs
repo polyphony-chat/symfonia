@@ -8,44 +8,37 @@ use std::collections::HashMap;
 
 use chorus::types::{Snowflake, jwt::Claims};
 use poem::{
-    IntoResponse, handler,
-    web::{Data, Json, Path},
+	IntoResponse, handler,
+	web::{Data, Json, Path},
 };
 use sqlx::PgPool;
-
 use util::{
-    entities::{Guild, GuildMember},
-    errors::{Error, GuildError},
+	entities::{Guild, GuildMember},
+	errors::{Error, GuildError},
 };
 
 #[handler]
 pub async fn count_by_members(
-    Data(db): Data<&PgPool>,
-    Data(claims): Data<&Claims>,
-    Path(guild_id): Path<Snowflake>,
+	Data(db): Data<&PgPool>,
+	Data(claims): Data<&Claims>,
+	Path(guild_id): Path<Snowflake>,
 ) -> poem::Result<impl IntoResponse> {
-    let guild = Guild::get_by_id(db, guild_id)
-        .await?
-        .ok_or(Error::Guild(GuildError::InvalidGuild))?;
+	let guild =
+		Guild::get_by_id(db, guild_id).await?.ok_or(Error::Guild(GuildError::InvalidGuild))?;
 
-    if !guild.has_member(db, claims.id).await? {
-        return Err(Error::Guild(GuildError::MemberNotFound).into());
-    }
+	if !guild.has_member(db, claims.id).await? {
+		return Err(Error::Guild(GuildError::MemberNotFound).into());
+	}
 
-    let role_ids = guild
-        .get_roles(db)
-        .await?
-        .into_iter()
-        .map(|r| r.id)
-        .collect::<Vec<_>>();
+	let role_ids = guild.get_roles(db).await?.into_iter().map(|r| r.id).collect::<Vec<_>>();
 
-    let mut counts = HashMap::new();
+	let mut counts = HashMap::new();
 
-    // TODO: optimize this into one query
-    for role_id in role_ids {
-        let count = GuildMember::count_by_role(db, role_id).await?;
-        counts.insert(role_id, count);
-    }
+	// TODO: optimize this into one query
+	for role_id in role_ids {
+		let count = GuildMember::count_by_role(db, role_id).await?;
+		counts.insert(role_id, count);
+	}
 
-    Ok(Json(counts))
+	Ok(Json(counts))
 }

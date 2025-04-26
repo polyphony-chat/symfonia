@@ -10,19 +10,16 @@ mod limits;
 pub use domain::*;
 pub use limits::*;
 use poem::{
-    IntoResponse, Route, get, handler,
-    web::{Data, Json},
+	IntoResponse, Route, get, handler,
+	web::{Data, Json},
 };
 use util::entities::Config;
 
 #[handler]
 pub async fn general_config(Data(cfg): Data<&Config>) -> impl IntoResponse {
-    Json(serde_json::to_value(&cfg.general).unwrap())
+	Json(serde_json::to_value(&cfg.general).unwrap())
 }
 
 pub fn setup_routes() -> Route {
-    Route::new()
-        .at("/", get(general_config))
-        .at("/limits", get(limits))
-        .at("/domains", get(domain))
+	Route::new().at("/", get(general_config)).at("/limits", get(limits)).at("/domains", get(domain))
 }

@@ -12,7 +12,5 @@ use poem::{Route, post};
 pub use register::*;
 
 pub fn setup_routes() -> Route {
-    Route::new()
-        .at("/login", post(login))
-        .at("/register", post(register))
+	Route::new().at("/login", post(login)).at("/register", post(register))
 }

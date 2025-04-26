@@ -6,40 +6,36 @@
 
 use chorus::types::{UserSettings, jwt::Claims};
 use poem::{
-    IntoResponse, handler,
-    web::{Data, Json},
+	IntoResponse, handler,
+	web::{Data, Json},
 };
 use sqlx::PgPool;
 use util::{
-    entities::User,
-    errors::{Error, UserError},
+	entities::User,
+	errors::{Error, UserError},
 };
 
 #[handler]
 pub async fn get_settings(
-    Data(db): Data<&PgPool>,
-    Data(claims): Data<&Claims>,
+	Data(db): Data<&PgPool>,
+	Data(claims): Data<&Claims>,
 ) -> poem::Result<impl IntoResponse> {
-    let user = User::get_by_id(db, claims.id)
-        .await?
-        .ok_or(Error::User(UserError::InvalidUser))?;
+	let user = User::get_by_id(db, claims.id).await?.ok_or(Error::User(UserError::InvalidUser))?;
 
-    Ok(Json(user.settings))
+	Ok(Json(user.settings))
 }
 
 #[handler]
 pub async fn update_settings(
-    Data(db): Data<&PgPool>,
-    Data(claims): Data<&Claims>,
-    Json(settings): Json<UserSettings>,
+	Data(db): Data<&PgPool>,
+	Data(claims): Data<&Claims>,
+	Json(settings): Json<UserSettings>,
 ) -> poem::Result<impl IntoResponse> {
-    let mut user = User::get_by_id(db, claims.id)
-        .await?
-        .ok_or(Error::User(UserError::InvalidUser))?;
+	let mut user =
+		User::get_by_id(db, claims.id).await?.ok_or(Error::User(UserError::InvalidUser))?;
 
-    user.settings =
-        util::entities::UserSettings::consume(settings, user.settings_index.to_uint());
-    // TODO: user.settings.update(db).await.map_err(Error::Sqlx)?;
+	user.settings = util::entities::UserSettings::consume(settings, user.settings_index.to_uint());
+	// TODO: user.settings.update(db).await.map_err(Error::Sqlx)?;
 
-    Ok(Json(user.settings))
+	Ok(Json(user.settings))
 }

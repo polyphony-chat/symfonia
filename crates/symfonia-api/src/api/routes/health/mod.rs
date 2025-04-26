@@ -9,15 +9,13 @@ use sqlx::PgPool;
 
 #[handler]
 pub async fn healthz(Data(db): Data<&PgPool>) -> poem::Result<impl IntoResponse> {
-    if db.is_closed() {
-        return Err(poem::Error::from_status(StatusCode::SERVICE_UNAVAILABLE));
-    }
+	if db.is_closed() {
+		return Err(poem::Error::from_status(StatusCode::SERVICE_UNAVAILABLE));
+	}
 
-    Ok(StatusCode::OK)
+	Ok(StatusCode::OK)
 }
 
 pub fn setup_routes() -> Route {
-    Route::new()
-        .at("/healthz", get(healthz))
-        .at("/readyz", get(healthz))
+	Route::new().at("/healthz", get(healthz)).at("/readyz", get(healthz))
 }

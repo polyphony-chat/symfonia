@@ -11,11 +11,11 @@ use email_address::EmailAddress;
 use crate::errors::{Error, UserError};
 
 pub fn adjust_email(email: &str) -> Result<EmailAddress, Error> {
-    if email.is_empty() {
-        return Err(Error::User(UserError::InvalidEmail));
-    }
+	if email.is_empty() {
+		return Err(Error::User(UserError::InvalidEmail));
+	}
 
-    // TODO: check accounts with uncommon email domains
-    // TODO: replace .dots and +alternatives -> Gmail Dot Trick https://support.google.com/mail/answer/7436150 and https://generator.email/blog/gmail-generator
-    EmailAddress::from_str(email).map_err(|e| Error::User(UserError::InvalidEmail))
+	// TODO: check accounts with uncommon email domains
+	// TODO: replace .dots and +alternatives -> Gmail Dot Trick https://support.google.com/mail/answer/7436150 and https://generator.email/blog/gmail-generator
+	EmailAddress::from_str(email).map_err(|e| Error::User(UserError::InvalidEmail))
 }
