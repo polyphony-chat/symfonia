@@ -4,7 +4,12 @@ use secrecy::{
 	SecretBox,
 	zeroize::{Zeroize, ZeroizeOnDrop},
 };
-use sqlx::{PgPool, postgres::PgConnectOptions};
+use sqlx::{PgPool, Row, postgres::PgConnectOptions};
+
+mod seed_config;
+pub use seed_config::*;
+
+use crate::errors::Error;
 
 pub struct Connection {
 	pool: PgPool,
@@ -30,6 +35,13 @@ impl Connection {
 		valid_until: Option<u64>,
 	) -> Result<(), sqlx::Error> {
 		todo!()
+	}
+
+	pub async fn check_fresh_db(&self) -> Result<bool, Error> {
+		let res = sqlx::query("SELECT COUNT(*) FROM config").fetch_one(self.pool()).await?;
+		let c: i64 = res.get(0);
+
+		Ok(c == 0)
 	}
 }
 
