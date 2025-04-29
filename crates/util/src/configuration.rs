@@ -20,16 +20,14 @@ const TLS_CONFIG_VERIFY_FULL: &str = "verify_full";
 
 static CONFIG: OnceLock<SymfoniaConfiguration> = OnceLock::new();
 
-#[cfg_attr(test, derive(Debug))]
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct SymfoniaConfiguration {
 	pub api: ApiConfiguration,
 	pub gateway: GatewayConfiguration,
 	pub general: GeneralConfiguration,
 }
 
-#[cfg_attr(test, derive(Debug))]
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ComponentConfiguration {
 	pub enabled: bool,
 	pub port: u16,
@@ -38,9 +36,8 @@ pub struct ComponentConfiguration {
 	pub database: DatabaseConfigurationOverrides,
 }
 
-#[cfg_attr(test, derive(Debug))]
 #[serde_as]
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct DatabaseConfigurationOverrides {
 	pub max_connections: u32,
 	pub user: Option<String>,
@@ -114,8 +111,7 @@ impl FromStr for TlsConfig {
 	}
 }
 
-#[cfg_attr(test, derive(Debug))]
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct GeneralConfiguration {
 	pub log_level: LogLevel,
 	pub node_id: u64,
@@ -132,8 +128,7 @@ pub enum LogLevel {
 	Trace = 4,
 }
 
-#[cfg_attr(test, derive(Debug))]
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct GatewayConfiguration {
 	#[serde(flatten)]
 	pub cfg: ComponentConfiguration,
@@ -153,8 +148,7 @@ impl Display for GatewayConfiguration {
 	}
 }
 
-#[cfg_attr(test, derive(Debug))]
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ApiConfiguration {
 	#[serde(flatten)]
 	pub cfg: ComponentConfiguration,
@@ -197,6 +191,12 @@ impl SymfoniaConfiguration {
 		let config: SymfoniaConfiguration = toml::from_str(&file_content)?;
 
 		Ok(config)
+	}
+
+	pub fn init(file_path: &PathBuf) {
+		let config =
+			SymfoniaConfiguration::from_file(file_path).expect("Couldn't parse configuration");
+		CONFIG.set(config).expect("CONFIG has already been set");
 	}
 }
 

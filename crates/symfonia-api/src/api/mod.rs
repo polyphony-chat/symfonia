@@ -67,10 +67,13 @@ pub async fn start_api(
 
 	log::info!(target: "symfonia::api", "Starting HTTP Server");
 
+	let host = &SymfoniaConfiguration::get().api.cfg.host;
+	let port = SymfoniaConfiguration::get().api.cfg.port;
+
 	tokio::task::spawn(async move {
 		// .trim() needs to be called because \n is appended to the .to_string(),
 		// messing up the binding
-		Server::new(TcpListener::bind(SymfoniaConfiguration::get().api.to_string().trim()))
+		Server::new(TcpListener::bind((host.as_str(), port)))
 			.run(v9_api)
 			.await
 			.expect("Failed to start HTTP server");

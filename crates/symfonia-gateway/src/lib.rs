@@ -68,13 +68,14 @@ pub async fn start_gateway(
 	// gateway
 	info!(target: "symfonia::gateway", "Starting gateway server");
 
-	let bind = &SymfoniaConfiguration::get().gateway.to_string();
+	let port = SymfoniaConfiguration::get().gateway.cfg.port;
+	let host = &SymfoniaConfiguration::get().gateway.cfg.host;
 	// .trim() needs to be called because \n is appended to the .to_string(),
 	// messing up the binding
-	let try_socket = TcpListener::bind(&bind.trim()).await;
+	let try_socket = TcpListener::bind((host.as_str(), port)).await;
 	let listener = try_socket.expect("Failed to bind to address");
 
-	info!(target: "symfonia::gateway", "Gateway server listening on port {bind}");
+	info!(target: "symfonia::gateway", "Gateway server listening on {host}:{port}");
 
 	let resumeable_clients: ResumableClientsStore = HashMap::new();
 	let connected_users_clone = connected_users.clone();

@@ -21,7 +21,10 @@ use sqlx::{PgPool, postgres::PgConnectOptions};
 use symfonia_api::api::start_api;
 use symfonia_gateway::start_gateway;
 use tokio::sync::OnceCell;
-use util::{database::Connection, entities::Config, gateway::ConnectedUsers};
+use util::{
+	configuration::SymfoniaConfiguration, database::Connection, entities::Config,
+	gateway::ConnectedUsers,
+};
 
 mod cli;
 
@@ -47,18 +50,13 @@ pub(crate) type AnyError = Box<dyn std::error::Error + 'static>;
 
 #[tokio::main]
 async fn main() -> Result<(), AnyError> {
-	env_logger::builder()
-		.filter(None, log::LevelFilter::Off)
-		.filter_module("symfonia", log::LevelFilter::Trace)
-		.try_init()?;
 	let _ = cli::CliArgs::try_parse().unwrap_or_default();
-	let args: util::configuration::SymfoniaConfiguration =
-		toml::from_str(&std::fs::read_to_string(
-			CLI_ARGS.config.as_ref().unwrap_or(
-				&PathBuf::from_str("./symfonia.toml")
-					.expect("This str is not a valid PathBuf: Report this to the developers"),
-			),
-		)?)?;
+	SymfoniaConfiguration::init(
+		CLI_ARGS.config.as_ref().unwrap_or(
+			&PathBuf::from_str("./symfonia.toml")
+				.expect("This str is not a valid PathBuf: Report this to the developers"),
+		),
+	);
 	trace!("Read config!");
 	let stdout = ConsoleAppender::builder()
 		.target(Target::Stdout)
@@ -143,12 +141,12 @@ async fn main() -> Result<(), AnyError> {
 	};
 
 	let pg_connect_options = PgConnectOptions::new()
-		.database(&args.general.database_configuration.database)
+		.database(&SymfoniaConfiguration::get().general.database_configuration.database)
 		.application_name("symfonia-monolith")
-		.host(&args.general.database_configuration.host)
-		.password(&args.general.database_configuration.password)
-		.port(args.general.database_configuration.port)
-		.ssl_mode(match &args.general.database_configuration.tls {
+		.host(&SymfoniaConfiguration::get().general.database_configuration.host)
+		.password(&SymfoniaConfiguration::get().general.database_configuration.password)
+		.port(SymfoniaConfiguration::get().general.database_configuration.port)
+		.ssl_mode(match &SymfoniaConfiguration::get().general.database_configuration.tls {
 			util::configuration::TlsConfig::Disable => sqlx::postgres::PgSslMode::Disable,
 			util::configuration::TlsConfig::Allow => sqlx::postgres::PgSslMode::Allow,
 			util::configuration::TlsConfig::Prefer => sqlx::postgres::PgSslMode::Prefer,
@@ -156,7 +154,7 @@ async fn main() -> Result<(), AnyError> {
 			util::configuration::TlsConfig::VerifyCa => sqlx::postgres::PgSslMode::VerifyCa,
 			util::configuration::TlsConfig::VerifyFull => sqlx::postgres::PgSslMode::VerifyFull,
 		})
-		.username(&args.general.database_configuration.username);
+		.username(&SymfoniaConfiguration::get().general.database_configuration.username);
 	log::info!(target: "symfonia::db", "Establishing database connection");
 	let db = Connection::new(pg_connect_options).await?;
 
