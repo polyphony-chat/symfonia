@@ -53,7 +53,7 @@ sentry = { version = "0.34.0", default-features = false, features = [
     "rustls",
 ] }
 chorus = { workspace = true }
-util = { path = "../util", features = ["poem"] }
+util = { path = "../util", features = ["poem"], version = "0" }
 serde_path_to_error = "0.1.17"
 percent-encoding = "2.3.1"
 hex = "0.4.3"
