@@ -64,4 +64,4 @@ jobs:
         run: rustup default nightly
 
       - name: cargo-udeps
-        run: cargo +nightly udeps --all-targets --all-features
+        run: cargo udeps --workspace --all-targets --all-features
