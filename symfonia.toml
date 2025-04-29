@@ -1,0 +1,41 @@
+[api]
+enabled = true
+port = 3001
+host = "0.0.0.0"
+tls = false
+
+[api.database]
+max_connections = 20
+# Override values from [general.database] here
+# user = ""
+# password = ""
+# port = 0
+# host = ""
+# tls = "prefer"
+
+[gateway]
+enabled = true
+port = 3002
+host = "0.0.0.0"
+tls = false
+
+[gateway.database]
+max_connections = 20
+# Override values from [general.database] here
+# user = ""
+# password = ""
+# port = 0
+# host = ""
+# tls = "prefer"
+
+[general]
+log_level = "Trace"
+node_id = 1
+
+[general.database]
+database = "symfonia"
+username = "symfonia"
+password = "symfonia"
+port = 5432
+host = "localhost"
+tls = "prefer"

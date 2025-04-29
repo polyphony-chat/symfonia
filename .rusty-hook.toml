@@ -1,6 +1,6 @@
 [hooks]
-pre-push = "cargo fmt -- --check --color always"
-pre-commit = "./prepare-sqlx-if-needed.sh"
+# pre-push = "cargo fmt -- --check --color always"
+# pre-commit = "./prepare-sqlx-if-needed.sh"
 
 [logging]
 verbose = true

@@ -1,0 +1,23 @@
+name: "General: License headers and identifiers"
+
+on:
+  push:
+    branches: ["main"]
+    tags: ["*"]
+  pull_request:
+    branches: ["*"]
+  workflow_dispatch:
+
+jobs:
+  license-headers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Check license headers
+        uses: viperproject/check-license-header@e06c65614fa9f32e099838df4dd25440c5344b32
+        with:
+          path: .
+          config: ./.github/license-check/config.json
+          strict: true

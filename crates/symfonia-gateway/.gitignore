@@ -1,0 +1,7 @@
+/target
+Cargo.lock
+.env
+/log
+/.idea
+/firedbg
+debug.json
