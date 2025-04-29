@@ -41,6 +41,10 @@ pub mod entities;
 pub mod errors;
 pub mod events;
 pub mod gateway;
+#[cfg(feature = "oidc_auth_adapter")]
+/// An OIDC client, bridging Spacebar-Style authentication calls to OpenID
+/// Connect.
+pub mod oidc_auth_adapter;
 pub mod util;
 
 pub type SharedEventPublisher = Arc<RwLock<Publisher<Event>>>;
@@ -57,23 +61,4 @@ pub fn eq_shared_event_publisher(a: &SharedEventPublisher, b: &SharedEventPublis
 	let a = a.read();
 	let b = b.read();
 	*a == *b
-}
-
-// TODO: Use this in more places
-/// The maximum number of rows that can be returned in most queries
-static QUERY_UPPER_LIMIT: i32 = 10000;
-
-static DATABASE: OnceCell<PgPool> = OnceCell::const_new();
-
-#[derive(Debug)]
-struct LogFilter;
-
-impl Filter for LogFilter {
-	fn filter(&self, record: &log::Record) -> log4rs::filter::Response {
-		if record.target().starts_with("symfonia") {
-			log4rs::filter::Response::Accept
-		} else {
-			log4rs::filter::Response::Reject
-		}
-	}
 }

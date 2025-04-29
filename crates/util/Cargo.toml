@@ -7,6 +7,7 @@ license = "MPL-2.0"
 
 [features]
 poem = ["dep:poem"]
+oidc_auth_adapter = ["dep:openidconnect"]
 
 [dependencies]
 argon2 = "0.5.3"
@@ -21,6 +22,7 @@ jsonwebtoken = "9.3.1"
 log = "0.4.27"
 log4rs = "1.3.0"
 num-traits = "0.2.19"
+openidconnect = { version = "4.0.0", optional = true }
 parking_lot = "0.12.3"
 poem = { version = "3.1.9", optional = true }
 pubserve = "1.1.0"
