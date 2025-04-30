@@ -7,7 +7,7 @@ license = "MPL-2.0"
 
 [features]
 poem = ["dep:poem"]
-oidc_auth_adapter = ["dep:openidconnect"]
+oidc_auth_adapter = ["dep:openidconnect", "poem"]
 
 [dependencies]
 argon2 = "0.5.3"
