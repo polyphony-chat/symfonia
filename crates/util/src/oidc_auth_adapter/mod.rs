@@ -9,8 +9,8 @@ authenticate even though they have no clue about OIDC.
 */
 
 use bigdecimal::BigDecimal;
-use chorus::types::{RegisterSchema, Snowflake};
-use sqlx::PgPool;
+use chorus::types::{RegisterSchema, Snowflake, UserModifySchema};
+use sqlx::{PgPool, postgres::PgValue};
 
 use crate::{
 	entities::{Config, User},
@@ -36,6 +36,19 @@ pub trait AdminApi {
 	///   header to make use of security features.
 	fn register_user(
 		login_schema: &RegisterSchema,
+		client_ip: &str,
+	) -> impl std::future::Future<Output = Result<Self::User, Self::Error>> + Send;
+
+	/// Edit a OIDC user using this admin API implementation.
+	///
+	/// ## Parameters
+	///
+	/// - `register_schema` [RegisterSchema]: Registration information provided
+	///   by the Spacebar client.
+	/// - `client_ip` [str]: IP of the client; MUST be forwarded as `X-Real-Ip`
+	///   header to make use of security features.
+	fn edit_user(
+		modify_schema: &UserModifySchema,
 		client_ip: &str,
 	) -> impl std::future::Future<Output = Result<Self::User, Self::Error>> + Send;
 
@@ -75,4 +88,44 @@ async fn insert_adapter_user(
 	.execute(pool)
 	.await?;
 	Ok(user)
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+/// Either/Or-style argument to pass to the [delete_adapter_user] method.
+pub enum DeleteInfo {
+	/// A [Snowflake] ID
+	IdSnowflake(Snowflake),
+	/// An OIDC sub (primary key)
+	OidcSub(String),
+}
+
+/// Deletes an adapter user from the adapter user table. Does *not* delete the
+/// user from the Users table. Depending on the supplied [DeleteInfo], this will
+/// delete either all entries in the adapter user table where the snowflake
+/// matches the supplied snowflake, OR the entry where the oidc_sub primary key
+/// matches the supplied [DeleteInfo::OidcSub].
+///
+/// If you intend to delete the user from that table as well, make sure to
+/// preserve information about the OIDC sub<-->Snowflake ID mapping.
+async fn delete_adapter_user(
+	pool: &PgPool,
+	delete_info: DeleteInfo,
+) -> Result<(), crate::errors::Error> {
+	sqlx::query!(
+		r#"
+        DELETE FROM oidc_spacebar 
+		WHERE oidc_sub = $1 OR user_id = $2
+    	"#,
+		match &delete_info {
+			DeleteInfo::IdSnowflake(_) => String::new(),
+			DeleteInfo::OidcSub(value) => value.clone(),
+		},
+		match &delete_info {
+			DeleteInfo::IdSnowflake(snowflake) => BigDecimal::from(u64::from(*snowflake)),
+			DeleteInfo::OidcSub(_) => BigDecimal::default(),
+		}
+	)
+	.execute(pool)
+	.await?;
+	Ok(())
 }
