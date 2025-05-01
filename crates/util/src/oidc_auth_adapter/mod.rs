@@ -52,6 +52,17 @@ pub trait AdminApi {
 		client_ip: &str,
 	) -> impl std::future::Future<Output = Result<Self::User, Self::Error>> + Send;
 
+	/// Delete a OIDC user using this admin API implementation.
+	///
+	/// ## Parameters
+	///
+	/// - `client_ip` [str]: IP of the client; MUST be forwarded as `X-Real-Ip`
+	///   header to make use of security features.
+	fn delete_user(
+		oidc_sub: &str,
+		client_ip: &str,
+	) -> impl std::future::Future<Output = Result<(), Self::Error>> + Send;
+
 	/// Retrieve the OIDC `sub` attribute of a `Self::User`
 	fn user_oid_sub(user: &Self::User) -> String;
 }
