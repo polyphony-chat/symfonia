@@ -63,7 +63,7 @@ async fn insert_adapter_user(
 		bot,
 	)
 	.await?;
-	let oidc_sub = sqlx::query_as!(
+	let _oidc_sub = sqlx::query_as!(
 		String,
 		r#"
         INSERT INTO oidc_spacebar (oidc_sub, user_id)
@@ -71,6 +71,8 @@ async fn insert_adapter_user(
     "#,
 		oidc_sub,
 		BigDecimal::from(u64::from(user.id))
-	);
+	)
+	.execute(pool)
+	.await?;
 	Ok(user)
 }
