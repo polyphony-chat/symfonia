@@ -154,8 +154,45 @@ async fn delete_adapter_user(
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod test {
+	use super::*;
+	use crate::init_logger;
 
-	#[sqlx::test(fixtures("users"))]
-	fn test_create_adapter_user() {}
+	#[sqlx::test(fixtures(path = "../../fixtures", scripts("users")))]
+	async fn create_adapter_mapping(pool: PgPool) {
+		init_logger();
+		add_adapter_mapping(
+			&pool,
+			"123e4567-e89b-12d3-a456-426614174000",
+			Snowflake(7248639845155737600),
+		)
+		.await
+		.unwrap();
+	}
+
+	#[sqlx::test]
+	async fn test_insert_adapter_user(pool: PgPool) {
+		init_logger();
+		let register_schema = RegisterSchema {
+			username: String::from("usery_name"),
+			password: None,
+			consent: true,
+			email: None,
+			fingerprint: None,
+			invite: None,
+			date_of_birth: None,
+			gift_code_sku_id: None,
+			captcha_key: None,
+			promotional_email_opt_in: None,
+		};
+		let user = insert_adapter_user(
+			&pool,
+			"123e4567-e89b-12d3-a456-426614174000",
+			&register_schema,
+			false,
+		)
+		.await
+		.unwrap();
+	}
 }
