@@ -70,7 +70,7 @@ pub trait AdminApi {
 /// Insert a new adapter auth adapter user into the database. Creates a new
 /// entry in the `users` table, and an entry in the `oidc_spacebar` table,
 /// mapping the created user to a OIDC `sub` value.
-async fn insert_adapter_user(
+pub async fn insert_adapter_user(
 	pool: &PgPool,
 	oidc_sub: &str,
 	register_schema: &RegisterSchema,
@@ -87,18 +87,30 @@ async fn insert_adapter_user(
 		bot,
 	)
 	.await?;
-	let _oidc_sub = sqlx::query_as!(
-		String,
+	add_adapter_mapping(pool, oidc_sub, user.id).await?;
+	Ok(user)
+}
+
+/// Adds a mapping from [User] to an `oidc_sub` value to the `oidc_spacebar`
+/// table without creating a new [User]. Will fail, if the user specified by
+/// `user_id` does not exist in the `users` table.
+pub async fn add_adapter_mapping(
+	pool: &PgPool,
+	oidc_sub: &str,
+	user_id: Snowflake,
+) -> Result<(), crate::errors::Error> {
+	sqlx::query!(
 		r#"
-        INSERT INTO oidc_spacebar (oidc_sub, user_id)
-        VALUES ($1, $2)
-    "#,
+		INSERT INTO oidc_spacebar (oidc_sub, user_id)
+		VALUES ($1, $2)
+	"#,
 		oidc_sub,
-		BigDecimal::from(u64::from(user.id))
+		BigDecimal::from(user_id.0)
 	)
 	.execute(pool)
-	.await?;
-	Ok(user)
+	.await
+	.map_err(|e| e.into())
+	.map(|_| ())
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -139,4 +151,11 @@ async fn delete_adapter_user(
 	.execute(pool)
 	.await?;
 	Ok(())
+}
+
+#[cfg(test)]
+mod test {
+
+	#[sqlx::test(fixtures("users"))]
+	fn test_create_adapter_user() {}
 }
