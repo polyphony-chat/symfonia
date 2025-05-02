@@ -60,3 +60,18 @@ pub fn eq_shared_event_publisher(a: &SharedEventPublisher, b: &SharedEventPublis
 	let b = b.read();
 	*a == *b
 }
+
+#[cfg(test)]
+#[allow(clippy::expect_used)]
+/// Publicly exported function so that all symfonia-* tests can run with
+/// logging. This function is only exported if `#[cfg(test)]` is met.
+pub fn init_logger() {
+	env_logger::builder()
+		.filter_level(LevelFilter::Off)
+		.filter_module("symfonia", LevelFilter::Trace)
+		.filter_module("util", LevelFilter::Trace)
+		.filter_module("symfonia-api", LevelFilter::Trace)
+		.filter_module("symfonia-gateway", LevelFilter::Trace)
+		.try_init()
+		.expect("Failed initializing logger");
+}
