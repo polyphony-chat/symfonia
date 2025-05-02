@@ -8,8 +8,6 @@ This client will serve as a "bridge" for Spacebar API clients, so that they can
 authenticate even though they have no clue about OIDC.
 */
 
-pub mod routes;
-
 use bigdecimal::BigDecimal;
 use chorus::types::{RegisterSchema, Snowflake, UserModifySchema};
 use sqlx::{PgPool, postgres::PgValue};
@@ -19,47 +17,49 @@ use crate::{
 	errors,
 };
 
-/// Represents a set of administration APIs of an OIDC IDP needed to register a
-/// new user. There is no proper, standardized administration API for IDPs, and
-/// registering a new client programmatically is not a part of OIDC. IDPs like
-/// "Rauthy" will provide an admin API to do this.
+/// Represents a set of administration APIs needed to register a
+/// new user. In the context of symfonia, this is intended to offer backwards
+/// compatibility for non-OIDC clients
 pub trait AdminApi {
 	/// The user type specific to this admin API implementation
 	type User;
 	type Error: std::error::Error;
 
-	/// Register a new OIDC user using this admin API implementation.
+	/// Register a new user using this admin API implementation.
 	///
 	/// ## Parameters
 	///
 	/// - `register_schema` [RegisterSchema]: Registration information provided
 	///   by the Spacebar client.
 	/// - `client_ip` [str]: IP of the client; MUST be forwarded as `X-Real-Ip`
-	///   header to make use of security features.
+	///   header to make use of security features, if an external auth provider
+	///   is used.
 	fn register_user(
 		login_schema: &RegisterSchema,
 		client_ip: &str,
 	) -> impl std::future::Future<Output = Result<Self::User, Self::Error>> + Send;
 
-	/// Edit a OIDC user using this admin API implementation.
+	/// Edit a user using this admin API implementation.
 	///
 	/// ## Parameters
 	///
 	/// - `register_schema` [RegisterSchema]: Registration information provided
 	///   by the Spacebar client.
 	/// - `client_ip` [str]: IP of the client; MUST be forwarded as `X-Real-Ip`
-	///   header to make use of security features.
+	///   header to make use of security features, if an external auth provider
+	///   is used.
 	fn edit_user(
 		modify_schema: &UserModifySchema,
 		client_ip: &str,
 	) -> impl std::future::Future<Output = Result<Self::User, Self::Error>> + Send;
 
-	/// Delete a OIDC user using this admin API implementation.
+	/// Delete a user using this admin API implementation.
 	///
 	/// ## Parameters
 	///
 	/// - `client_ip` [str]: IP of the client; MUST be forwarded as `X-Real-Ip`
-	///   header to make use of security features.
+	///   header to make use of security features, if an external auth provider
+	///   is used.
 	fn delete_user(
 		oidc_sub: &str,
 		client_ip: &str,
