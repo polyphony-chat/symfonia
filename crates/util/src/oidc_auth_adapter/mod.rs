@@ -160,12 +160,28 @@ mod test {
 	use crate::init_logger;
 
 	#[sqlx::test(fixtures(path = "../../fixtures", scripts("users")))]
-	async fn create_adapter_mapping(pool: PgPool) {
+	async fn create_delete_adapter_mapping(pool: PgPool) {
 		init_logger();
 		add_adapter_mapping(
 			&pool,
 			"123e4567-e89b-12d3-a456-426614174000",
 			Snowflake(7248639845155737600),
+		)
+		.await
+		.unwrap();
+		delete_adapter_user(&pool, DeleteInfo::IdSnowflake(Snowflake(7248639845155737600)))
+			.await
+			.unwrap();
+		add_adapter_mapping(
+			&pool,
+			"123e4567-e89b-12d3-a456-426614174000",
+			Snowflake(7248639845155737600),
+		)
+		.await
+		.unwrap();
+		delete_adapter_user(
+			&pool,
+			DeleteInfo::OidcSub("123e4567-e89b-12d3-a456-426614174000".into()),
 		)
 		.await
 		.unwrap();
