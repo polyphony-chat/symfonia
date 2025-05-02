@@ -9,8 +9,9 @@ authenticate even though they have no clue about OIDC.
 */
 
 use bigdecimal::BigDecimal;
-use chorus::types::{RegisterSchema, Snowflake, UserModifySchema};
-use sqlx::{PgPool, postgres::PgValue};
+use chorus::types::{LoginSchema, RegisterSchema, Snowflake, UserModifySchema};
+use sqlx::{PgPool, postgres::PgValue, query_as, query_scalar, types::Text};
+use sqlx_pg_uint::PgU64;
 
 use crate::{
 	entities::{Config, User},
@@ -37,6 +38,7 @@ pub trait AdminApi {
 	fn register_user(
 		login_schema: &RegisterSchema,
 		client_ip: &str,
+		pool: &PgPool,
 	) -> impl std::future::Future<Output = Result<Self::User, Self::Error>> + Send;
 
 	/// Edit a user using this admin API implementation.
@@ -51,6 +53,7 @@ pub trait AdminApi {
 	fn edit_user(
 		modify_schema: &UserModifySchema,
 		client_ip: &str,
+		pool: &PgPool,
 	) -> impl std::future::Future<Output = Result<Self::User, Self::Error>> + Send;
 
 	/// Delete a user using this admin API implementation.
@@ -63,7 +66,25 @@ pub trait AdminApi {
 	fn delete_user(
 		oidc_sub: &str,
 		client_ip: &str,
+		pool: &PgPool,
 	) -> impl std::future::Future<Output = Result<(), Self::Error>> + Send;
+
+	/// Login a user using this admin API implementation.
+	///
+	/// ## Returns
+	///
+	/// An error, or an empty tuple `()` representing success.
+	///
+	/// ## Parameters
+	///
+	/// - `client_ip` [str]: IP of the client; MUST be forwarded as `X-Real-Ip`
+	///   header to make use of security features, if an external auth provider
+	///   is used.
+	fn login_user(
+		login_schema: &LoginSchema,
+		client_ip: &str,
+		pool: &PgPool,
+	) -> impl std::future::Future<Output = Result<String, Self::Error>> + Send;
 
 	/// Retrieve the OIDC `sub` attribute of a `Self::User`
 	fn user_oid_sub(user: &Self::User) -> String;
@@ -115,9 +136,44 @@ pub async fn add_adapter_mapping(
 	.map(|_| ())
 }
 
+/// Retrieve a mapping from [User] to an `oidc_sub` value from the
+/// `oidc_spacebar` table. Will fail, if the user specified by
+/// [UserInfo] does not exist in the `users` table.
+///
+/// ## Returns
+///
+/// - If [UserInfo::IdSnowflake] was specified and the user specified by that
+///   IdSnowflake exists in the database, returns the corresponding
+///   [UserInfo::OidcSub].
+/// - If [UserInfo::OidcSub] was specified and the user specified by that
+///   OidcSub exists in the database, returns the corresponding
+///   [UserInfo::IdSnowflake].
+/// - If the user doesn't exist, returns an error.
+pub async fn get_mapping(
+	pool: &PgPool,
+	user_info: &UserInfo,
+) -> Result<UserInfo, crate::errors::Error> {
+	match user_info {
+		UserInfo::IdSnowflake(snowflake) => {
+			let oidc_sub: String = query_as!(
+				Text,
+				r#"
+			SELECT (oidc_sub, user_id) FROM oidc_spacebar
+			WHERE user_id = $1 LIMIT 1
+			"#,
+				BigDecimal::from(snowflake.0)
+			)
+			.fetch_one(pool)
+			.await?;
+			Ok(UserInfo::OidcSub(oidc_sub))
+		}
+		UserInfo::OidcSub(_) => todo!(),
+	}
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// Either/Or-style argument to pass to the [delete_adapter_user] method.
-pub enum DeleteInfo {
+pub enum UserInfo {
 	/// A [Snowflake] ID
 	IdSnowflake(Snowflake),
 	/// An OIDC sub (primary key)
@@ -125,16 +181,16 @@ pub enum DeleteInfo {
 }
 
 /// Deletes an adapter user from the adapter user table. Does *not* delete the
-/// user from the Users table. Depending on the supplied [DeleteInfo], this will
+/// user from the Users table. Depending on the supplied [UserInfo], this will
 /// delete either all entries in the adapter user table where the snowflake
 /// matches the supplied snowflake, OR the entry where the oidc_sub primary key
-/// matches the supplied [DeleteInfo::OidcSub].
+/// matches the supplied [UserInfo::OidcSub].
 ///
 /// If you intend to delete the user from that table as well, make sure to
 /// preserve information about the OIDC sub<-->Snowflake ID mapping.
 async fn delete_adapter_user(
 	pool: &PgPool,
-	delete_info: DeleteInfo,
+	delete_info: UserInfo,
 ) -> Result<(), crate::errors::Error> {
 	sqlx::query!(
 		r#"
@@ -142,12 +198,12 @@ async fn delete_adapter_user(
 		WHERE oidc_sub = $1 OR user_id = $2
     	"#,
 		match &delete_info {
-			DeleteInfo::IdSnowflake(_) => String::new(),
-			DeleteInfo::OidcSub(value) => value.clone(),
+			UserInfo::IdSnowflake(_) => String::new(),
+			UserInfo::OidcSub(value) => value.clone(),
 		},
 		match &delete_info {
-			DeleteInfo::IdSnowflake(snowflake) => BigDecimal::from(u64::from(*snowflake)),
-			DeleteInfo::OidcSub(_) => BigDecimal::default(),
+			UserInfo::IdSnowflake(snowflake) => BigDecimal::from(u64::from(*snowflake)),
+			UserInfo::OidcSub(_) => BigDecimal::default(),
 		}
 	)
 	.execute(pool)
@@ -171,7 +227,7 @@ mod test {
 		)
 		.await
 		.unwrap();
-		delete_adapter_user(&pool, DeleteInfo::IdSnowflake(Snowflake(7248639845155737600)))
+		delete_adapter_user(&pool, UserInfo::IdSnowflake(Snowflake(7248639845155737600)))
 			.await
 			.unwrap();
 		add_adapter_mapping(
@@ -183,7 +239,7 @@ mod test {
 		.unwrap();
 		delete_adapter_user(
 			&pool,
-			DeleteInfo::OidcSub("123e4567-e89b-12d3-a456-426614174000".into()),
+			UserInfo::OidcSub("123e4567-e89b-12d3-a456-426614174000".into()),
 		)
 		.await
 		.unwrap();

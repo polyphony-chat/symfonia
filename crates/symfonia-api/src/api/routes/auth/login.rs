@@ -27,7 +27,7 @@ pub async fn login(
 		}
 
 		let ip = req.remote_addr().to_string();
-		log::info!(target: "symfonia::auth", "Got client ip: {}", ip);
+		log::debug!(target: "symfonia::auth", "Got client ip: {}", ip);
 
 		// TODO: verify captcha
 	}
