@@ -10,7 +10,12 @@ authenticate even though they have no clue about OIDC.
 
 use bigdecimal::BigDecimal;
 use chorus::types::{LoginSchema, RegisterSchema, Snowflake, UserModifySchema};
-use sqlx::{PgPool, postgres::PgValue, query_as, query_scalar, types::Text};
+use sqlx::{
+	PgPool,
+	postgres::{PgRow, PgValue},
+	query_as, query_scalar,
+	types::Text,
+};
 use sqlx_pg_uint::PgU64;
 
 use crate::{
@@ -155,19 +160,37 @@ pub async fn get_mapping(
 ) -> Result<UserInfo, crate::errors::Error> {
 	match user_info {
 		UserInfo::IdSnowflake(snowflake) => {
-			let oidc_sub: String = query_as!(
-				Text,
+			let oidc_sub = query_as!(
+				UserInfoReturn,
 				r#"
-			SELECT (oidc_sub, user_id) FROM oidc_spacebar
+			SELECT * FROM oidc_spacebar
 			WHERE user_id = $1 LIMIT 1
 			"#,
 				BigDecimal::from(snowflake.0)
 			)
 			.fetch_one(pool)
 			.await?;
-			Ok(UserInfo::OidcSub(oidc_sub))
+			match oidc_sub.oidc_sub {
+				Some(s) => Ok(UserInfo::OidcSub(s)),
+				None => unreachable!(),
+			}
 		}
-		UserInfo::OidcSub(_) => todo!(),
+		UserInfo::OidcSub(oidc_sub) => {
+			let user_id = query_as!(
+				UserInfoReturn,
+				r#"
+			SELECT * FROM oidc_spacebar
+			WHERE oidc_sub = $1 LIMIT 1
+			"#,
+				oidc_sub
+			)
+			.fetch_one(pool)
+			.await?;
+			match user_id.user_id {
+				Some(b) => Ok(UserInfo::IdSnowflake(PgU64::try_from(b)?.to_uint().into())),
+				None => unreachable!(),
+			}
+		}
 	}
 }
 
@@ -178,6 +201,12 @@ pub enum UserInfo {
 	IdSnowflake(Snowflake),
 	/// An OIDC sub (primary key)
 	OidcSub(String),
+}
+
+#[derive(Debug)]
+struct UserInfoReturn {
+	oidc_sub: Option<String>,
+	user_id: Option<BigDecimal>,
 }
 
 /// Deletes an adapter user from the adapter user table. Does *not* delete the
