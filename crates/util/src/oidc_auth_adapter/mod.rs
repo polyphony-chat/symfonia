@@ -297,5 +297,29 @@ mod test {
 		)
 		.await
 		.unwrap();
+
+		let user_info = UserInfo::IdSnowflake(Snowflake(user.id.into()));
+		let result = get_mapping(&pool, &user_info).await.unwrap();
+		assert_eq!(result, UserInfo::OidcSub("123e4567-e89b-12d3-a456-426614174000".into()));
+
+		let user_info = UserInfo::OidcSub(String::from("123e4567-e89b-12d3-a456-426614174000"));
+		let result = get_mapping(&pool, &user_info).await.unwrap();
+		assert_eq!(result, UserInfo::IdSnowflake(Snowflake(user.id.into())));
+	}
+
+	#[sqlx::test(fixtures(path = "../../fixtures", scripts("users")))]
+	async fn test_get_mapping_nonexistent_id(pool: PgPool) {
+		init_logger();
+		let user_info = UserInfo::IdSnowflake(Snowflake(9999999999999999999));
+		let result = get_mapping(&pool, &user_info).await;
+		assert!(result.is_err());
+	}
+
+	#[sqlx::test(fixtures(path = "../../fixtures", scripts("users")))]
+	async fn test_get_mapping_nonexistent_oidc_sub(pool: PgPool) {
+		init_logger();
+		let user_info = UserInfo::OidcSub(String::from("nonexistent-oidc-sub"));
+		let result = get_mapping(&pool, &user_info).await;
+		assert!(result.is_err());
 	}
 }
