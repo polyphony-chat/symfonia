@@ -5,6 +5,7 @@
 use std::ops::{Deref, DerefMut};
 
 use chorus::types::ConfigValue;
+use log::{debug, trace};
 use serde_json::{Map, Value};
 use sqlx::PgPool;
 use tokio::io::AsyncReadExt;
@@ -47,6 +48,7 @@ impl Config {
 	}
 
 	fn from_pairs(pairs: Vec<ConfigEntity>) -> Self {
+		trace!("Pairs: {:?}", pairs);
 		let mut value = Value::Object(Map::new());
 
 		for p in pairs {
@@ -68,15 +70,24 @@ impl Config {
 			}
 		}
 
+		trace!("Built Value {:?}", value);
+
 		// TODO: Remove this eventually
 		let s = serde_json::to_string_pretty(&value).unwrap();
+		debug!("Printed prettified version of Config to debug.json on fs");
 		std::fs::write("debug.json", &s);
 		let jd = &mut serde_json::Deserializer::from_str(&s);
-		let cf: ConfigValue = serde_path_to_error::deserialize(jd).unwrap();
+		let cf: ConfigValue = match serde_path_to_error::deserialize(jd) {
+			Ok(val) => val,
+			Err(e) => {
+				log::warn!(target: "symfonia::api::cfg", "Failed to parse config, defaulting to a default configuration: {}", e);
+				return Self(ConfigValue::default());
+			}
+		};
 		match serde_json::from_value(value) {
 			Ok(v) => Self(v),
 			Err(e) => {
-				log::error!(target: "symfonia::api::cfg", "Failed to parse config: {}", e);
+				log::warn!(target: "symfonia::api::cfg", "Failed to parse config, defaulting to a default configuration: {}", e);
 				Self(ConfigValue::default())
 			}
 		}
