@@ -8,6 +8,8 @@ This client will serve as a "bridge" for Spacebar API clients, so that they can
 authenticate even though they have no clue about OIDC.
 */
 
+pub mod routes;
+
 use bigdecimal::BigDecimal;
 use chorus::types::{RegisterSchema, Snowflake, UserModifySchema};
 use sqlx::{PgPool, postgres::PgValue};
