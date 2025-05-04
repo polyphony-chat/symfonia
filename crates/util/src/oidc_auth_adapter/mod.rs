@@ -74,23 +74,6 @@ pub trait AdminApi {
 		pool: &PgPool,
 	) -> impl std::future::Future<Output = Result<(), Self::Error>> + Send;
 
-	/// Login a user using this admin API implementation.
-	///
-	/// ## Returns
-	///
-	/// An error, or an empty tuple `()` representing success.
-	///
-	/// ## Parameters
-	///
-	/// - `client_ip` [str]: IP of the client; MUST be forwarded as `X-Real-Ip`
-	///   header to make use of security features, if an external auth provider
-	///   is used.
-	fn login_user(
-		login_schema: &LoginSchema,
-		client_ip: &str,
-		pool: &PgPool,
-	) -> impl std::future::Future<Output = Result<String, Self::Error>> + Send;
-
 	/// Retrieve the OIDC `sub` attribute of a `Self::User`
 	fn user_oid_sub(user: &Self::User) -> String;
 }
