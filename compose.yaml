@@ -40,6 +40,7 @@ services:
       - ENC_KEY_ACTIVE=${RAUTHY_ENC_KEY_ACTIVE:?}
     ports:
       - 8080:8080
+      - 9090:9090
     volumes:
       - rauthy:/app/data
       - ./rauthy.cfg:/app/rauthy.cfg
