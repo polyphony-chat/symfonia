@@ -67,6 +67,8 @@ parking_lot = { version = "0.12.3", features = ["deadlock_detection"] }
 sqlx-pg-uint = { workspace = true }
 toml = "0.8.22"
 argon2 = "0.5.3"
+rauthy-client = "0.6.1"
+openidconnect = "4.0.0"
 
 [profile.release]
 lto = true

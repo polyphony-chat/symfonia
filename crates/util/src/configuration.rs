@@ -8,6 +8,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 use serde_with::{DisplayFromStr, serde_as};
+use url::Url;
 
 use crate::errors::Error;
 
@@ -37,13 +38,14 @@ pub struct ComponentConfiguration {
 }
 
 #[serde_as]
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, zeroize::Zeroize, zeroize::ZeroizeOnDrop)]
 pub struct DatabaseConfigurationOverrides {
 	pub max_connections: u32,
 	pub user: Option<String>,
 	pub password: Option<String>,
 	pub host: Option<String>,
 	pub port: Option<u32>,
+	#[zeroize(skip)]
 	#[serde(default)]
 	#[serde_as(as = "DisplayFromStr")]
 	pub tls: TlsConfig,
@@ -152,6 +154,20 @@ impl Display for GatewayConfiguration {
 pub struct ApiConfiguration {
 	#[serde(flatten)]
 	pub cfg: ComponentConfiguration,
+	pub oidc: OidcConfiguration,
+}
+
+#[derive(Serialize, Deserialize, Debug, zeroize::Zeroize, zeroize::ZeroizeOnDrop)]
+pub struct OidcConfiguration {
+	pub client_secret: String,
+	idp_url: String,
+}
+
+impl OidcConfiguration {
+	/// Access the `idp_url` field of [OidcConfiguration]
+	pub fn idp_url(&self) -> Result<Url, url::ParseError> {
+		Url::parse(&self.idp_url)
+	}
 }
 
 impl Display for ApiConfiguration {
@@ -201,13 +217,14 @@ impl SymfoniaConfiguration {
 }
 
 #[serde_as]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, zeroize::Zeroize, zeroize::ZeroizeOnDrop)]
 pub struct DatabaseConfiguration {
 	pub host: String,
 	pub port: u16,
 	pub username: String,
 	pub password: String,
 	pub database: String,
+	#[zeroize(skip)]
 	#[serde_as(as = "DisplayFromStr")]
 	pub tls: TlsConfig,
 }
