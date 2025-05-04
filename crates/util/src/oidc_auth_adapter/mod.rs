@@ -78,19 +78,21 @@ pub fn ensure_proper_client_ips(client_ips: &[Ip]) -> Result<(), String> {
 /// new user. In the context of symfonia, this is intended to offer backwards
 /// compatibility for non-OIDC clients
 pub trait AdminApi {
-	/// The user type specific to this admin API implementation
-	type User;
 	type Error: std::error::Error;
 
 	/// Register a new user using this admin API implementation.
 	///
 	/// ## ⚠️⚠️ Please read this documentation thoroughly, as improper implementation of this method will result in security risks. ⚠️⚠️
 	///
+	/// ## Returns
+	///
+	/// A [String], representing an OIDC `sub` claim, if successful.
+	///
 	/// ## Parameters
 	///
 	/// - `register_schema` [RegisterSchema]: Registration information provided
 	///   by the Spacebar client.
-	/// - `client_ip` `&[Ip]`: [Ip]s of the client; MUST be forwarded as
+	/// - `client_ip` `&[Ip]`: IPs of the client; MUST be forwarded as
 	///   `X-Real-Ip` header(s) and `X-Forwarded-For` header(s) to make use of
 	///   security features, if an external auth provider is used. Please read
 	///   up on documentation regarding these HTTP headers. **⚠️⚠️ Improper use
@@ -103,43 +105,64 @@ pub trait AdminApi {
 	///   addresses of the same type is forbidden.
 	fn register_user(
 		register_schema: &RegisterSchema,
-		client_ip: &[Ip],
-		server_ip: &[Ip],
+		client_ips: &[Ip],
+		server_ips: &[Ip],
 		pool: &PgPool,
-	) -> impl std::future::Future<Output = Result<Self::User, Self::Error>> + Send;
+	) -> impl std::future::Future<Output = Result<String, Self::Error>> + Send;
 
 	/// Edit a user using this admin API implementation.
 	///
+	/// ## ⚠️⚠️ Please read this documentation thoroughly, as improper implementation of this method will result in security risks. ⚠️⚠️
+	///
 	/// ## Parameters
 	///
+	/// - `oidc_sub` [&str]: The OIDC `sub` of the user to edit.
 	/// - `register_schema` [RegisterSchema]: Registration information provided
 	///   by the Spacebar client.
-	/// - `client_ip` [str]: IP of the client; MUST be forwarded as `X-Real-Ip`
-	///   header to make use of security features, if an external auth provider
-	///   is used.
+	/// - `client_ip` &[Ip]: [Ip]s of the client; MUST be forwarded as
+	///   `X-Real-Ip` header(s) and `X-Forwarded-For` header(s) to make use of
+	///   security features, if an external auth provider is used. Please read
+	///   up on documentation regarding these HTTP headers. **⚠️⚠️ Improper use
+	///   or formatting of these headers will be a security risk. ⚠️⚠️** The
+	///   reason this variable is of type slice, is that the `X-Forwarded-For`
+	///   header can be set multiple times, for IPV4 and IPV6 IP addresses of
+	///   the client. Of course, a client must have at minimum one IP address,
+	///   and may have two IP addresses at maximum, where one IP address is of
+	///   type IPv4, and one IP address is of type IPv6. Having multiple IP
+	///   addresses of the same type is forbidden.
+	/// - `server_ip`
 	fn edit_user(
-		modify_schema: &UserModifySchema,
-		client_ip: &[Ip],
-		server_ip: &[Ip],
-		pool: &PgPool,
-	) -> impl std::future::Future<Output = Result<Self::User, Self::Error>> + Send;
-
-	/// Delete a user using this admin API implementation.
-	///
-	/// ## Parameters
-	///
-	/// - `client_ip` [str]: IP of the client; MUST be forwarded as `X-Real-Ip`
-	///   header to make use of security features, if an external auth provider
-	///   is used.
-	fn delete_user(
 		oidc_sub: &str,
-		client_ip: &[Ip],
-		server_ip: &[Ip],
+		modify_schema: &UserModifySchema,
+		client_ips: &[Ip],
+		server_ips: &[Ip],
 		pool: &PgPool,
 	) -> impl std::future::Future<Output = Result<(), Self::Error>> + Send;
 
-	/// Retrieve the OIDC `sub` attribute of a `Self::User`
-	fn user_oid_sub(user: &Self::User) -> String;
+	/// Delete a user using this admin API implementation.
+	///
+	/// ## ⚠️⚠️ Please read this documentation thoroughly, as improper implementation of this method will result in security risks. ⚠️⚠️
+	///
+	/// ## Parameters
+	///
+	/// - `oidc_sub` [&str]: The OIDC `sub` of the user to delete.
+	/// - `client_ip` [&[Ip]]: IPs of the client; MUST be forwarded as
+	///   `X-Real-Ip` header(s) and `X-Forwarded-For` header(s) to make use of
+	///   security features, if an external auth provider is used. Please read
+	///   up on documentation regarding these HTTP headers. **⚠️⚠️ Improper use
+	///   or formatting of these headers will be a security risk. ⚠️⚠️** The
+	///   reason this variable is of type slice, is that the `X-Forwarded-For`
+	///   header can be set multiple times, for IPV4 and IPV6 IP addresses of
+	///   the client. Of course, a client must have at minimum one IP address,
+	///   and may have two IP addresses at maximum, where one IP address is of
+	///   type IPv4, and one IP address is of type IPv6. Having multiple IP
+	///   addresses of the same type is forbidden.
+	fn delete_user(
+		oidc_sub: &str,
+		client_ips: &[Ip],
+		server_ips: &[Ip],
+		pool: &PgPool,
+	) -> impl std::future::Future<Output = Result<(), Self::Error>> + Send;
 }
 
 /// Insert a new adapter auth adapter user into the database. Creates a new

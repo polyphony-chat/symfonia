@@ -1,11 +1,9 @@
-use std::str::FromStr;
-
-use openidconnect::core::CoreIdToken;
+use chorus::types::UserModifySchema;
 use reqwest::{Method, StatusCode};
 use serde_json::json;
+use sqlx::PgPool;
 use util::{
 	configuration::SymfoniaConfiguration,
-	entities::Config,
 	oidc_auth_adapter::{AdminApi, Ip, ensure_proper_client_ips},
 };
 
@@ -19,8 +17,6 @@ static RAUTHY_DELETE_METHOD: Method = Method::DELETE;
 pub struct Rauthy;
 
 impl AdminApi for Rauthy {
-	type User = CoreIdToken;
-
 	type Error = util::errors::Error;
 
 	fn register_user(
@@ -28,7 +24,7 @@ impl AdminApi for Rauthy {
 		client_ips: &[Ip],
 		server_ips: &[Ip],
 		pool: &sqlx::PgPool,
-	) -> impl std::future::Future<Output = Result<Self::User, Self::Error>> + Send {
+	) -> impl std::future::Future<Output = Result<String, Self::Error>> + Send {
 		let config = SymfoniaConfiguration::get();
 		async move {
 			let email = match &register_schema.email {
@@ -79,22 +75,21 @@ impl AdminApi for Rauthy {
 	}
 
 	fn edit_user(
-		modify_schema: &chorus::types::UserModifySchema,
-		client_ip: &str,
-		pool: &sqlx::PgPool,
-	) -> impl std::future::Future<Output = Result<Self::User, Self::Error>> + Send {
+		oidc_sub: &str,
+		modify_schema: &UserModifySchema,
+		client_ip: &[Ip],
+		server_ip: &[Ip],
+		pool: &PgPool,
+	) -> impl std::future::Future<Output = Result<(), Self::Error>> + Send {
 		todo!()
 	}
 
 	fn delete_user(
 		oidc_sub: &str,
-		client_ip: &str,
-		pool: &sqlx::PgPool,
+		client_ips: &[Ip],
+		server_ips: &[Ip],
+		pool: &PgPool,
 	) -> impl std::future::Future<Output = Result<(), Self::Error>> + Send {
-		todo!()
-	}
-
-	fn user_oid_sub(user: &Self::User) -> String {
 		todo!()
 	}
 }
