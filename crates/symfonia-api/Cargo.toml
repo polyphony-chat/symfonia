@@ -69,6 +69,7 @@ toml = "0.8.22"
 argon2 = "0.5.3"
 rauthy-client = "0.6.1"
 openidconnect = "4.0.0"
+url = "2.5.4"
 
 [profile.release]
 lto = true
