@@ -53,7 +53,10 @@ sentry = { version = "0.34.0", default-features = false, features = [
     "rustls",
 ] }
 chorus = { workspace = true }
-util = { path = "../util", features = ["poem"], version = "0" }
+util = { path = "../util", features = [
+    "poem",
+    "oidc_auth_adapter",
+], version = "0" }
 serde_path_to_error = "0.1.17"
 percent-encoding = "2.3.1"
 hex = "0.4.3"
@@ -70,6 +73,9 @@ argon2 = "0.5.3"
 rauthy-client = "0.6.1"
 openidconnect = "4.0.0"
 url = "2.5.4"
+
+[dev-dependencies]
+util = { path = "../util", features = ["_cfg_test"], version = "0" }
 
 [profile.release]
 lto = true

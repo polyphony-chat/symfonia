@@ -8,12 +8,14 @@ license = "MPL-2.0"
 [features]
 poem = ["dep:poem"]
 oidc_auth_adapter = ["dep:openidconnect", "poem"]
+_cfg_test = ["dep:env_logger"]
 
 [dependencies]
 argon2 = "0.5.3"
 bigdecimal = "0.4.8"
 chorus = { workspace = true }
 chrono = "0.4.41"
+env_logger = { version = "0.11.8", optional = true }
 email_address = "0.2.9"
 futures = "0.3.31"
 hex = "0.4.3"
@@ -41,9 +43,6 @@ tokio-tungstenite = { workspace = true }
 toml = "0.8.22"
 url = { version = "2.5.4", features = ["serde"] }
 zeroize = { version = "1.8.1", features = ["derive"] }
-
-[dev-dependencies]
-env_logger = "0.11.8"
 
 [profile.release]
 lto = true

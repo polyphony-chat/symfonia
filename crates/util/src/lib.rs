@@ -61,7 +61,7 @@ pub fn eq_shared_event_publisher(a: &SharedEventPublisher, b: &SharedEventPublis
 	*a == *b
 }
 
-#[cfg(test)]
+#[cfg(feature = "_cfg_test")]
 #[allow(clippy::expect_used)]
 /// Publicly exported function so that all symfonia-* tests can run with
 /// logging. This function is only exported if `#[cfg(test)]` is met.
