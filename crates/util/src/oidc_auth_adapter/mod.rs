@@ -28,6 +28,15 @@ pub enum Ip {
 	V6(String),
 }
 
+impl std::fmt::Display for Ip {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Ip::V4(text) => f.write_str(text),
+			Ip::V6(text) => f.write_str(text),
+		}
+	}
+}
+
 /// Ensure the following properties for a slice of client_ips [Ip]:
 ///
 /// - A client must have at minimum one IP address.
