@@ -23,6 +23,48 @@ use crate::{
 	errors,
 };
 
+pub enum Ip {
+	V4(String),
+	V6(String),
+}
+
+/// Ensure the following properties for a slice of client_ips [Ip]:
+///
+/// - A client must have at minimum one IP address.
+/// - A client may have two IP addresses at maximum, where one IP address is of
+///   type IPv4, and one IP address is of type IPv6.
+/// - Having multiple IP addresses of the same type is forbidden.
+///
+/// If any of these properties is invalidated, an error [String] naming the
+/// reason why this set of [Ip]s was not a well-formed set of client_ips is
+/// returned.
+pub fn ensure_proper_client_ips(client_ips: &[Ip]) -> Result<(), String> {
+	if client_ips.len() > 2 || client_ips.is_empty() {
+		return Err("Illegal number of client IP addresses".into());
+	}
+	let mut ipv6 = false;
+	let mut ipv4 = false;
+	for ip in client_ips.iter() {
+		match ip {
+			Ip::V4(_) => {
+				if ipv4 {
+					return Err("Illegal number of client IPv4 addresses".into());
+				} else {
+					ipv4 = true;
+				}
+			}
+			Ip::V6(_) => {
+				if ipv6 {
+					return Err("Illegal number of client IPv6 addresses".into());
+				} else {
+					ipv6 = true;
+				}
+			}
+		}
+	}
+	Ok(())
+}
+
 /// Represents a set of administration APIs needed to register a
 /// new user. In the context of symfonia, this is intended to offer backwards
 /// compatibility for non-OIDC clients
@@ -33,16 +75,27 @@ pub trait AdminApi {
 
 	/// Register a new user using this admin API implementation.
 	///
+	/// ## ⚠️⚠️ Please read this documentation thoroughly, as improper implementation of this method will result in security risks. ⚠️⚠️
+	///
 	/// ## Parameters
 	///
 	/// - `register_schema` [RegisterSchema]: Registration information provided
 	///   by the Spacebar client.
-	/// - `client_ip` [str]: IP of the client; MUST be forwarded as `X-Real-Ip`
-	///   header to make use of security features, if an external auth provider
-	///   is used.
+	/// - `client_ip` `&[Ip]`: [Ip]s of the client; MUST be forwarded as
+	///   `X-Real-Ip` header(s) and `X-Forwarded-For` header(s) to make use of
+	///   security features, if an external auth provider is used. Please read
+	///   up on documentation regarding these HTTP headers. **⚠️⚠️ Improper use
+	///   or formatting of these headers will be a security risk. ⚠️⚠️** The
+	///   reason this variable is of type slice, is that the `X-Forwarded-For`
+	///   header can be set multiple times, for IPV4 and IPV6 IP addresses of
+	///   the client. Of course, a client must have at minimum one IP address,
+	///   and may have two IP addresses at maximum, where one IP address is of
+	///   type IPv4, and one IP address is of type IPv6. Having multiple IP
+	///   addresses of the same type is forbidden.
 	fn register_user(
-		login_schema: &RegisterSchema,
-		client_ip: &str,
+		register_schema: &RegisterSchema,
+		client_ip: &[Ip],
+		server_ip: &[Ip],
 		pool: &PgPool,
 	) -> impl std::future::Future<Output = Result<Self::User, Self::Error>> + Send;
 
@@ -57,7 +110,8 @@ pub trait AdminApi {
 	///   is used.
 	fn edit_user(
 		modify_schema: &UserModifySchema,
-		client_ip: &str,
+		client_ip: &[Ip],
+		server_ip: &[Ip],
 		pool: &PgPool,
 	) -> impl std::future::Future<Output = Result<Self::User, Self::Error>> + Send;
 
@@ -70,7 +124,8 @@ pub trait AdminApi {
 	///   is used.
 	fn delete_user(
 		oidc_sub: &str,
-		client_ip: &str,
+		client_ip: &[Ip],
+		server_ip: &[Ip],
 		pool: &PgPool,
 	) -> impl std::future::Future<Output = Result<(), Self::Error>> + Send;
 
