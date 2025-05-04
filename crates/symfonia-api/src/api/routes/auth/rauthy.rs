@@ -1,10 +1,11 @@
 use chorus::types::UserModifySchema;
+use log::{error, warn};
 use reqwest::{Method, StatusCode};
 use serde_json::json;
 use sqlx::PgPool;
 use util::{
 	configuration::SymfoniaConfiguration,
-	oidc_auth_adapter::{AdminApi, Ip, ensure_proper_client_ips},
+	oidc_auth_adapter::{AdminApi, Ip, ensure_proper_client_ips, rauthy::ApiKey},
 };
 
 static RAUTHY_REGISTER_PATH: &str = "/users";
@@ -18,8 +19,10 @@ pub struct Rauthy;
 
 impl AdminApi for Rauthy {
 	type Error = util::errors::Error;
+	type ApiKey = ApiKey;
 
 	fn register_user(
+		token: ApiKey,
 		register_schema: &chorus::types::RegisterSchema,
 		client_ips: &[Ip],
 		server_ips: &[Ip],
@@ -27,6 +30,12 @@ impl AdminApi for Rauthy {
 	) -> impl std::future::Future<Output = Result<String, Self::Error>> + Send {
 		let config = SymfoniaConfiguration::get();
 		async move {
+			if token.is_empty() {
+				warn!("Could not register Rauthy user: Empty authorization token provided");
+				return Err(util::errors::Error::Custom(
+					"Empty authorization token provided".into(),
+				));
+			}
 			let email = match &register_schema.email {
 				Some(address) => address.clone(),
 				None => {
@@ -64,8 +73,16 @@ impl AdminApi for Rauthy {
 			let response = request.send().await?;
 			// TODO: Match response status
 			match response.status() {
-				StatusCode::OK => Ok(()),
-			}
+				StatusCode::OK => (),
+				StatusCode::FORBIDDEN => {
+					error!(
+						"Trying to register a user with Rauthy yielded 403 FORBIDDEN. Does the client have administration privileges?"
+					);
+					return Err(util::errors::Error::Custom(
+						"OIDC client lacks privileges needed to register user".into(),
+					));
+				}
+			};
 			// TODO: Login user to receive [CoreIdToken], perhaps with proper scopes?
 
 			// TODO: Return [CoreIdToken]
@@ -75,6 +92,7 @@ impl AdminApi for Rauthy {
 	}
 
 	fn edit_user(
+		token: ApiKey,
 		oidc_sub: &str,
 		modify_schema: &UserModifySchema,
 		client_ip: &[Ip],
@@ -85,6 +103,7 @@ impl AdminApi for Rauthy {
 	}
 
 	fn delete_user(
+		token: ApiKey,
 		oidc_sub: &str,
 		client_ips: &[Ip],
 		server_ips: &[Ip],

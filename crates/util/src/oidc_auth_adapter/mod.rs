@@ -8,8 +8,12 @@ This client will serve as a "bridge" for Spacebar API clients, so that they can
 authenticate even though they have no clue about OIDC.
 */
 
+/// Module containing Rauthy-specific structs and behaviors.
+pub mod rauthy;
+
 use bigdecimal::BigDecimal;
 use chorus::types::{LoginSchema, RegisterSchema, Snowflake, UserModifySchema};
+use rauthy::ApiKey;
 use sqlx::{
 	PgPool,
 	postgres::{PgRow, PgValue},
@@ -79,6 +83,7 @@ pub fn ensure_proper_client_ips(client_ips: &[Ip]) -> Result<(), String> {
 /// compatibility for non-OIDC clients
 pub trait AdminApi {
 	type Error: std::error::Error;
+	type ApiKey: std::fmt::Display;
 
 	/// Register a new user using this admin API implementation.
 	///
@@ -90,6 +95,8 @@ pub trait AdminApi {
 	///
 	/// ## Parameters
 	///
+	/// - `api_key`: An API key, valid for the purpose of performing this
+	///   action.
 	/// - `register_schema` [RegisterSchema]: Registration information provided
 	///   by the Spacebar client.
 	/// - `client_ip` `&[Ip]`: IPs of the client; MUST be forwarded as
@@ -104,6 +111,7 @@ pub trait AdminApi {
 	///   type IPv4, and one IP address is of type IPv6. Having multiple IP
 	///   addresses of the same type is forbidden.
 	fn register_user(
+		api_key: Self::ApiKey,
 		register_schema: &RegisterSchema,
 		client_ips: &[Ip],
 		server_ips: &[Ip],
@@ -116,6 +124,8 @@ pub trait AdminApi {
 	///
 	/// ## Parameters
 	///
+	/// - `api_key`: An API key, valid for the purpose of performing this
+	///   action.
 	/// - `oidc_sub` [&str]: The OIDC `sub` of the user to edit.
 	/// - `register_schema` [RegisterSchema]: Registration information provided
 	///   by the Spacebar client.
@@ -132,6 +142,7 @@ pub trait AdminApi {
 	///   addresses of the same type is forbidden.
 	/// - `server_ip`
 	fn edit_user(
+		api_key: Self::ApiKey,
 		oidc_sub: &str,
 		modify_schema: &UserModifySchema,
 		client_ips: &[Ip],
@@ -145,6 +156,8 @@ pub trait AdminApi {
 	///
 	/// ## Parameters
 	///
+	/// - `api_key`: An API key, valid for the purpose of performing this
+	///   action.
 	/// - `oidc_sub` [&str]: The OIDC `sub` of the user to delete.
 	/// - `client_ip` [&[Ip]]: IPs of the client; MUST be forwarded as
 	///   `X-Real-Ip` header(s) and `X-Forwarded-For` header(s) to make use of
@@ -158,6 +171,7 @@ pub trait AdminApi {
 	///   type IPv4, and one IP address is of type IPv6. Having multiple IP
 	///   addresses of the same type is forbidden.
 	fn delete_user(
+		api_key: Self::ApiKey,
 		oidc_sub: &str,
 		client_ips: &[Ip],
 		server_ips: &[Ip],
