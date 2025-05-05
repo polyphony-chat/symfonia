@@ -1,11 +1,11 @@
 use chorus::types::UserModifySchema;
-use log::{error, warn};
+use log::{debug, error, warn};
 use reqwest::{Method, StatusCode};
 use serde_json::json;
 use sqlx::PgPool;
 use util::{
 	configuration::SymfoniaConfiguration,
-	oidc_auth_adapter::{AdminApi, Ip, ensure_proper_client_ips, rauthy::ApiKey},
+	oidc_auth_adapter::{AdminApi, Ip, ensure_proper_client_ips, rauthy, rauthy::ApiKey},
 };
 
 static RAUTHY_REGISTER_PATH: &str = "/users";
@@ -72,6 +72,7 @@ impl AdminApi for Rauthy {
 				);
 			let response = request.send().await?;
 			// TODO: Match response status
+			// These are the main three responses we expect. Rauthy OpenAPI docs say so.
 			match response.status() {
 				StatusCode::OK => (),
 				StatusCode::FORBIDDEN => {
@@ -82,7 +83,17 @@ impl AdminApi for Rauthy {
 						"OIDC client lacks privileges needed to register user".into(),
 					));
 				}
+				StatusCode::UNAUTHORIZED => {
+					error!("Trying to register a user with Rauthy yielded 401 UNAUTHORIZED.");
+					return Err(util::errors::Error::Custom(
+						"OIDC client lacks privileges needed to register user".into(),
+					));
+				}
+				_ => (),
 			};
+			let response = handle_errors(response).await?;
+			let user: rauthy::User = serde_json::from_str(&response.text().await?)?;
+
 			// TODO: Login user to receive [CoreIdToken], perhaps with proper scopes?
 
 			// TODO: Return [CoreIdToken]
@@ -111,6 +122,40 @@ impl AdminApi for Rauthy {
 	) -> impl std::future::Future<Output = Result<(), Self::Error>> + Send {
 		todo!()
 	}
+}
+
+/// Helper function to return some error messages and logging if a response has
+/// yielded an error.
+async fn handle_errors(
+	response: reqwest::Response,
+) -> Result<reqwest::Response, util::errors::Error> {
+	if response.status().is_client_error() {
+		error!(
+			"Trying to register a user with Rauthy yielded client error {}.",
+			response.status().as_u16()
+		);
+		debug!(
+			"Client error response body: {}",
+			response.text().await.unwrap_or("None".to_owned())
+		);
+		return Err(util::errors::Error::Custom(
+			"Encountered client error (HTTP response code 400-499)".into(),
+		));
+	}
+	if response.status().is_server_error() {
+		error!(
+			"Trying to register a user with Rauthy yielded server error {}.",
+			response.status().as_u16()
+		);
+		debug!(
+			"Server error response body: {}",
+			response.text().await.unwrap_or("None".to_owned())
+		);
+		return Err(util::errors::Error::Custom(
+			"Encountered server error (HTTP response code 500-599)".into(),
+		));
+	}
+	Ok(response)
 }
 
 /// From a set of client and server [Ip]s, construct a [reqwest::HeaderMap]
