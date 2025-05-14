@@ -298,7 +298,7 @@ async fn finish_connecting(
             }
             let identify_data = identify.event_data.unwrap();
 
-            let _session = Session::create(
+            let session = Session::create(
                 &state.db,
                 claims.id,
                 identify_data
@@ -324,6 +324,7 @@ async fn finish_connecting(
                 event_data: Some(
                     create_ready(
                         claims.id,
+                        &session.session_id,
                         state.connected_ip,
                         &state.config,
                         identify_data.intents.unwrap_or(GatewayIntents::all()),

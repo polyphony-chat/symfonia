@@ -22,6 +22,7 @@ use std::{
 
 pub async fn create_ready(
     user_id: Snowflake,
+    session_id: &str,
     ip: IpAddr,
     config: &Config,
     intents: GatewayIntents,
@@ -198,7 +199,7 @@ pub async fn create_ready(
         api_version: UInt8::from(9), // This should be dynamic if we decide to support other api versions
         user: user.clone().to_inner(),
         guilds,
-        session_id,
+        session_id: session_id.to_string(),
         session_type: "normal".to_string(),
         resume_gateway_url: "".to_string(),
         shard: None,
