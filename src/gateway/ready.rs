@@ -1,15 +1,15 @@
 use crate::{
     database::entities::{
         Channel, Config, Emoji, Guild, GuildMember, GuildScheduledEvent, Note, Relationship, Role,
-        StageInstance, Sticker, User, VoiceState,
+        Session, StageInstance, Sticker, User, VoiceState,
     },
     errors::Error,
 };
 use chorus::{
     types::{
         ClientInfo, ClientStatusObject, GatewayCapabilities, GatewayGuild, GatewayIntents,
-        GatewayReady, GuildDataMode, PresenceUpdate, ReadState, RelationshipType, Session,
-        Snowflake, UserNote, VersionedReadStateOrEntries,
+        GatewayReady, GuildDataMode, PresenceUpdate, ReadState, RelationshipType, Snowflake,
+        UserNote, VersionedReadStateOrEntries,
     },
     UInt8,
 };
@@ -186,17 +186,7 @@ pub async fn create_ready(
         deduped_users.insert(user.to_inner());
     }
 
-    // TODO: The session ID needs to be stored in the database and also removed on
-    // session disconnect. This is a temporary solution.
-    let session_id = Snowflake::generate().to_string();
-
-    // TODO: This is also just temporary.
-    let session = Session {
-        activities: None,
-        client_info: ClientInfo::default(),
-        session_id: session_id.clone(),
-        status: "Testing symfonia".to_string(),
-    };
+    let session = Session::get_by_user(db, user_id).await?;
 
     // TODO: There are a lot of missing fields here. Ideally, all of the fields should be
     // populated with the correct data.
@@ -228,7 +218,7 @@ pub async fn create_ready(
         tutorial: None,
         api_code_version: Default::default(),
         experiments: vec![],
-        sessions: Some([session].into()),
+        sessions: Some(session.into_iter().map(|s| s.into_inner()).collect()),
         // Note: Discord.com now just sends Entries, while Spacebar sends VersionedReadState
         read_state: VersionedReadStateOrEntries::Versioned(ReadState {
             entries: Default::default(),

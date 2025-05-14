@@ -1,12 +1,13 @@
 use chorus::types::{
-    GatewayHeartbeat, GatewayHeartbeatAck, GatewayHello, GatewayIdentifyPayload, GatewayIntents,
-    GatewayReady, GatewayResume, Snowflake,
+    ClientInfo, ClientType, GatewayHeartbeat, GatewayHeartbeatAck, GatewayHello,
+    GatewayIdentifyPayload, GatewayIntents, GatewayReady, GatewayResume, Snowflake,
 };
 use futures::{SinkExt, StreamExt};
 use log::{debug, trace};
 use rand::seq;
 use serde_json::{from_str, json};
 use sqlx::PgPool;
+use sqlx_pg_uint::PgU8;
 use std::{collections::HashMap, net::IpAddr, sync::Arc};
 use tokio::{
     net::TcpStream,
@@ -21,6 +22,11 @@ use tokio_tungstenite::{
     },
 };
 
+use super::{
+    ConnectedUsers, GatewayClient, NewWebSocketConnection, ResumableClientsStore,
+    WebSocketConnection,
+};
+use crate::database::entities::Session;
 use crate::{
     database::entities::Config,
     errors::{Error, GatewayError},
@@ -29,11 +35,6 @@ use crate::{
         GatewayUser,
     },
     util::token::check_token,
-};
-
-use super::{
-    ConnectedUsers, GatewayClient, NewWebSocketConnection, ResumableClientsStore,
-    WebSocketConnection,
 };
 
 /// Internal use only state struct to pass around data to the `finish_connecting` function.
@@ -296,6 +297,27 @@ async fn finish_connecting(
                 }
             }
             let identify_data = identify.event_data.unwrap();
+
+            let _session = Session::create(
+                &state.db,
+                claims.id,
+                identify_data
+                    .presence
+                    .as_ref()
+                    .map(|x| x.status)
+                    .unwrap_or_default(),
+                ClientInfo {
+                    client: Some(ClientType::Unknown), // TODO: Get this properly
+                    os: Some(identify_data.properties.os),
+                    version: PgU8::default(), // TODO: Properly get version
+                },
+                identify_data
+                    .presence
+                    .as_ref()
+                    .map(|x| x.activities.to_owned())
+                    .unwrap_or_default(),
+            )
+            .await?;
 
             let formatted_payload = GatewayPayload::<GatewayReady> {
                 op_code: 0,
