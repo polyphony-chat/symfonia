@@ -91,8 +91,8 @@ impl Relationship {
 //     async fn get_by_from_id(pool: PgPool) {
 //         sqlx::query!(
 //             "INSERT INTO relationships(from_id, to_id, nickname, type)
-// VALUES($1, $2, $3, $4);",             
-// BigDecimal::from(7248639845155737600_u64),             
+// VALUES($1, $2, $3, $4);",
+// BigDecimal::from(7248639845155737600_u64),
 // BigDecimal::from(7248639891561517057_u64),             "Janana Banana 🍌",
 //             BigDecimal::from(RelationshipType::Outgoing as u8)
 //         )
@@ -117,8 +117,8 @@ impl Relationship {
 //     async fn get_by_to_id(pool: PgPool) {
 //         sqlx::query!(
 //             "INSERT INTO relationships(from_id, to_id, nickname, type)
-// VALUES($1, $2, $3, $4);",             
-// BigDecimal::from(7248639845155737600_u64),             
+// VALUES($1, $2, $3, $4);",
+// BigDecimal::from(7248639845155737600_u64),
 // BigDecimal::from(7248639891561517057_u64),             "Janana Banana 🍌",
 //             BigDecimal::from(RelationshipType::Outgoing as u8)
 //         )
@@ -143,8 +143,8 @@ impl Relationship {
 //     async fn get_all_by_id(pool: PgPool) {
 //         sqlx::query!(
 //             "INSERT INTO relationships(from_id, to_id, nickname, type)
-// VALUES($1, $2, $3, $4);",             
-// BigDecimal::from(7248639845155737600_u64),             
+// VALUES($1, $2, $3, $4);",
+// BigDecimal::from(7248639845155737600_u64),
 // BigDecimal::from(7248639891561517057_u64),             "Janana Banana 🍌",
 //             BigDecimal::from(RelationshipType::Outgoing as u8)
 //         )
@@ -167,8 +167,8 @@ impl Relationship {
 
 //         sqlx::query!(
 //             "INSERT INTO relationships(from_id, to_id, nickname, type)
-// VALUES($1, $2, $3, $4);",             
-// BigDecimal::from(7248639845155737600_u64),             
+// VALUES($1, $2, $3, $4);",
+// BigDecimal::from(7248639845155737600_u64),
 // BigDecimal::from(7248640296244744192_u64),             "Banana Janana 🍌",
 //             BigDecimal::from(RelationshipType::Incoming as u8)
 //         )
