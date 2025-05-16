@@ -16,4 +16,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Check license headers
-        run: npx github:viperproject/check-license-header#v1 check --strict --config ./.github/license-check/config.json --path .
+        uses: viperproject/check-license-header@e06c65614fa9f32e099838df4dd25440c5344b32
+        with:
+          path: .
+          config: ./.github/license-check/config.json
+          strict: true
