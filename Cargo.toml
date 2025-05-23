@@ -3,6 +3,7 @@ resolver = "3"
 members = ["crates/*"]
 
 [workspace.dependencies]
+async-nats = { version = "0.41.0" }
 chorus = { version = "0.20.0", features = [
     "backend",
 ], default-features = false, git = "https://github.com/polyphony-chat/chorus", branch = "dev" }

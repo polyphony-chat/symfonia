@@ -7,9 +7,11 @@ license = "MPL-2.0"
 
 [features]
 poem = ["dep:poem"]
+nats = ["dep:async-nats"]
 
 [dependencies]
 argon2 = "0.5.3"
+async-nats = { workspace = true, optional = true }
 bigdecimal = "0.4.8"
 chorus = { workspace = true }
 chrono = "0.4.41"

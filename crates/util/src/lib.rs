@@ -39,6 +39,8 @@ pub mod entities;
 pub mod errors;
 pub mod events;
 pub mod gateway;
+#[cfg(feature = "nats")]
+pub mod nats;
 pub mod util;
 
 pub type SharedEventPublisher = Arc<RwLock<Publisher<Event>>>;
