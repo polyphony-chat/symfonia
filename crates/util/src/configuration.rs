@@ -43,6 +43,8 @@ pub struct ComponentConfiguration {
 #[serde_as]
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DatabaseConfigurationOverrides {
+	#[serde(rename = "override")]
+	pub enabled: bool,
 	pub max_connections: u32,
 	pub user: Option<String>,
 	pub password: Option<String>,
@@ -121,6 +123,8 @@ pub struct GeneralConfiguration {
 	pub node_id: u64,
 	#[serde(rename = "database")]
 	pub database_configuration: DatabaseConfiguration,
+	#[serde(rename = "nats")]
+	pub nats_configuration: NatsConfiguration,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -224,6 +228,13 @@ impl Display for DatabaseConfiguration {
 			self.username, self.password, self.host, self.port, self.database
 		)
 	}
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct NatsConfiguration {
+	pub host: String,
+	pub port: u16,
+	pub token: String,
 }
 
 #[cfg(test)]

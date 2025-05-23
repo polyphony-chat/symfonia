@@ -7,11 +7,12 @@ tls = false
 [api.database]
 max_connections = 20
 # Override values from [general.database] here
-# user = ""
-# password = ""
-# port = 0
-# host = ""
-# tls = "prefer"
+override = false
+user = ""
+password = ""
+port = 0
+host = ""
+tls = "prefer"
 
 [gateway]
 enabled = true
@@ -22,11 +23,12 @@ tls = false
 [gateway.database]
 max_connections = 20
 # Override values from [general.database] here
-# user = ""
-# password = ""
-# port = 0
-# host = ""
-# tls = "prefer"
+override = false
+user = ""
+password = ""
+port = 0
+host = ""
+tls = "prefer"
 
 [general]
 log_level = "Trace"
@@ -39,3 +41,8 @@ password = "symfonia"
 port = 5432
 host = "localhost"
 tls = "prefer"
+
+[general.nats]
+host = "localhost"
+port = 4222
+token = ""
