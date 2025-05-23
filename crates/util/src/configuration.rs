@@ -12,6 +12,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 use serde_with::{DisplayFromStr, serde_as};
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use crate::errors::Error;
 
@@ -24,14 +25,14 @@ const TLS_CONFIG_VERIFY_FULL: &str = "verify_full";
 
 static CONFIG: OnceLock<SymfoniaConfiguration> = OnceLock::new();
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Zeroize, ZeroizeOnDrop)]
 pub struct SymfoniaConfiguration {
 	pub api: ApiConfiguration,
 	pub gateway: GatewayConfiguration,
 	pub general: GeneralConfiguration,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Zeroize, ZeroizeOnDrop)]
 pub struct ComponentConfiguration {
 	pub enabled: bool,
 	pub port: u16,
@@ -41,7 +42,7 @@ pub struct ComponentConfiguration {
 }
 
 #[serde_as]
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Zeroize, ZeroizeOnDrop)]
 pub struct DatabaseConfigurationOverrides {
 	#[serde(rename = "override")]
 	pub enabled: bool,
@@ -55,7 +56,7 @@ pub struct DatabaseConfigurationOverrides {
 	pub tls: TlsConfig,
 }
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Default, Zeroize, ZeroizeOnDrop)]
 /// TLS configuration modes. Also called `sslconfig` by PostgreSQL. See <https://www.postgresql.org/docs/current/libpq-ssl.html#:~:text=32.1.%C2%A0SSL%20Mode-,descriptions,-sslmode>
 /// for the security implications of this choice.
 pub enum TlsConfig {
@@ -117,8 +118,9 @@ impl FromStr for TlsConfig {
 	}
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Zeroize, ZeroizeOnDrop)]
 pub struct GeneralConfiguration {
+	#[zeroize(skip)]
 	pub log_level: LogLevel,
 	pub node_id: u64,
 	#[serde(rename = "database")]
@@ -127,7 +129,7 @@ pub struct GeneralConfiguration {
 	pub nats_configuration: NatsConfiguration,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
 pub enum LogLevel {
 	Error = 0,
 	Warn = 1,
@@ -136,7 +138,7 @@ pub enum LogLevel {
 	Trace = 4,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Zeroize, ZeroizeOnDrop)]
 pub struct GatewayConfiguration {
 	#[serde(flatten)]
 	pub cfg: ComponentConfiguration,
@@ -156,7 +158,7 @@ impl Display for GatewayConfiguration {
 	}
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Zeroize, ZeroizeOnDrop)]
 pub struct ApiConfiguration {
 	#[serde(flatten)]
 	pub cfg: ComponentConfiguration,
@@ -209,7 +211,7 @@ impl SymfoniaConfiguration {
 }
 
 #[serde_as]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
 pub struct DatabaseConfiguration {
 	pub host: String,
 	pub port: u16,
@@ -230,7 +232,7 @@ impl Display for DatabaseConfiguration {
 	}
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
 pub struct NatsConfiguration {
 	pub host: String,
 	pub port: u16,
