@@ -32,7 +32,11 @@ tls = "prefer"
 
 [general]
 log_level = "Trace"
-node_id = 1
+# Must be unique per same-instance deployment.
+node_id = "worker-1"
+# Arbitrary region identifier. Useful for multi-region deployments with
+# NATS SuperCluster geo-affinity.
+region = "testing"
 
 [general.database]
 database = "symfonia"
