@@ -11,6 +11,7 @@ services:
       interval: 3s
       timeout: 3s
       retries: 10
+
   symfonia:
     env_file: .env
     build: .
@@ -24,6 +25,8 @@ services:
         condition: service_healthy
       rauthy:
         condition: service_started
+      nats:
+        condition: service_started
     ports:
       - 3001:3001
       - 3002:3002
@@ -31,19 +34,20 @@ services:
       - 3003:3003/udp
     volumes:
       - ./config.toml:/app/config.toml
-  rauthy:
-    image: ghcr.io/sebadob/rauthy:0.28.3
-    env_file: .env
-    environment:
-      - COOKIE_MODE=${RAUTHY_COOKIE_MODE:?}
-      - ENC_KEYS=${RAUTHY_ENC_KEYS:?}
-      - ENC_KEY_ACTIVE=${RAUTHY_ENC_KEY_ACTIVE:?}
-    ports:
-      - 8080:8080
-    volumes:
-      - rauthy:/app/data
-      - ./rauthy.cfg:/app/rauthy.cfg
 
+  nats:
+    env_file: .env
+    # If you'd like to supply a NATS configuration file, add it here by appending the flag
+    # "-c /etc/nats-config.cfg" (without quotes),
+    # then uncommenting the last line of the "volumes:" key.
+    command: -js -sd /data
+    ports:
+      - 4222:4222
+      # - 8222:8222 # Optional, HTTP management port for information reporting
+      # - 6222:6222 # Optional, routing port for clustering
+    volumes:
+      - "nats:/data"
+      - "./nats-config.cfg:/etc/nats-config.cfg"
 volumes:
-  rauthy:
   postgres:
+  nats:
