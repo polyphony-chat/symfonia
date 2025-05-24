@@ -31,6 +31,7 @@ host = ""
 tls = "prefer"
 
 [general]
+# Accepted values: Trace, Debug, Info, Warn, Error, Silent
 log_level = "Trace"
 # Must be unique per same-instance deployment.
 node_id = "worker-1"
