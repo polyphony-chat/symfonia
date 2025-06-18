@@ -1,7 +1,12 @@
 <div align="center">
 
 [![Discord]][Discord-invite]
-<img src="https://img.shields.io/static/v1?label=Status&message=Early%20Development&color=blue">  
+<img src="https://img.shields.io/static/v1?label=Status&message=Early%20Development&color=blue">
+[![FAQ-shield]][FAQ]
+
+[FAQ-shield]: https://img.shields.io/badge/Frequently_Asked_Questions_(FAQ)-ff62bd
+[FAQ]: https://github.com/polyphony-chat/.github/blob/main/FAQ.md
+
 </div>
 
 <p align="center">
