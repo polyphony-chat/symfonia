@@ -1,4 +1,6 @@
-CREATE TYPE permission_override_value AS ENUM ('allow', 'unchanged', 'disallow');
+CREATE TYPE permission_override_value AS ENUM (
+    'allow', 'unchanged', 'disallow'
+);
 CREATE TYPE permission_override_type AS ENUM (
     'channel.view',
     'channel.write',

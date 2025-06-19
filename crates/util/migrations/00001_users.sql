@@ -1,13 +1,13 @@
 CREATE TABLE IF NOT EXISTS users (
-    local_name text not null primary key,
-    display_name text null,
-    pronouns varchar(32) null,
-    about varchar(1000) null,
-    avatar varchar(255) null,
-    availability smallint not null default 0 constraint chk_availability check (
+    local_name text NOT NULL PRIMARY KEY,
+    display_name text NULL,
+    pronouns varchar(32) NULL,
+    about varchar(1000) NULL,
+    avatar varchar(255) NULL,
+    availability smallint NOT NULL DEFAULT 0 CONSTRAINT chk_availability CHECK (
         availability >= 0
-        and availability <= 3
+        AND availability <= 3
     ),
-    status varchar (50) null,
-    timezone text references tzone(tzone_name) null
+    status varchar(50) NULL,
+    timezone text REFERENCES tzone (tzone_name) NULL
 );

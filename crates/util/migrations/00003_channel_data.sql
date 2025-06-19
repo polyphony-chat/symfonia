@@ -1,8 +1,8 @@
 CREATE TABLE IF NOT EXISTS channel_data (
     id bigserial PRIMARY KEY,
-    type smallint not null default 0 constraint chk_type check (
+    type smallint NOT NULL DEFAULT 0 CONSTRAINT chk_type CHECK (
         type >= 0
-        and type <= 3
+        AND type <= 3
     ),
     name varchar(64) NOT NULL,
     description text NULL

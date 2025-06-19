@@ -5,5 +5,7 @@ CREATE TABLE IF NOT EXISTS channels (
     parent_type entity_type NOT NULL,
     permission_overrides permission_overrides [] NULL,
     channel_data bigint UNIQUE NULL,
-    CONSTRAINT fk_channel_data FOREIGN KEY (channel_data) references channel_data (id) ON DELETE CASCADE
+    CONSTRAINT fk_channel_data FOREIGN KEY (
+        channel_data
+    ) REFERENCES channel_data (id) ON DELETE CASCADE
 );
