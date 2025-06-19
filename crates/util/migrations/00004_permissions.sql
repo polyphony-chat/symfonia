@@ -4,7 +4,12 @@ CREATE TYPE permission_override_value AS ENUM (
 CREATE TYPE permission_override_type AS ENUM (
     'channel.view',
     'channel.write',
-    'channel.modify'
+    'channel.modify',
+    'channel.voice.speak',
+    'channel.voice.mute_others',
+    'channel.voice.deafen_others',
+    'channel.voice.disconnect_others',
+    'channel.send_attachments'
 );
 CREATE TYPE permission_override AS (
     type permission_override_type,
