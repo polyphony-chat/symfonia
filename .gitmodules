@@ -1,0 +1,3 @@
+[submodule "crates/sonata"]
+	path = crates/sonata
+	url = https://github.com/polyphony-chat/sonata.git
