@@ -10,5 +10,5 @@ tokio-tungstenite = { version = "0.26.2", features = [
     "rustls-tls-webpki-roots",
     "url",
 ] }
-sqlx = "0.8.5"
+sqlx = "0.8.6"
 sqlx-pg-uint = { version = "0.10.1", features = ["serde"] }

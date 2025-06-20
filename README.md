@@ -17,15 +17,20 @@
 
 ## About
 
-This is a WIP implementation of a Spacebar compatible Server in Rust!
+This is a WIP implementation of a polyproto-chat compatible Server in Rust.
+
+!!! info
+
+      This server is still in early development and thus not yet usable.
+
+
 
 This repository contains:
 A partial implementation of:
 
-- [HTTP API Server](/src/api)
-- [HTTP CDN Server](/src/cdn)
-- [WebSocket Gateway Server](/src/gateway)
-- [Database Models](/src/database)
+- [HTTP API Server](/src/crates/symfonia-api)
+- [WebSocket Gateway Server](/src/crates/symfonia-gateway)
+- [Database Models](/src/crates/util/migrations)
 
 ## Local Development/Test Environment
 
@@ -34,6 +39,8 @@ Whether you are using Docker or not, you will need to have the following install
 - [Rust](https://www.rust-lang.org/tools/install)
 - [git](https://git-scm.com/downloads)
 - [`sqlx-cli`](https://crates.io/crates/sqlx-cli)
+
+You will also have to run `git submodule update` after cloning the repository.
 
 If your development environment is hosted on a Windows machine, please additionally make sure that
 you have a bash shell available to execute pre-commit hooks. This can be done by installing
@@ -57,12 +64,8 @@ DATABASE_PASSWORD=[Your Postgres password]
 DATABASE_NAME=[Your Postgres database name]
 API_BIND=[ip:port to bind the HTTP API server to. Defaults to 0.0.0.0:3001 if not set]
 GATEWAY_BIND=[ip:port to bind the Gateway server to. Defaults to 0.0.0.0:3003 if not set]
-# For rauthy:
-COOKIE_MODE=danger-insecure
 ```
 
-4. Install and host an instance of [rauthy](https://github.com/sebadob/rauthy). Documentation on how
-   to do this can be found [here](https://sebadob.github.io/rauthy/intro.html).
 5. Install the sqlx CLI with `cargo install sqlx-cli`
 6. Run `cargo sqlx migrate run` from within the project directory to run the migrations
 7. Run the project with `cargo run`.
@@ -71,19 +74,8 @@ COOKIE_MODE=danger-insecure
 
 1. Copy the `compose-example.env` file to `.env` in the root of the compose project and fill in the values
    to your liking.
-2. Create a `rauthy.cfg` in the root of the compose project and fill in the
-   values according to [the rauthy documentation. A reference config is included on that page](https://sebadob.github.io/rauthy/config/config.html#reference-config).
-
-    !!! tip
-
-        rauthy also supports PostgreSQL as a database backend, but comes with [Hiqlite](https://github.com/sebadob/hiqlite)
-        as a default database backend.fe
-
-3. Adjust ports in `docker-compose.yml` if needed.
-4. Run `docker compose up --build`.
-
-If you haven't edited the corresponding `rauthy.cfg` settings, the default user for rauthy is `admin@localhost.de`.
-The password will be generated at first launch and you can discover it using `docker compose logs`.
+2. Adjust ports in `docker-compose.yml` if needed.
+3. Run `docker compose up --build`.
 
 Code changes will require you to restart the container with `docker compose up --build`. If you want
 to reset to a fully clean state, run `docker compose down -v`.

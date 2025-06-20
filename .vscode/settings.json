@@ -1,3 +1,17 @@
 {
-	"rust-analyzer.cargo.features": "all"
+	"rust-analyzer.cargo.features": "all",
+	"sqltools.connections": [
+		{
+			"previewLimit": 50,
+			"server": "localhost",
+			"port": 5432,
+			"driver": "PostgreSQL",
+			"database": "symfonia",
+			"username": "symfonia",
+			"password": "symfonia",
+			"name": "localdb"
+		}
+	],
+	"sqlfluff.dialect": "postgres",
+	"sqlfluff.excludeRules": ["LT05"]
 }
