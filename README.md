@@ -19,11 +19,8 @@
 
 This is a WIP implementation of a polyproto-chat compatible Server in Rust.
 
-!!! info
-
-      This server is still in early development and thus not yet usable.
-
-
+> [!Warning]
+> This server is still in early development and thus not yet usable.
 
 This repository contains:
 A partial implementation of:
