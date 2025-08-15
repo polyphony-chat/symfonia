@@ -1,0 +1,8 @@
+repos:
+- repo: https://github.com/sqlfluff/sqlfluff
+  rev: 27ef5db7053dfd00c93e1c5283e38780d7f6e0c5
+  hooks:
+  - id: sqlfluff-lint
+    args: [--dialect, "postgres", -e, "LT05"]
+  - id: sqlfluff-fix
+    args: [--dialect, "postgres", -e, "LT05"]
